@@ -54,13 +54,19 @@ class ClutterConfig(Config):
 
   # use small validation steps since the epoch is small
   VALIDATION_STEPS = 5
+  
+  def __init__(self):
+    # Overriding things here.
+    super().__init__()
+    self.IMAGE_SHAPE[2] = 3
+    self.MEAN_PIXEL = np.array([128., 128., 128.])
 
 class ClutterDataset(utils.Dataset):
   """Generates the shapes synthetic dataset. The dataset consists of simple
   shapes (triangles, squares, circles) placed randomly on a blank surface.
   The images are generated on the fly. No file access required.
   """
-  def load(self, imset, fold=0):
+  def load(self, imset, typ='depth', fold=0):
     # Load the indices for imset.
     self.base_path = os.path.join('../clutter_segmentation_11_07_17/')
     split_file = os.path.join(self.base_path, 'splits',
@@ -69,7 +75,8 @@ class ClutterDataset(utils.Dataset):
     self.add_class('clutter', 1, 'fg')
 
     for i in self.image_id:
-      p = os.path.join(self.base_path, 'depth_ims', 'image_{:06d}.png'.format(i))
+      p = os.path.join(self.base_path, '{:s}_ims'.format(typ), 
+        'image_{:06d}.png'.format(i))
       self.add_image('clutter', image_id=i, path=p, width=256, height=256)
 
   def load_image(self, image_id):
@@ -81,6 +88,8 @@ class ClutterDataset(utils.Dataset):
     info = self.image_info[image_id]
     image = cv2.imread(info['path'], cv2.IMREAD_UNCHANGED)
     assert(image is not None)
+    assert(image.ndim == 2)
+    image = np.tile(image[:,:,np.newaxis], [1,1,3])
     return image
 
   def image_reference(self, image_id):
@@ -106,29 +115,23 @@ class ClutterDataset(utils.Dataset):
         Is.append(I)
       else:
         break
-    mask = np.concatenate(Is, 2)
+    if len(Is) > 0: mask = np.concatenate(Is, 2)
+    else: mask = np.zeros([info['height'], info['width'], 0], dtype=np.bool)
+    # Making sure masks are always contiguous.
+    # block = np.any(np.any(mask,0),0)
+    # assert((not np.any(block)) or (not np.any(block[np.where(block)[0][-1]+1:])))
+    # print(block)
     class_ids = np.array([1 for _ in range(mask.shape[2])])
-    # shapes = info['shapes']
-    # count = len(shapes)
-    # mask = np.zeros([info['height'], info['width'], count], dtype=np.uint8)
-    # for i, (shape, _, dims) in enumerate(info['shapes']):
-    #   mask[:, :, i:i + 1] = self.draw_shape(mask[:, :, i:i + 1].copy(),
-    #                       shape, dims, 1)
-    # # Handle occlusions
-    # occlusion = np.logical_not(mask[:, :, -1]).astype(np.uint8)
-    # for i in range(count - 2, -1, -1):
-    #   mask[:, :, i] = mask[:, :, i] * occlusion
-    #   occlusion = np.logical_and(
-    #     occlusion, np.logical_not(mask[:, :, i]))
-    # # Map class names to class IDs.
-    # class_ids = np.array([self.class_names.index(s[0]) for s in shapes])
     return mask, class_ids.astype(np.int32)
 
 def test_clutter_dataset():
   clutter_dataset = ClutterDataset()
-  clutter_dataset.load('train')
+  clutter_dataset.load('train', 'gray')
   clutter_dataset.prepare()
   image_ids = clutter_dataset.image_ids
   for i in image_ids:
     clutter_dataset.load_image(i)
     clutter_dataset.load_mask(i)
+
+if __name__ == '__main__':
+  test_clutter_dataset()
