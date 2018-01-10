@@ -105,7 +105,22 @@ def benchmark():
   ap, rec, prec, npos, _ = du.inst_bench(None, None, None, tp=tps, fp=fps, score=scs, numInst=num_insts)
   print("mAP: ", ap[0], "prec: ", np.max(prec), "rec: ", np.max(rec), "prec-1: ", prec[-1], "npos: ", npos)
 
+def subplot(plt, Y_X, sz_y_sz_x=(10,10), space_y_x=(0.1,0.1), T=False):
+  Y,X = Y_X
+  sz_y, sz_x = sz_y_sz_x
+  hspace, wspace = space_y_x
+  plt.rcParams['figure.figsize'] = (X*sz_x, Y*sz_y)
+  fig, axes = plt.subplots(Y, X, squeeze=False)
+  plt.subplots_adjust(wspace=wspace, hspace=hspace)
+  if T:
+    axes_list = axes.T.ravel()[::-1].tolist()
+  else:
+    axes_list = axes.ravel()[::-1].tolist()
+  return fig, axes, axes_list
+
 def vis():
+  inference_config, model, dataset_val = prepare_for_test()
+  
   # Test on a random image
   image_id = random.choice(dataset_val.image_ids)
   original_image, image_meta, gt_class_id, gt_bbox, gt_mask =\
@@ -117,14 +132,24 @@ def vis():
   log("gt_bbox", gt_bbox)
   log("gt_mask", gt_mask)
 
-  visualize.display_instances(original_image, gt_bbox, gt_mask, gt_class_id,
-    dataset_val.class_names, figsize=(8, 8))
+  fig, _, axes = subplot(plt, (2,6), sz_y_sz_x=(5,5))
+  for i in range(6):
+    ax = axes.pop()
+    if i < gt_bbox.shape[0]:
+      visualize.display_instances(original_image, gt_bbox[i:i+1,:], gt_mask[:,:,i:i+1], 
+        gt_class_id[i:i+1], dataset_val.class_names, ax=ax)
 
   results = model.detect([original_image], verbose=1)
-
   r = results[0]
-  visualize.display_instances(original_image, r['rois'], r['masks'], r['class_ids'], 
-    dataset_val.class_names, r['scores'], ax=get_ax())
+  
+  for i in range(6):
+    ax = axes.pop()
+    if i < gt_bbox.shape[0]:
+      visualize.display_instances(original_image, r['rois'][i:i+1,:], r['masks'][:,:,i:i+1], 
+        r['class_ids'][i:i+1], dataset_val.class_names, r['scores'][i:i+1], ax=ax)
+  
+  # visualize.display_instances(original_image, r['rois'], r['masks'], r['class_ids'], 
+  #   dataset_val.class_names, r['scores'], ax=get_ax())
   file_name = os.path.join(model.model_dir, 'vis.png')
   plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
   plt.close()
