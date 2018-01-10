@@ -1,3 +1,4 @@
 opencv-python
 pytest
 keras
+tqdm
