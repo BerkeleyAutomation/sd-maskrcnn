@@ -55,6 +55,8 @@ class ClutterConfig(Config):
   # use small validation steps since the epoch is small
   VALIDATION_STEPS = 5
   
+  DETECTION_MIN_CONFIDENCE = 0.4
+  
   def __init__(self):
     # Overriding things here.
     super().__init__()
