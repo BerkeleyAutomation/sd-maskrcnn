@@ -34,7 +34,7 @@ def main(_):
   # which layers to train by name pattern.
   model.train(dataset_train, dataset_val, 
               learning_rate=config.LEARNING_RATE, 
-              epochs=1, 
+              epochs=10, 
               layers='all')
 
 if __name__ == '__main__':
