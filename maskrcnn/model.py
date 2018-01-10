@@ -146,7 +146,7 @@ def conv_block(input_tensor, kernel_size, filters, stage, block,
 
 
 def resnet_graph(input_image, architecture, stage5=False):
-    assert architecture in ["resnet50", "resnet101"]
+    assert architecture in ["resnet35", "resnet50", "resnet101"]
     # Stage 1
     x = KL.ZeroPadding2D((3, 3))(input_image)
     x = KL.Conv2D(64, (7, 7), strides=(2, 2), name='conv1', use_bias=True)(x)
@@ -164,7 +164,7 @@ def resnet_graph(input_image, architecture, stage5=False):
     C3 = x = identity_block(x, 3, [128, 128, 512], stage=3, block='d')
     # Stage 4
     x = conv_block(x, 3, [256, 256, 1024], stage=4, block='a')
-    block_count = {"resnet50": 5, "resnet101": 22}[architecture]
+    block_count = {"resnet35": 0, "resnet50": 5, "resnet101": 22}[architecture]
     for i in range(block_count):
         x = identity_block(x, 3, [256, 256, 1024], stage=4, block=chr(98 + i))
     C4 = x
@@ -1788,7 +1788,7 @@ class MaskRCNN():
         # Bottom-up Layers
         # Returns a list of the last layers of each stage, 5 in total.
         # Don't create the thead (stage 5), so we pick the 4th item in the list.
-        _, C2, C3, C4, C5 = resnet_graph(input_image, "resnet101", stage5=True)
+        _, C2, C3, C4, C5 = resnet_graph(input_image, "resnet35", stage5=True)
         # Top-down Layers
         # TODO: add assert to varify feature map sizes match what's in config
         P5 = KL.Conv2D(256, (1, 1), name='fpn_c5p5')(C5)
