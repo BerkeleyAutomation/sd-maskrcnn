@@ -11,6 +11,7 @@ Written by Waleed Abdulla
 
 import numpy as np, cv2, os
 from maskrcnn.config import Config
+from tqdm import tqdm
 import maskrcnn.utils as utils
 
 # Structure of data from Jeff.
@@ -108,21 +109,25 @@ class ClutterDataset(utils.Dataset):
     info = self.image_info[image_id]
     _image_id = info['id']
     Is = []
+    file_name = os.path.join(self.base_path, 'occluded_segmasks_project', 
+      'image_{:06d}.png'.format(_image_id))
+    all_masks = cv2.imread(file_name, cv2.IMREAD_UNCHANGED)
+    
     for i in range(25):
-      file_name = os.path.join(self.base_path, 'occluded_segmasks', 
-        'image_{:06d}_channel_{:03d}.png'.format(_image_id, i))
-      I = cv2.imread(file_name, cv2.IMREAD_UNCHANGED) > 0
+      # file_name = os.path.join(self.base_path, 'occluded_segmasks', 
+      #   'image_{:06d}_channel_{:03d}.png'.format(_image_id, i))
+      # I = cv2.imread(file_name, cv2.IMREAD_UNCHANGED) > 0
+      I = all_masks == i+1
       if np.any(I):
         I = I[:,:,np.newaxis]
         Is.append(I)
-      else:
-        break
     if len(Is) > 0: mask = np.concatenate(Is, 2)
     else: mask = np.zeros([info['height'], info['width'], 0], dtype=np.bool)
     # Making sure masks are always contiguous.
     # block = np.any(np.any(mask,0),0)
     # assert((not np.any(block)) or (not np.any(block[np.where(block)[0][-1]+1:])))
     # print(block)
+    # import pdb; pdb.set_trace()
     class_ids = np.array([1 for _ in range(mask.shape[2])])
     return mask, class_ids.astype(np.int32)
 
@@ -131,9 +136,30 @@ def test_clutter_dataset():
   clutter_dataset.load('train', 'gray')
   clutter_dataset.prepare()
   image_ids = clutter_dataset.image_ids
-  for i in image_ids:
+  for i in tqdm(image_ids):
     clutter_dataset.load_image(i)
     clutter_dataset.load_mask(i)
 
+def concat_segmasks():
+  base_dir = '../clutter_segmentation_11_07_17/'
+  bads = []
+  for i in tqdm(range(10000)):
+    Is = []
+    masks = np.zeros((256, 256), dtype=np.uint8)
+    for j in range(25):
+      file_name = os.path.join(base_dir, 'occluded_segmasks', 
+        'image_{:06d}_channel_{:03d}.png'.format(i, j))
+      I = cv2.imread(file_name, cv2.IMREAD_UNCHANGED) > 0
+      masks[I] = j+1
+      I = I[:,:,np.newaxis]; Is.append(I)
+    Is = np.concatenate(Is, 2)
+    Is = Is*1
+    file_name = os.path.join(base_dir, 'occluded_segmasks_project', 
+      'image_{:06d}.png'.format(i))
+    cv2.imwrite(file_name, masks)
+    bads.append(len(np.where(np.sum(Is,2) > 1)[0]))
+  print(bads)
+
 if __name__ == '__main__':
   test_clutter_dataset()
+  # concat_segmasks()
