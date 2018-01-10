@@ -1,10 +1,16 @@
 import os, numpy as np, random
-import maskrcnn.model as modellib, visualize
+import model as modellib, visualize, utils
 from maskrcnn.model import log
 from clutter import ClutterDataset, ClutterConfig
 from tensorflow.python.platform import app
 from tensorflow.python.platform import flags
 import matplotlib.pyplot as plt
+
+FLAGS = flags.FLAGS
+flags.DEFINE_string('task', '', '')
+# flags.DEFINE_string('logdir_prefix', 'output/', '')
+# flags.DEFINE_string('logdir', 'simple', '')
+# flags.DEFINE_string('config_name', '', '')
 
 def train():
   # Load the datasets, configs.
@@ -123,7 +129,17 @@ def get_ax(rows=1, cols=1, size=8):
 
 def main(_):
   # train()
-  benchmark()
+  if FLAGS.task == 'train':
+    train()
+
+  elif FLAGS.task == 'vis':
+    vis()
+
+  elif FLAGS.task == 'bench':
+    benchmark()
+
+  else:
+    assert(False), 'Unknown option {:s}.'.format(FLAGS.task)
 
 if __name__ == '__main__':
   app.run()
