@@ -1,5 +1,8 @@
-import os, numpy as np, random
+import os, numpy as np 
+from tqdm import tqdm
 import model as modellib, visualize, utils, det_utils as du
+import tensorflow as tf
+from keras.backend.tensorflow_backend import set_session
 from maskrcnn.model import log
 from clutter import ClutterDataset, ClutterConfig
 from tensorflow.python.platform import app
@@ -40,7 +43,7 @@ def train():
   # layers. You can also pass a regular expression to select
   # which layers to train by name pattern.
   model.train(dataset_train, dataset_val, learning_rate=config.LEARNING_RATE,
-    epochs=20, layers='all')
+    epochs=40, layers='all')
   model_path = os.path.join(model_dir, "mask_rcnn_clutter.h5")
   model.keras_model.save_weights(model_path)
 
@@ -70,15 +73,13 @@ def prepare_for_test():
   return inference_config, model, dataset_val
 
 def benchmark():
-  # Compute VOC-Style mAP @ IoU=0.5
-  # Running on 10 images. Increase for better accuracy.
   inference_config, model, dataset_val = prepare_for_test()
   # rng = np.random.RandomState(0)
   # image_ids = rng.choice(dataset_val.image_ids, 100)
   image_ids = dataset_val.image_ids
   
   tps, fps, scs, num_insts, dup_dets, inst_ids, ovs = [], [], [], [], [], [], []
-  for image_id in image_ids:
+  for image_id in tqdm(image_ids):
     # Load image and ground truth data
     image, image_meta, gt_class_id, gt_bbox, gt_mask =\
       modellib.load_image_gt(dataset_val, inference_config, image_id,
@@ -102,8 +103,18 @@ def benchmark():
     dup_dets.append(dup_det); inst_ids.append(inst_id); ovs.append(ov);
     
   # Compute AP
-  ap, rec, prec, npos, _ = du.inst_bench(None, None, None, tp=tps, fp=fps, score=scs, numInst=num_insts)
-  print("mAP: ", ap[0], "prec: ", np.max(prec), "rec: ", np.max(rec), "prec-1: ", prec[-1], "npos: ", npos)
+  ap, rec, prec, npos, _ = \
+    du.inst_bench(None, None, None, tp=tps, fp=fps, score=scs, numInst=num_insts)
+  print("mAP: ", ap[0], "prec: ", np.max(prec), "rec: ", np.max(rec), "prec-1: ", 
+    prec[-1], "npos: ", npos)
+  plt.style.use('bmh')
+  fig, _, axes = subplot(plt, (1,1), (8,8))
+  ax = axes.pop(); ax.plot(rec, prec, 'r'); ax.set_xlim([0,1]); ax.set_ylim([0,1]);
+  ax.set_xlabel('Recall'); ax.set_ylabel('Precision')
+  ax.set_title('{:5.3f}'.format(ap[0]*100))
+  file_name = os.path.join(model.model_dir, 'pr.png')
+  plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
+  plt.close()
 
 def subplot(plt, Y_X, sz_y_sz_x=(10,10), space_y_x=(0.1,0.1), T=False):
   Y,X = Y_X
@@ -123,7 +134,7 @@ def vis():
   
   # Test on a random image
   rng = np.random.RandomState(0)
-  for i in range(10):
+  for i in tqdm(range(100)):
     image_id = rng.choice(dataset_val.image_ids)
     original_image, image_meta, gt_class_id, gt_bbox, gt_mask =\
         modellib.load_image_gt(dataset_val, inference_config, image_id, use_mini_mask=False)
@@ -134,7 +145,7 @@ def vis():
     log("gt_bbox", gt_bbox)
     log("gt_mask", gt_mask)
 
-    class_names = dataset_val.class_names
+    # class_names = dataset_val.class_names
     class_names = {1: ''}
 
     fig, _, axes = subplot(plt, (2,6), sz_y_sz_x=(5,5))
@@ -174,18 +185,22 @@ def get_ax(rows=1, cols=1, size=8):
   return ax
 
 def main(_):
-  # train()
-  if FLAGS.task == 'train':
-    train()
+  config = tf.ConfigProto()
+  config.gpu_options.allow_growth = True
+  with tf.Session(config=config) as sess:
+    set_session(sess)
+  
+    if FLAGS.task == 'train':
+      train()
 
-  elif FLAGS.task == 'vis':
-    vis()
+    elif FLAGS.task == 'vis':
+      vis()
 
-  elif FLAGS.task == 'bench':
-    benchmark()
+    elif FLAGS.task == 'bench':
+      benchmark()
 
-  else:
-    assert(False), 'Unknown option {:s}.'.format(FLAGS.task)
+    else:
+      assert(False), 'Unknown option {:s}.'.format(FLAGS.task)
 
 if __name__ == '__main__':
   app.run()
