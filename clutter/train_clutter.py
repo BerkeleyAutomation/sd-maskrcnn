@@ -1,5 +1,5 @@
 import os, numpy as np, random
-import model as modellib, visualize, utils
+import model as modellib, visualize, utils, det_utils as du
 from maskrcnn.model import log
 from clutter import ClutterDataset, ClutterConfig
 from tensorflow.python.platform import app
@@ -73,9 +73,11 @@ def benchmark():
   # Compute VOC-Style mAP @ IoU=0.5
   # Running on 10 images. Increase for better accuracy.
   inference_config, model, dataset_val = prepare_for_test()
-
-  image_ids = np.random.choice(dataset_val.image_ids, 100)
-  APs = []
+  # rng = np.random.RandomState(0)
+  # image_ids = rng.choice(dataset_val.image_ids, 100)
+  image_ids = dataset_val.image_ids
+  
+  tps, fps, scs, num_insts, dup_dets, inst_ids, ovs = [], [], [], [], [], [], []
   for image_id in image_ids:
     # Load image and ground truth data
     image, image_meta, gt_class_id, gt_bbox, gt_mask =\
@@ -86,11 +88,22 @@ def benchmark():
     # Run object detection
     results = model.detect([image], verbose=0)
     r = results[0]
-    # Compute AP
-    AP, precisions, recalls, overlaps = utils.compute_ap(gt_bbox, gt_class_id,
-      r["rois"], r["class_ids"], r["scores"])
-    APs.append(AP)
-  print("mAP: ", np.mean(APs))
+
+    # Make sure scores are sorted.
+    sc = r['scores']
+    is_sorted = np.all(np.diff(sc) <= 0)
+    assert(is_sorted)
+    overlaps = utils.compute_overlaps(r['rois'], gt_bbox)
+    dt = {'sc': sc[:,np.newaxis]*1.}
+    gt = {'diff': np.zeros((gt_bbox.shape[0],1), dtype=np.bool)}
+    tp, fp, sc, num_inst, dup_det, inst_id, ov = \
+      du.inst_bench_image(dt, gt, {'minoverlap': 0.5}, overlaps)
+    tps.append(tp); fps.append(fp); scs.append(sc); num_insts.append(num_inst);
+    dup_dets.append(dup_det); inst_ids.append(inst_id); ovs.append(ov);
+    
+  # Compute AP
+  ap, rec, prec, npos, _ = du.inst_bench(None, None, None, tp=tps, fp=fps, score=scs, numInst=num_insts)
+  print("mAP: ", ap[0], "prec: ", np.max(prec), "rec: ", np.max(rec), "prec-1: ", prec[-1], "npos: ", npos)
 
 def vis():
   # Test on a random image

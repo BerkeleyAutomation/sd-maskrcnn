@@ -57,7 +57,7 @@ def inst_bench_image(dt, gt, bOpts, overlap=None):
 
   # Walk through the detections in decreasing score
   # and assign tp, fp, fn, tn labels
-  for i in xrange(nDt):
+  for i in range(nDt):
     # assign detection to ground truth object if any
     if nGt > 0:
       maxOverlap = overlap[i,:].max(); maxInd = overlap[i,:].argmax();
