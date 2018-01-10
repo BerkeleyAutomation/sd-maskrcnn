@@ -122,42 +122,45 @@ def vis():
   inference_config, model, dataset_val = prepare_for_test()
   
   # Test on a random image
-  image_id = random.choice(dataset_val.image_ids)
-  original_image, image_meta, gt_class_id, gt_bbox, gt_mask =\
-      modellib.load_image_gt(dataset_val, inference_config, image_id, use_mini_mask=False)
-  
-  log("original_image", original_image)
-  log("image_meta", image_meta)
-  log("gt_class_id", gt_bbox)
-  log("gt_bbox", gt_bbox)
-  log("gt_mask", gt_mask)
+  rng = np.random.RandomState(0)
+  for i in range(10):
+    image_id = rng.choice(dataset_val.image_ids)
+    original_image, image_meta, gt_class_id, gt_bbox, gt_mask =\
+        modellib.load_image_gt(dataset_val, inference_config, image_id, use_mini_mask=False)
+    
+    log("original_image", original_image)
+    log("image_meta", image_meta)
+    log("gt_class_id", gt_bbox)
+    log("gt_bbox", gt_bbox)
+    log("gt_mask", gt_mask)
 
-  class_names = dataset_val.class_names
-  class_names = {1: ''}
+    class_names = dataset_val.class_names
+    class_names = {1: ''}
 
-  fig, _, axes = subplot(plt, (2,6), sz_y_sz_x=(5,5))
-  ax = axes.pop(); ax.imshow(original_image); ax.set_axis_off();
-  for i in range(5):
-    ax = axes.pop()
-    if i < gt_bbox.shape[0]:
-      visualize.display_instances(original_image, gt_bbox[i:i+1,:], gt_mask[:,:,i:i+1], 
-        gt_class_id[i:i+1], class_names, ax=ax, title='')
+    fig, _, axes = subplot(plt, (2,6), sz_y_sz_x=(5,5))
+    ax = axes.pop(); ax.imshow(original_image); ax.set_axis_off();
+    for i in range(5):
+      ax = axes.pop()
+      if i < gt_bbox.shape[0]:
+        visualize.display_instances(original_image, gt_bbox[i:i+1,:], gt_mask[:,:,i:i+1], 
+          gt_class_id[i:i+1], class_names, ax=ax, title='')
 
-  results = model.detect([original_image], verbose=1)
-  r = results[0]
+    results = model.detect([original_image], verbose=1)
+    r = results[0]
 
-  ax = axes.pop(); ax.imshow(original_image); ax.set_axis_off()
-  for i in range(5):
-    ax = axes.pop()
-    if i < gt_bbox.shape[0]:
-      visualize.display_instances(original_image, r['rois'][i:i+1,:], r['masks'][:,:,i:i+1], 
-        r['class_ids'][i:i+1], class_names, title='{:0.3f}'.format(r['scores'][i]), ax=ax)
-  
-  # visualize.display_instances(original_image, r['rois'], r['masks'], r['class_ids'], 
-  #   dataset_val.class_names, r['scores'], ax=get_ax())
-  file_name = os.path.join(model.model_dir, 'vis.png')
-  plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
-  plt.close()
+    ax = axes.pop(); ax.imshow(original_image); ax.set_axis_off()
+    for i in range(5):
+      ax = axes.pop()
+      if i < r['rois'].shape[0]:
+        visualize.display_instances(original_image, r['rois'][i:i+1,:], r['masks'][:,:,i:i+1], 
+          r['class_ids'][i:i+1], class_names, title='{:0.3f}'.format(r['scores'][i]), ax=ax)
+    
+    # visualize.display_instances(original_image, r['rois'], r['masks'], r['class_ids'], 
+    #   dataset_val.class_names, r['scores'], ax=get_ax())
+    file_name = os.path.join(model.model_dir, 'vis',
+      'vis_{:06d}.png'.format(dataset_val.image_id[image_id]))
+    plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
+    plt.close()
 
 def get_ax(rows=1, cols=1, size=8):
   """Return a Matplotlib Axes array to be used in
