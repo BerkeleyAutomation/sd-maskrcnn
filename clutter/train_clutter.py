@@ -9,14 +9,14 @@ import matplotlib.pyplot as plt
 FLAGS = flags.FLAGS
 flags.DEFINE_string('task', '', '')
 # flags.DEFINE_string('logdir_prefix', 'output/', '')
-# flags.DEFINE_string('logdir', 'simple', '')
+flags.DEFINE_string('logdir', 'outputs/v1', '')
 # flags.DEFINE_string('config_name', '', '')
 
 def train():
   # Load the datasets, configs.
   config = ClutterConfig()
   config.display()
-  model_dir = os.path.join('outputs/v1/') 
+  model_dir = os.path.join(FLAGS.logdir)
 
   # Training dataset
   dataset_train = ClutterDataset()
@@ -39,10 +39,10 @@ def train():
   # Passing layers="heads" freezes all layers except the head
   # layers. You can also pass a regular expression to select
   # which layers to train by name pattern.
-  model.train(dataset_train, dataset_val, 
-              learning_rate=config.LEARNING_RATE, 
-              epochs=10, 
-              layers='all')
+  model.train(dataset_train, dataset_val, learning_rate=config.LEARNING_RATE,
+    epochs=50, layers='all')
+  model_path = os.path.join(model_dir, "mask_rcnn_clutter.h5")
+  model.keras_model.save_weights(model_path)
 
 def prepare_for_test():
   class InferenceConfig(ClutterConfig):
@@ -50,13 +50,13 @@ def prepare_for_test():
     IMAGES_PER_GPU = 1
 
   inference_config = InferenceConfig()
-  model_dir = 'outputs/v1/clutter20180109T1810/'
+  model_dir = FLAGS.logdir
 
   # Recreate the model in inference mode
   model = modellib.MaskRCNN(mode="inference", config=inference_config,
     model_dir=model_dir)
   
-  model_path = 'outputs/v1/clutter20180109T1810/mask_rcnn_clutter_0008.h5'
+  model_path = os.path.join(FLAGS.logdir, 'mask_rcnn_clutter.h5')
 
   # Load trained weights (fill in path to trained weights here)
   assert model_path != "", "Provide path to trained weights"
