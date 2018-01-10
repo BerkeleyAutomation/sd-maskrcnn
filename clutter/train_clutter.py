@@ -132,21 +132,26 @@ def vis():
   log("gt_bbox", gt_bbox)
   log("gt_mask", gt_mask)
 
+  class_names = dataset_val.class_names
+  class_names = {1: ''}
+
   fig, _, axes = subplot(plt, (2,6), sz_y_sz_x=(5,5))
-  for i in range(6):
+  ax = axes.pop(); ax.imshow(original_image); ax.set_axis_off();
+  for i in range(5):
     ax = axes.pop()
     if i < gt_bbox.shape[0]:
       visualize.display_instances(original_image, gt_bbox[i:i+1,:], gt_mask[:,:,i:i+1], 
-        gt_class_id[i:i+1], dataset_val.class_names, ax=ax)
+        gt_class_id[i:i+1], class_names, ax=ax, title='')
 
   results = model.detect([original_image], verbose=1)
   r = results[0]
-  
-  for i in range(6):
+
+  ax = axes.pop(); ax.imshow(original_image); ax.set_axis_off()
+  for i in range(5):
     ax = axes.pop()
     if i < gt_bbox.shape[0]:
       visualize.display_instances(original_image, r['rois'][i:i+1,:], r['masks'][:,:,i:i+1], 
-        r['class_ids'][i:i+1], dataset_val.class_names, r['scores'][i:i+1], ax=ax)
+        r['class_ids'][i:i+1], class_names, title='{:0.3f}'.format(r['scores'][i]), ax=ax)
   
   # visualize.display_instances(original_image, r['rois'], r['masks'], r['class_ids'], 
   #   dataset_val.class_names, r['scores'], ax=get_ax())
