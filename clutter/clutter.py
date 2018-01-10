@@ -53,7 +53,7 @@ class ClutterConfig(Config):
   STEPS_PER_EPOCH = 5000
 
   # use small validation steps since the epoch is small
-  VALIDATION_STEPS = 5
+  VALIDATION_STEPS = 50
   
   DETECTION_MIN_CONFIDENCE = 0.4
   
