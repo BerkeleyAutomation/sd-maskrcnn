@@ -51,7 +51,7 @@ class ClutterConfig(Config):
   TRAIN_ROIS_PER_IMAGE = 32
 
   # Use a small epoch since the data is simple
-  STEPS_PER_EPOCH = 5000
+  STEPS_PER_EPOCH = 10000/IMAGES_PER_GPU
 
   # use small validation steps since the epoch is small
   VALIDATION_STEPS = 50
