@@ -76,11 +76,23 @@ class ClutterDataset(utils.Dataset):
       'fold_{:02d}'.format(fold), '{:s}_indices.npy'.format(imset))
     self.image_id = np.load(split_file)
     self.add_class('clutter', 1, 'fg')
-
+    flips = [0, 1, 2, 3] if imset == 'train' else [0]
     for i in self.image_id:
       p = os.path.join(self.base_path, '{:s}_ims'.format(typ), 
         'image_{:06d}.png'.format(i))
-      self.add_image('clutter', image_id=i, path=p, width=256, height=256)
+      for flip in flips:
+        self.add_image('clutter', image_id=i, path=p, width=256, height=256, flip=flip)
+
+  def flip(self, image, flip):
+    if flip == 0:
+      image = image
+    elif flip == 1:
+      image = image[::-1,:,:]
+    elif flip == 2:
+      image = image[:,::-1,:]
+    elif flip == 3:
+      image = image[::-1,::-1,:]
+    return image
 
   def load_image(self, image_id):
     """Generate an image from the specs of the given image ID.
@@ -93,13 +105,14 @@ class ClutterDataset(utils.Dataset):
     assert(image is not None)
     assert(image.ndim == 2)
     image = np.tile(image[:,:,np.newaxis], [1,1,3])
+    image = self.flip(image, info['flip'])
     return image
 
   def image_reference(self, image_id):
     """Return the shapes data of the image."""
     info = self.image_info[image_id]
     if info["source"] == "clutter":
-      return info["path"]
+      return info["path"] + "-{:d}".format(info["flip"])
     else:
       super(self.__class__).image_reference(self, image_id)
 
@@ -128,6 +141,7 @@ class ClutterDataset(utils.Dataset):
     # assert((not np.any(block)) or (not np.any(block[np.where(block)[0][-1]+1:])))
     # print(block)
     # import pdb; pdb.set_trace()
+    mask = self.flip(mask, info['flip'])
     class_ids = np.array([1 for _ in range(mask.shape[2])])
     return mask, class_ids.astype(np.int32)
 

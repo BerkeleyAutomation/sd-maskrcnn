@@ -15,6 +15,14 @@ flags.DEFINE_string('task', '', '')
 flags.DEFINE_string('logdir', 'outputs/v1', '')
 # flags.DEFINE_string('config_name', '', '')
 
+def mkdir_if_missing(output_dir):
+  if not os.path.exists(output_dir):
+    try:
+      os.makedirs(output_dir)
+    except:
+      logging.error("Something went wrong in mkdir_if_missing. "
+        "Probably some other process created the directory already.")
+
 def train():
   # Load the datasets, configs.
   config = ClutterConfig()
@@ -134,6 +142,8 @@ def vis():
   
   # Test on a random image
   rng = np.random.RandomState(0)
+  mkdir_if_missing(os.path.join(model.model_dir, 'vis'))
+
   for i in tqdm(range(100)):
     image_id = rng.choice(dataset_val.image_ids)
     original_image, image_meta, gt_class_id, gt_bbox, gt_mask =\
@@ -153,8 +163,8 @@ def vis():
     for i in range(5):
       ax = axes.pop()
       if i < gt_bbox.shape[0]:
-        visualize.display_instances(original_image, gt_bbox[i:i+1,:], gt_mask[:,:,i:i+1], 
-          gt_class_id[i:i+1], class_names, ax=ax, title='')
+        visualize.display_instances(original_image, gt_bbox[i:i+1,:], 
+          gt_mask[:,:,i:i+1], gt_class_id[i:i+1], class_names, ax=ax, title='')
 
     results = model.detect([original_image], verbose=1)
     r = results[0]
@@ -163,8 +173,9 @@ def vis():
     for i in range(5):
       ax = axes.pop()
       if i < r['rois'].shape[0]:
-        visualize.display_instances(original_image, r['rois'][i:i+1,:], r['masks'][:,:,i:i+1], 
-          r['class_ids'][i:i+1], class_names, title='{:0.3f}'.format(r['scores'][i]), ax=ax)
+        visualize.display_instances(original_image, r['rois'][i:i+1,:], 
+          r['masks'][:,:,i:i+1], r['class_ids'][i:i+1], class_names, 
+          title='{:0.3f}'.format(r['scores'][i]), ax=ax)
     
     # visualize.display_instances(original_image, r['rois'], r['masks'], r['class_ids'], 
     #   dataset_val.class_names, r['scores'], ax=get_ax())
