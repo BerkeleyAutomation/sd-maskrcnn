@@ -1,4 +1,4 @@
-import os, numpy as np 
+import os, numpy as np, logging
 from tqdm import tqdm
 import model as modellib, visualize, utils, det_utils as du
 import tensorflow as tf
@@ -16,7 +16,10 @@ flags.DEFINE_string('im_type', 'gray', '')
 flags.DEFINE_string('logdir', 'outputs/v1', '')
 # flags.DEFINE_string('config_name', '', '')
 
-# CUDA_VISIBLE_DEVICES='2' PYTHONPATH='.:maskrcnn/' python clutter/train_clutter.py --logdir outputs/v3_512_40_flip_depth --im_type depth --task train
+# CUDA_VISIBLE_DEVICES='2' PYTHONPATH='.:maskrcnn/' python clutter/train_clutter.py \
+#   --logdir outputs/v3_512_40_flip_depth --im_type depth --task train
+# CUDA_VISIBLE_DEVICES='3' PYTHONPATH='.:maskrcnn/' python clutter/train_clutter.py \
+#   --logdir outputs/v3_512_40_flip --im_type gray --task benchmark
 
 def mkdir_if_missing(output_dir):
   if not os.path.exists(output_dir):
@@ -84,13 +87,38 @@ def prepare_for_test():
   dataset_val.prepare()
   return inference_config, model, dataset_val
 
+def compute_gt_stats(gt_bbox, gt_mask):
+  # Compute statistics for all the ground truth things.
+  hw = gt_bbox[:,2:] - gt_bbox[:,:2]
+  hw = hw*1.
+  min_side = np.min(hw,1)[:,np.newaxis]
+  max_side = np.max(hw,1)[:,np.newaxis]
+  aspect_ratio = np.max(hw, 1) / np.min(hw, 1)
+  aspect_ratio = aspect_ratio[:,np.newaxis]
+  log_aspect_ratio = np.log(aspect_ratio)
+  box_area = np.prod(hw, 1)[:,np.newaxis]
+  log_box_area = np.log(box_area)
+  sqrt_box_area = np.sqrt(box_area)
+  modal_area = np.sum(np.sum(gt_mask, 0), 0)[:,np.newaxis]*1.
+  log_modal_area = np.log(modal_area)
+  sqrt_modal_area = np.sqrt(modal_area)
+
+  a = np.concatenate([min_side, max_side, aspect_ratio, log_aspect_ratio,
+    box_area, log_box_area, sqrt_box_area, modal_area, log_modal_area,
+    sqrt_modal_area], 1)
+  n = ['min_side', 'max_side', 'aspect_ratio', 'log_aspect_ratio', 'box_area',
+    'log_box_area', 'sqrt_box_area', 'modal_area', 'log_modal_area',
+    'sqrt_modal_area']
+  return a, n
+
 def benchmark():
   inference_config, model, dataset_val = prepare_for_test()
   # rng = np.random.RandomState(0)
   # image_ids = rng.choice(dataset_val.image_ids, 100)
   image_ids = dataset_val.image_ids
   
-  tps, fps, scs, num_insts, dup_dets, inst_ids, ovs = [], [], [], [], [], [], []
+  tps, fps, scs, num_insts, dup_dets, inst_ids, ovs, tp_inds, fn_inds, gt_stats = \
+    [], [], [], [], [], [], [], [], [], []
   for image_id in tqdm(image_ids):
     # Load image and ground truth data
     image, image_meta, gt_class_id, gt_bbox, gt_mask =\
@@ -111,22 +139,53 @@ def benchmark():
     gt = {'diff': np.zeros((gt_bbox.shape[0],1), dtype=np.bool)}
     tp, fp, sc, num_inst, dup_det, inst_id, ov = \
       du.inst_bench_image(dt, gt, {'minoverlap': 0.5}, overlaps)
+    # du.collect_analysis_stats(tp, fp, inst_id, ov)
+    tp_ind = np.sort(inst_id[tp])
+    fn_ind = np.setdiff1d(np.arange(num_inst), tp_ind)
     tps.append(tp); fps.append(fp); scs.append(sc); num_insts.append(num_inst);
     dup_dets.append(dup_det); inst_ids.append(inst_id); ovs.append(ov);
-    
+    tp_inds.append(tp_ind); fn_inds.append(fn_ind);
+    gt_stat, stat_name = compute_gt_stats(gt_bbox, gt_mask) 
+    gt_stats.append(gt_stat)
+  
   # Compute AP
   ap, rec, prec, npos, _ = \
     du.inst_bench(None, None, None, tp=tps, fp=fps, score=scs, numInst=num_insts)
-  print("mAP: ", ap[0], "prec: ", np.max(prec), "rec: ", np.max(rec), "prec-1: ", 
-    prec[-1], "npos: ", npos)
-  plt.style.use('bmh')
-  fig, _, axes = subplot(plt, (1,1), (8,8))
+  str_ = 'mAP: {:.3f}, prec: {:.3f}, rec: {:.3f}, npos: {:d}'.format(
+    ap[0], np.min(prec), np.max(rec), npos)
+  logging.error('%s', str_)
+  # print("mAP: ", ap[0], "prec: ", np.max(prec), "rec: ", np.max(rec), "prec-1: ", 
+  #   prec[-1], "npos: ", npos)
+  plt.style.use('fivethirtyeight') #bmh')
+  fig, _, axes = subplot(plt, (3,4), (8,8), space_y_x=(0.2,0.2))
   ax = axes.pop(); ax.plot(rec, prec, 'r'); ax.set_xlim([0,1]); ax.set_ylim([0,1]);
   ax.set_xlabel('Recall'); ax.set_ylabel('Precision')
-  ax.set_title('{:5.3f}'.format(ap[0]*100))
-  file_name = os.path.join(model.model_dir, 'pr.png')
+  ax.set_title(str_) #'{:5.3f}'.format(ap[0]*100))
+  plot_stats(stat_name, gt_stats, tp_inds, fn_inds, axes)
+  file_name = os.path.join(model.model_dir, 'pr_stats.png')
+  logging.error('plot file name: %s', file_name)
   plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
   plt.close()
+
+def plot_stats(stat_name, gt_stats, tp_inds, fn_inds, axes):
+  # Accumulate all stats for positives, and negatives.
+  tp_stats = [gt_stat[tp_ind, :] for gt_stat, tp_ind in zip(gt_stats, tp_inds)]
+  tp_stats = np.concatenate(tp_stats, 0)
+  fn_stats = [gt_stat[fn_ind, :] for gt_stat, fn_ind in zip(gt_stats, fn_inds)]
+  fn_stats = np.concatenate(fn_stats, 0)
+  all_stats = np.concatenate(gt_stats, 0)
+  
+  for i in range(all_stats.shape[1]): 
+    ax = axes.pop()
+    ax.set_title(stat_name[i])
+    _, bins = np.histogram(all_stats[:,i], 'auto')
+    for i, (m, n) in \
+        enumerate(zip([tp_stats[:,i], fn_stats[:,i]], ['tp', 'fp'])):
+        # enumerate(zip([all_stats[:,i], tp_stats[:,i], fn_stats[:,i]], ['all', 'tp', 'fp'])):
+      # ax.hist(m, bins+i*0.2*(bins[1]-bins[0]), alpha=0.8, label=n, linewidth=1,
+      #   linestyle='-', ec=None, rwidth=0.6, histtype='bar')
+      ax.hist(m, bins, alpha=0.5, label=n, linewidth=1, linestyle='-', ec='k')
+    ax.legend()
 
 def subplot(plt, Y_X, sz_y_sz_x=(10,10), space_y_x=(0.1,0.1), T=False):
   Y,X = Y_X
@@ -200,6 +259,7 @@ def get_ax(rows=1, cols=1, size=8):
   return ax
 
 def main(_):
+  assert(FLAGS.task in ['train', 'vis', 'bench'])
   config = tf.ConfigProto()
   config.gpu_options.allow_growth = True
   with tf.Session(config=config) as sess:
