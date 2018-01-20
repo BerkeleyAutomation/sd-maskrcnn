@@ -11,9 +11,12 @@ import matplotlib.pyplot as plt
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('task', '', '')
+flags.DEFINE_string('im_type', 'gray', '')
 # flags.DEFINE_string('logdir_prefix', 'output/', '')
 flags.DEFINE_string('logdir', 'outputs/v1', '')
 # flags.DEFINE_string('config_name', '', '')
+
+# CUDA_VISIBLE_DEVICES='2' PYTHONPATH='.:maskrcnn/' python clutter/train_clutter.py --logdir outputs/v3_512_40_flip_depth --im_type depth --task train
 
 def mkdir_if_missing(output_dir):
   if not os.path.exists(output_dir):
@@ -25,18 +28,19 @@ def mkdir_if_missing(output_dir):
 
 def train():
   # Load the datasets, configs.
-  config = ClutterConfig()
+  m = 166. if FLAGS.im_type=='depth' else 128
+  config = ClutterConfig(mean=m)
   config.display()
   model_dir = os.path.join(FLAGS.logdir)
 
   # Training dataset
   dataset_train = ClutterDataset()
-  dataset_train.load('train', 'gray', 0)
+  dataset_train.load('train', FLAGS.im_type, 0)
   dataset_train.prepare()
 
   # Validation dataset
   dataset_val = ClutterDataset()
-  dataset_val.load('test', 'gray', 0)
+  dataset_val.load('test', FLAGS.im_type, 0)
   dataset_val.prepare()
 
   # Create the model.
@@ -59,8 +63,8 @@ def prepare_for_test():
   class InferenceConfig(ClutterConfig):
     GPU_COUNT = 1
     IMAGES_PER_GPU = 1
-
-  inference_config = InferenceConfig()
+  m = 166. if FLAGS.im_type=='depth' else 128
+  inference_config = InferenceConfig(mean=m)
   model_dir = FLAGS.logdir
 
   # Recreate the model in inference mode

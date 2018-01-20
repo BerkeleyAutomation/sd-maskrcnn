@@ -58,11 +58,11 @@ class ClutterConfig(Config):
   
   DETECTION_MIN_CONFIDENCE = 0.4
   
-  def __init__(self):
+  def __init__(self, mean):
     # Overriding things here.
     super().__init__()
     self.IMAGE_SHAPE[2] = 3
-    self.MEAN_PIXEL = np.array([128., 128., 128.])
+    self.MEAN_PIXEL = np.array([mean, mean, mean])
 
 class ClutterDataset(utils.Dataset):
   """Generates the shapes synthetic dataset. The dataset consists of simple
@@ -139,7 +139,6 @@ class ClutterDataset(utils.Dataset):
     # block = np.any(np.any(mask,0),0)
     # assert((not np.any(block)) or (not np.any(block[np.where(block)[0][-1]+1:])))
     # print(block)
-    # import pdb; pdb.set_trace()
     mask = self.flip(mask, info['flip'])
     class_ids = np.array([1 for _ in range(mask.shape[2])])
     return mask, class_ids.astype(np.int32)
@@ -147,12 +146,15 @@ class ClutterDataset(utils.Dataset):
 def test_clutter_dataset():
   clutter_dataset = ClutterDataset()
   # clutter_dataset.load('train', 'gray')
-  clutter_dataset.load('train', 'depth')
+  clutter_dataset.load('test', 'depth')
   clutter_dataset.prepare()
   image_ids = clutter_dataset.image_ids
+  Is = []
   for i in tqdm(image_ids):
-    clutter_dataset.load_image(i)
+    I = clutter_dataset.load_image(i)
     clutter_dataset.load_mask(i)
+    Is.append(I)
+  print(np.mean(np.array(Is)))
 
 def concat_segmasks():
   base_dir = '../clutter_segmentation_11_07_17/'
