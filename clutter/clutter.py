@@ -103,8 +103,7 @@ class ClutterDataset(utils.Dataset):
     info = self.image_info[image_id]
     image = cv2.imread(info['path'], cv2.IMREAD_UNCHANGED)
     assert(image is not None)
-    assert(image.ndim == 2)
-    image = np.tile(image[:,:,np.newaxis], [1,1,3])
+    if image.ndim == 2: image = np.tile(image[:,:,np.newaxis], [1,1,3])
     image = self.flip(image, info['flip'])
     return image
 
@@ -147,7 +146,8 @@ class ClutterDataset(utils.Dataset):
 
 def test_clutter_dataset():
   clutter_dataset = ClutterDataset()
-  clutter_dataset.load('train', 'gray')
+  # clutter_dataset.load('train', 'gray')
+  clutter_dataset.load('train', 'depth')
   clutter_dataset.prepare()
   image_ids = clutter_dataset.image_ids
   for i in tqdm(image_ids):
