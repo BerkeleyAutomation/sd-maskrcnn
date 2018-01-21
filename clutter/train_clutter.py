@@ -115,7 +115,7 @@ def benchmark():
   inference_config, model, dataset_val = prepare_for_test()
   # rng = np.random.RandomState(0)
   # image_ids = rng.choice(dataset_val.image_ids, 100)
-  image_ids = dataset_val.image_ids[:10]
+  image_ids = dataset_val.image_ids
   
   tps, fps, scs, num_insts, dup_dets, inst_ids, ovs, tp_inds, fn_inds, gt_stats = \
     [], [], [], [], [], [], [], [], [], []
