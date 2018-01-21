@@ -1,4 +1,4 @@
-import os, numpy as np, logging
+import os, numpy as np, logging, skimage
 from tqdm import tqdm
 import model as modellib, visualize, utils, det_utils as du
 import tensorflow as tf
@@ -104,12 +104,21 @@ def compute_gt_stats(gt_bbox, gt_mask):
   log_modal_area = np.log(modal_area)
   sqrt_modal_area = np.sqrt(modal_area)
 
+  # Number of distinct components
+  ov_connected = sqrt_box_area*1.
+  for i in range(gt_mask.shape[2]):
+    aa = skimage.measure.label(gt_mask[:,:,i], background=0)
+    sz = np.bincount(aa.ravel())[1:]
+    biggest = np.argmax(sz)+1
+    big_comp = utils.extract_bboxes(aa[:,:,np.newaxis]==biggest)
+    ov_connected[i,0] = utils.compute_overlaps(big_comp, gt_bbox[i:i+1,:])
+
   a = np.concatenate([min_side, max_side, aspect_ratio, log_aspect_ratio,
     box_area, log_box_area, sqrt_box_area, modal_area, log_modal_area,
-    sqrt_modal_area], 1)
+    sqrt_modal_area, ov_connected], 1)
   n = ['min_side', 'max_side', 'aspect_ratio', 'log_aspect_ratio', 'box_area',
     'log_box_area', 'sqrt_box_area', 'modal_area', 'log_modal_area',
-    'sqrt_modal_area']
+    'sqrt_modal_area', 'ov_connected']
   return a, n
 
 def benchmark():
