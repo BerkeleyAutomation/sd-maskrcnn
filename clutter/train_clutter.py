@@ -117,10 +117,17 @@ def benchmark():
   # image_ids = rng.choice(dataset_val.image_ids, 100)
   image_ids = dataset_val.image_ids[:10]
   
-  # for ov in [0.5, 0.25, 0.75]:
-  tps, fps, scs, num_insts, dup_dets, inst_ids, ovs, tp_inds, fn_inds, gt_stats = \
-    [], [], [], [], [], [], [], [], [], []
-    # tps_all.append(tps)
+  # tps_all,  fps_all,  scs_all,  num_insts_all,  dup_dets_all,  inst_ids_all, \
+  # ovs_all,  tp_inds_all,  fn_inds_all,  gt_stats_all = [], [], [], [], [], [], \
+  # [], [], [], []
+  ms = [[] for _ in range(10)]
+  thresh_all = [0.25, 0.5, 0.75]
+  for ov in thresh_all:
+    for m in ms:
+      m.append([])
+  ms.append(thresh_all)
+  ms = list(zip(*ms))
+  
   for image_id in tqdm(image_ids):
     # Load image and ground truth data
     image, image_meta, gt_class_id, gt_bbox, gt_mask =\
@@ -128,6 +135,8 @@ def benchmark():
         use_mini_mask=False)
     molded_images = modellib.mold_image(image, inference_config)
     molded_images = np.expand_dims(molded_images, 0)
+    gt_stat, stat_name = compute_gt_stats(gt_bbox, gt_mask) 
+    
     # Run object detection
     results = model.detect([image], verbose=0)
     r = results[0]
@@ -139,35 +148,37 @@ def benchmark():
     overlaps = utils.compute_overlaps(r['rois'], gt_bbox)
     dt = {'sc': sc[:,np.newaxis]*1.}
     gt = {'diff': np.zeros((gt_bbox.shape[0],1), dtype=np.bool)}
-    tp, fp, sc, num_inst, dup_det, inst_id, ov = \
-      du.inst_bench_image(dt, gt, {'minoverlap': 0.5}, overlaps)
-    # du.collect_analysis_stats(tp, fp, inst_id, ov)
-    tp_ind = np.sort(inst_id[tp])
-    fn_ind = np.setdiff1d(np.arange(num_inst), tp_ind)
-    tps.append(tp); fps.append(fp); scs.append(sc); num_insts.append(num_inst);
-    dup_dets.append(dup_det); inst_ids.append(inst_id); ovs.append(ov);
-    tp_inds.append(tp_ind); fn_inds.append(fn_ind);
-    gt_stat, stat_name = compute_gt_stats(gt_bbox, gt_mask) 
-    gt_stats.append(gt_stat)
+
+    for tps, fps, scs, num_insts, dup_dets, inst_ids, ovs, tp_inds, fn_inds, \
+      gt_stats, thresh in ms:
+      tp, fp, sc, num_inst, dup_det, inst_id, ov = \
+        du.inst_bench_image(dt, gt, {'minoverlap': thresh}, overlaps)
+      tp_ind = np.sort(inst_id[tp]); fn_ind = np.setdiff1d(np.arange(num_inst), tp_ind);
+      tps.append(tp); fps.append(fp); scs.append(sc); num_insts.append(num_inst);
+      dup_dets.append(dup_det); inst_ids.append(inst_id); ovs.append(ov);
+      tp_inds.append(tp_ind); fn_inds.append(fn_ind);
+      gt_stats.append(gt_stat)
   
   # Compute AP
-  ap, rec, prec, npos, _ = \
-    du.inst_bench(None, None, None, tp=tps, fp=fps, score=scs, numInst=num_insts)
-  str_ = 'mAP: {:.3f}, prec: {:.3f}, rec: {:.3f}, npos: {:d}'.format(
-    ap[0], np.min(prec), np.max(rec), npos)
-  logging.error('%s', str_)
-  # print("mAP: ", ap[0], "prec: ", np.max(prec), "rec: ", np.max(rec), "prec-1: ", 
-  #   prec[-1], "npos: ", npos)
-  plt.style.use('fivethirtyeight') #bmh')
-  fig, _, axes = subplot(plt, (3,4), (8,8), space_y_x=(0.2,0.2))
-  ax = axes.pop(); ax.plot(rec, prec, 'r'); ax.set_xlim([0,1]); ax.set_ylim([0,1]);
-  ax.set_xlabel('Recall'); ax.set_ylabel('Precision')
-  ax.set_title(str_) #'{:5.3f}'.format(ap[0]*100))
-  plot_stats(stat_name, gt_stats, tp_inds, fn_inds, axes)
-  file_name = os.path.join(model.model_dir, 'pr_stats.png')
-  logging.error('plot file name: %s', file_name)
-  plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
-  plt.close()
+  for tps, fps, scs, num_insts, dup_dets, inst_ids, ovs, tp_inds, fn_inds, \
+    gt_stats, thresh in ms:
+    ap, rec, prec, npos, _ = \
+      du.inst_bench(None, None, None, tp=tps, fp=fps, score=scs, numInst=num_insts)
+    str_ = 'mAP: {:.3f}, prec: {:.3f}, rec: {:.3f}, npos: {:d}'.format(
+      ap[0], np.min(prec), np.max(rec), npos)
+    logging.error('%s', str_)
+    # print("mAP: ", ap[0], "prec: ", np.max(prec), "rec: ", np.max(rec), "prec-1: ", 
+    #   prec[-1], "npos: ", npos)
+    plt.style.use('fivethirtyeight') #bmh')
+    fig, _, axes = subplot(plt, (3,4), (8,8), space_y_x=(0.2,0.2))
+    ax = axes.pop(); ax.plot(rec, prec, 'r'); ax.set_xlim([0,1]); ax.set_ylim([0,1]);
+    ax.set_xlabel('Recall'); ax.set_ylabel('Precision')
+    ax.set_title(str_) #'{:5.3f}'.format(ap[0]*100))
+    plot_stats(stat_name, gt_stats, tp_inds, fn_inds, axes)
+    file_name = os.path.join(model.model_dir, 'pr_stats_{:d}.png'.format(int(thresh*100)))
+    logging.error('plot file name: %s', file_name)
+    plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
+    plt.close()
 
 def plot_stats(stat_name, gt_stats, tp_inds, fn_inds, axes):
   # Accumulate all stats for positives, and negatives.
