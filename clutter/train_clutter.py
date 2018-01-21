@@ -14,6 +14,7 @@ flags.DEFINE_string('task', '', '')
 flags.DEFINE_string('im_type', 'gray', '')
 # flags.DEFINE_string('logdir_prefix', 'output/', '')
 flags.DEFINE_string('logdir', 'outputs/v1', '')
+flags.DEFINE_bool('vis_fn', False, '')
 # flags.DEFINE_string('config_name', '', '')
 
 # CUDA_VISIBLE_DEVICES='2' PYTHONPATH='.:maskrcnn/' python clutter/train_clutter.py \
@@ -116,6 +117,7 @@ def benchmark():
   # rng = np.random.RandomState(0)
   # image_ids = rng.choice(dataset_val.image_ids, 100)
   image_ids = dataset_val.image_ids
+  mkdir_if_missing(os.path.join(model.model_dir, 'vis_fn'))
   
   ms = [[] for _ in range(10)]
   thresh_all = [0.25, 0.5, 0.75]
@@ -155,6 +157,23 @@ def benchmark():
       dup_dets.append(dup_det); inst_ids.append(inst_id); ovs.append(ov);
       tp_inds.append(tp_ind); fn_inds.append(fn_ind);
       gt_stats.append(gt_stat)
+    
+    # Visualize missed objects.
+    if FLAGS.vis_fn:
+      fn_ind = ms[1][8][-1] # missing objects at threshold 0.5
+      if fn_ind.size > 0: 
+        fig, _, axes = subplot(plt, (fn_ind.size+1, 1), sz_y_sz_x=(5,5))
+        ax = axes.pop(); ax.imshow(image); ax.set_axis_off();
+        class_names = {1: ''}
+        for _ in range(fn_ind.size):
+          j = fn_ind[_]
+          ax = axes.pop()
+          visualize.display_instances(image, gt_bbox[j:j+1,:], 
+              gt_mask[:,:,j:j+1], gt_class_id[j:j+1], class_names, ax=ax, title='')
+        file_name = os.path.join(model.model_dir, 'vis_fn',
+          'vis_{:06d}.png'.format(dataset_val.image_id[image_id]))
+        plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
+        plt.close()
   
   # Compute AP
   for tps, fps, scs, num_insts, dup_dets, inst_ids, ovs, tp_inds, fn_inds, \
