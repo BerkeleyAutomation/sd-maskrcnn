@@ -83,7 +83,7 @@ def prepare_for_test():
 
   # Load dataset.
   dataset_val = ClutterDataset()
-  dataset_val.load('test', 'gray', 0)
+  dataset_val.load('test', FLAGS.im_type, 0)
   dataset_val.prepare()
   return inference_config, model, dataset_val
 
@@ -115,10 +115,12 @@ def benchmark():
   inference_config, model, dataset_val = prepare_for_test()
   # rng = np.random.RandomState(0)
   # image_ids = rng.choice(dataset_val.image_ids, 100)
-  image_ids = dataset_val.image_ids
+  image_ids = dataset_val.image_ids[:10]
   
+  # for ov in [0.5, 0.25, 0.75]:
   tps, fps, scs, num_insts, dup_dets, inst_ids, ovs, tp_inds, fn_inds, gt_stats = \
     [], [], [], [], [], [], [], [], [], []
+    # tps_all.append(tps)
   for image_id in tqdm(image_ids):
     # Load image and ground truth data
     image, image_meta, gt_class_id, gt_bbox, gt_mask =\
@@ -183,22 +185,27 @@ def plot_stats(stat_name, gt_stats, tp_inds, fn_inds, axes):
     all_stats_ = all_stats[:,i]*1.
     all_stats_ = all_stats_[np.logical_and(all_stats_ > min_, all_stats_ < max_)]
     _, bins = np.histogram(all_stats_, 'auto')
+    bin_size = bins[1]-bins[0]
+    s = np.unique(all_stats_); s = s[1:]-s[:-1]
+    if bin_size < np.min(s):
+      bin_size = np.min(s)
+      bins = np.arange(bins[0], bins[-1]+bin_size, bin_size)
     for j, (m, n) in \
-        enumerate(zip([tp_stats[:,i], fn_stats[:,i]], ['tp', 'fp'])):
-        # enumerate(zip([all_stats[:,i], tp_stats[:,i], fn_stats[:,i]], ['all', 'tp', 'fp'])):
-      # ax.hist(m, bins+i*0.2*(bins[1]-bins[0]), alpha=0.8, label=n, linewidth=1,
-      #   linestyle='-', ec=None, rwidth=0.6, histtype='bar')
+        enumerate(zip([tp_stats[:,i], fn_stats[:,i]], ['tp', 'fn'])):
       ax.hist(m, bins, alpha=0.5, label=n, linewidth=1, linestyle='-', ec='k')
     ax2 = ax.twinx()
     t, _ = np.histogram(all_stats[:,i], bins)
     mis, _ = np.histogram(fn_stats[:,i], bins)
     mis_rate, = ax2.plot((bins[:-1] + bins[1:])*0.5, mis / np.maximum(t, 0.00001), 
       'm', label='mis rate')
+    fract_data, = ax2.plot((bins[:-1] + bins[1:])*0.5, t / np.sum(t),
+      'm--', label='data fraction')
     ax2.set_ylim([0,1])
     ax2.tick_params(axis='y', colors=mis_rate.get_color())
     ax2.yaxis.label.set_color(mis_rate.get_color())
     ax2.grid('off')
-    ax.legend()
+    ax.legend(loc=2)
+    ax2.legend()
 
 def subplot(plt, Y_X, sz_y_sz_x=(10,10), space_y_x=(0.1,0.1), T=False):
   Y,X = Y_X
