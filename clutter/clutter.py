@@ -71,7 +71,7 @@ class ClutterDataset(utils.Dataset):
   """
   def load(self, imset, typ='depth', fold=0):
     # Load the indices for imset.
-    self.base_path = os.path.join('../clutter_segmentation_11_07_17/')
+    self.base_path = os.path.join('/nfs/diskstation/projects/dex-net/segmentation/datasets/pile_segmasks_01_28_18')
     split_file = os.path.join(self.base_path, 'splits',
       'fold_{:02d}'.format(fold), '{:s}_indices.npy'.format(imset))
     self.image_id = np.load(split_file)
@@ -121,7 +121,7 @@ class ClutterDataset(utils.Dataset):
     info = self.image_info[image_id]
     _image_id = info['id']
     Is = []
-    file_name = os.path.join(self.base_path, 'occluded_segmasks_project', 
+    file_name = os.path.join(self.base_path, 'modal_segmasks_project', 
       'image_{:06d}.png'.format(_image_id))
     all_masks = cv2.imread(file_name, cv2.IMREAD_UNCHANGED)
     
@@ -157,20 +157,23 @@ def test_clutter_dataset():
   print(np.mean(np.array(Is)))
 
 def concat_segmasks():
-  base_dir = '../clutter_segmentation_11_07_17/'
+  print("CONCATENATING SEGMASKS")
+  base_dir = '/nfs/diskstation/projects/dex-net/segmentation/datasets/pile_segmasks_01_28_18'
   bads = []
   for i in tqdm(range(10000)):
     Is = []
-    masks = np.zeros((256, 256), dtype=np.uint8)
-    for j in range(25):
-      file_name = os.path.join(base_dir, 'occluded_segmasks', 
+    masks = np.zeros((150, 200), dtype=np.uint8)
+    for j in range(21):
+      file_name = os.path.join(base_dir, 'modal_segmasks', 
         'image_{:06d}_channel_{:03d}.png'.format(i, j))
+      
       I = cv2.imread(file_name, cv2.IMREAD_UNCHANGED) > 0
+      
       masks[I] = j+1
       I = I[:,:,np.newaxis]; Is.append(I)
     Is = np.concatenate(Is, 2)
     Is = Is*1
-    file_name = os.path.join(base_dir, 'occluded_segmasks_project', 
+    file_name = os.path.join(base_dir, 'modal_segmasks_project', 
       'image_{:06d}.png'.format(i))
     cv2.imwrite(file_name, masks)
     bads.append(len(np.where(np.sum(Is,2) > 1)[0]))
@@ -178,4 +181,4 @@ def concat_segmasks():
 
 if __name__ == '__main__':
   test_clutter_dataset()
-  # concat_segmasks()
+  concat_segmasks()
