@@ -58,8 +58,11 @@ def train():
   # Passing layers="heads" freezes all layers except the head
   # layers. You can also pass a regular expression to select
   # which layers to train by name pattern.
+
+  print("BEGIN TRAINING")
+  
   model.train(dataset_train, dataset_val, learning_rate=config.LEARNING_RATE,
-    epochs=40, layers='all')
+    epochs=100, layers='all')
   model_path = os.path.join(model_dir, "mask_rcnn_clutter.h5")
   model.keras_model.save_weights(model_path)
 

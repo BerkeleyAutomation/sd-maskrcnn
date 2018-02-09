@@ -22,6 +22,8 @@ import maskrcnn.utils as utils
 # unoccluded_segmasks: image_{:06d}_channel_{:03d}.png
 # splits/fold_{:02d}/{train,test}_indices.npy
 
+base_dir = '/nfs/diskstation/projects/dex-net/segmentation/datasets/pile_segmasks_01_28_18'
+
 class ClutterConfig(Config):
   """Configuration for training on the toy shapes dataset.
   Derives from the base Config class and overrides values specific
@@ -75,11 +77,17 @@ class ClutterDataset(utils.Dataset):
     split_file = os.path.join(self.base_path, 'splits',
       'fold_{:02d}'.format(fold), '{:s}_indices.npy'.format(imset))
     self.image_id = np.load(split_file)
+
     self.add_class('clutter', 1, 'fg')
     flips = [0, 1, 2, 3] if imset == 'train' else [0]
+
+    count = 0
+    
     for i in self.image_id:
       p = os.path.join(self.base_path, '{:s}_ims'.format(typ), 
         'image_{:06d}.png'.format(i))
+      count += 1
+      
       for flip in flips:
         self.add_image('clutter', image_id=i, path=p, width=256, height=256, flip=flip)
 
@@ -101,6 +109,10 @@ class ClutterDataset(utils.Dataset):
     specs in image_info.
     """
     info = self.image_info[image_id]
+
+    # modify path- depth_ims to depth_ims_resized
+    info['path'] = info['path'].replace('depth_ims', 'depth_ims_resized')
+    
     image = cv2.imread(info['path'], cv2.IMREAD_UNCHANGED)
     assert(image is not None)
     if image.ndim == 2: image = np.tile(image[:,:,np.newaxis], [1,1,3])
@@ -121,8 +133,9 @@ class ClutterDataset(utils.Dataset):
     info = self.image_info[image_id]
     _image_id = info['id']
     Is = []
-    file_name = os.path.join(self.base_path, 'modal_segmasks_project', 
+    file_name = os.path.join(self.base_path, 'modal_segmasks_project_resized', 
       'image_{:06d}.png'.format(_image_id))
+    
     all_masks = cv2.imread(file_name, cv2.IMREAD_UNCHANGED)
     
     for i in range(25):
@@ -158,7 +171,6 @@ def test_clutter_dataset():
 
 def concat_segmasks():
   print("CONCATENATING SEGMASKS")
-  base_dir = '/nfs/diskstation/projects/dex-net/segmentation/datasets/pile_segmasks_01_28_18'
   bads = []
   for i in tqdm(range(10000)):
     Is = []
@@ -179,6 +191,31 @@ def concat_segmasks():
     bads.append(len(np.where(np.sum(Is,2) > 1)[0]))
   print(bads)
 
+def resize_images(max_dim=512):
+  """Resizes all images so their maximum dimension is 512. Saves to new directory."""
+  print("RESIZING IMAGES")
+  dirs = ['depth_ims', 'modal_segmasks_project' ] # directories of images that need resizing
+  resized_dirs = [d + '_resized' for d in dirs]
+  for d in resized_dirs:
+    # create new dirs for resized images
+    if not os.path.exists(os.path.join(base_dir, d)):
+      os.makedirs(os.path.join(base_dir, d))
+  for d, r_d in zip(dirs, resized_dirs):
+    old_path = os.path.join(base_dir, d)
+    new_path = os.path.join(base_dir, r_d)
+    for im_path in os.listdir(old_path):
+      print(im_path)
+      im_old_path = os.path.join(old_path, im_path)
+      im = cv2.imread(im_old_path, cv2.IMREAD_UNCHANGED)
+      scale = 512 / max(im.shape) # scale so max dimension is 512
+      scale_dim = tuple([int(d * scale) for d in im.shape[:2]])
+
+      im = cv2.resize(im, scale_dim)
+
+      im_new_path = os.path.join(new_path, im_path)
+      cv2.imwrite(im_new_path, im)
+  
 if __name__ == '__main__':
-  test_clutter_dataset()
-  concat_segmasks()
+  # test_clutter_dataset()
+  # concat_segmasks()
+  resize_images()
