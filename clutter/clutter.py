@@ -111,9 +111,8 @@ class ClutterDataset(utils.Dataset):
     info = self.image_info[image_id]
 
     # modify path- depth_ims to depth_ims_resized
-    info['path'] = info['path'].replace('depth_ims', 'depth_ims_resized')
-    
-    image = cv2.imread(info['path'], cv2.IMREAD_UNCHANGED)
+
+    image = cv2.imread(info['path'].replace('depth_ims', 'depth_ims_resized'), cv2.IMREAD_UNCHANGED)
     assert(image is not None)
     if image.ndim == 2: image = np.tile(image[:,:,np.newaxis], [1,1,3])
     image = self.flip(image, info['flip'])
