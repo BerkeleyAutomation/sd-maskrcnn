@@ -44,7 +44,8 @@ def log(text, array=None):
     """Prints a text message. And, optionally, if a Numpy array is provided it
     prints it's shape, min, and max values.
     """
-    if array is not None:
+    # print("log()", text, array.size, file=sys.stderr)  #
+    if array is not None and array.size != 0:
         text = text.ljust(25)
         text += ("shape: {:20}  min: {:10.5f}  max: {:10.5f}".format(
             str(array.shape),
@@ -1186,7 +1187,7 @@ def load_image_gt(dataset, config, image_id, augment=False,
     active_class_ids = np.zeros([dataset.num_classes], dtype=np.int32)
     source_class_ids = dataset.source_class_ids[dataset.image_info[image_id]["source"]]
     active_class_ids[source_class_ids] = 1
-    
+
     # Resize masks to smaller size to reduce memory usage
     if use_mini_mask:
         mask = utils.minimize_mask(bbox, mask, config.MINI_MASK_SHAPE)
@@ -1594,7 +1595,7 @@ def data_generator(dataset, config, shuffle=True, augment=True, random_rois=0,
         try:
             # Increment index to pick next image. Shuffle if at the start of an epoch.
             image_index = (image_index + 1) % len(image_ids)
-            
+
             if shuffle and image_index == 0:
                 np.random.shuffle(image_ids)
 
@@ -1610,7 +1611,7 @@ def data_generator(dataset, config, shuffle=True, augment=True, random_rois=0,
 
 
             # Which class IDs are active in this image?
-                        
+
             ### THIS IS THE PROBLEM -Andrew ###
             if not np.any(gt_class_ids > 0):
                 continue
@@ -1629,7 +1630,7 @@ def data_generator(dataset, config, shuffle=True, augment=True, random_rois=0,
                             rpn_rois, gt_class_ids, gt_boxes, gt_masks, config)
 
             # Init batch arrays
-            
+
             if b == 0:
                 batch_image_meta = np.zeros(
                     (batch_size,) + image_meta.shape, dtype=image_meta.dtype)
@@ -1671,7 +1672,7 @@ def data_generator(dataset, config, shuffle=True, augment=True, random_rois=0,
                 gt_masks = gt_masks[:, :, ids]
 
             # Add to batch
-            
+
             batch_image_meta[b] = image_meta
             batch_rpn_match[b] = rpn_match[:, np.newaxis]
             batch_rpn_bbox[b] = rpn_bbox
@@ -1686,7 +1687,7 @@ def data_generator(dataset, config, shuffle=True, augment=True, random_rois=0,
                     batch_mrcnn_class_ids[b] = mrcnn_class_ids
                     batch_mrcnn_bbox[b] = mrcnn_bbox
                     batch_mrcnn_mask[b] = mrcnn_mask
-            
+
             b += 1
 
             # Batch full?
@@ -2194,7 +2195,7 @@ class MaskRCNN():
         ]
 
         # Train
-        
+
         log("\nStarting at epoch {}. LR={}\n".format(self.epoch, learning_rate))
         log("Checkpoint Path: {}".format(self.checkpoint_path))
         self.set_trainable(layers)

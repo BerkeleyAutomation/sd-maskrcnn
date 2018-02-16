@@ -50,7 +50,7 @@ def train():
   # Create the model.
   model = modellib.MaskRCNN(mode="training", config=config,
     model_dir=model_dir)
-  
+
   # model.load_weights(model.find_last()[1], by_name=True)
 
   # Train the model.
@@ -60,7 +60,7 @@ def train():
   # which layers to train by name pattern.
 
   print("BEGIN TRAINING")
-  
+
   model.train(dataset_train, dataset_val, learning_rate=config.LEARNING_RATE,
     epochs=100, layers='all')
   model_path = os.path.join(model_dir, "mask_rcnn_clutter.h5")
@@ -77,7 +77,7 @@ def prepare_for_test():
   # Recreate the model in inference mode
   model = modellib.MaskRCNN(mode="inference", config=inference_config,
     model_dir=model_dir)
-  
+
   model_path = os.path.join(FLAGS.logdir, 'mask_rcnn_clutter.h5')
 
   # Load trained weights (fill in path to trained weights here)
@@ -130,7 +130,7 @@ def benchmark():
   # image_ids = rng.choice(dataset_val.image_ids, 100)
   image_ids = dataset_val.image_ids
   mkdir_if_missing(os.path.join(model.model_dir, 'vis_fn'))
-  
+
   ms = [[] for _ in range(10)]
   thresh_all = [0.25, 0.5, 0.75]
   for ov in thresh_all:
@@ -138,7 +138,7 @@ def benchmark():
       m.append([])
   ms.append(thresh_all)
   ms = list(zip(*ms))
-  
+
   for image_id in tqdm(image_ids):
     # Load image and ground truth data
     image, image_meta, gt_class_id, gt_bbox, gt_mask =\
@@ -146,8 +146,8 @@ def benchmark():
         use_mini_mask=False)
     molded_images = modellib.mold_image(image, inference_config)
     molded_images = np.expand_dims(molded_images, 0)
-    gt_stat, stat_name = compute_gt_stats(gt_bbox, gt_mask) 
-    
+    gt_stat, stat_name = compute_gt_stats(gt_bbox, gt_mask)
+
     # Run object detection
     results = model.detect([image], verbose=0)
     r = results[0]
@@ -169,24 +169,24 @@ def benchmark():
       dup_dets.append(dup_det); inst_ids.append(inst_id); ovs.append(ov);
       tp_inds.append(tp_ind); fn_inds.append(fn_ind);
       gt_stats.append(gt_stat)
-    
+
     # Visualize missed objects.
     if FLAGS.vis_fn:
       fn_ind = ms[1][8][-1] # missing objects at threshold 0.5
-      if fn_ind.size > 0: 
+      if fn_ind.size > 0:
         fig, _, axes = subplot(plt, (fn_ind.size+1, 1), sz_y_sz_x=(5,5))
         ax = axes.pop(); ax.imshow(image); ax.set_axis_off();
         class_names = {1: ''}
         for _ in range(fn_ind.size):
           j = fn_ind[_]
           ax = axes.pop()
-          visualize.display_instances(image, gt_bbox[j:j+1,:], 
+          visualize.display_instances(image, gt_bbox[j:j+1,:],
               gt_mask[:,:,j:j+1], gt_class_id[j:j+1], class_names, ax=ax, title='')
         file_name = os.path.join(model.model_dir, 'vis_fn',
           'vis_{:06d}.png'.format(dataset_val.image_id[image_id]))
         plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
         plt.close()
-  
+
   # Compute AP
   for tps, fps, scs, num_insts, dup_dets, inst_ids, ovs, tp_inds, fn_inds, \
     gt_stats, thresh in ms:
@@ -195,7 +195,7 @@ def benchmark():
     str_ = 'mAP: {:.3f}, prec: {:.3f}, rec: {:.3f}, npos: {:d}'.format(
       ap[0], np.min(prec), np.max(rec), npos)
     logging.error('%s', str_)
-    # print("mAP: ", ap[0], "prec: ", np.max(prec), "rec: ", np.max(rec), "prec-1: ", 
+    # print("mAP: ", ap[0], "prec: ", np.max(prec), "rec: ", np.max(rec), "prec-1: ",
     #   prec[-1], "npos: ", npos)
     plt.style.use('fivethirtyeight') #bmh')
     fig, _, axes = subplot(plt, (3,4), (8,8), space_y_x=(0.2,0.2))
@@ -215,8 +215,8 @@ def plot_stats(stat_name, gt_stats, tp_inds, fn_inds, axes):
   fn_stats = [gt_stat[fn_ind, :] for gt_stat, fn_ind in zip(gt_stats, fn_inds)]
   fn_stats = np.concatenate(fn_stats, 0)
   all_stats = np.concatenate(gt_stats, 0)
-  
-  for i in range(all_stats.shape[1]): 
+
+  for i in range(all_stats.shape[1]):
     ax = axes.pop()
     ax.set_title(stat_name[i])
     # np.histogram(all_stats
@@ -235,7 +235,7 @@ def plot_stats(stat_name, gt_stats, tp_inds, fn_inds, axes):
     ax2 = ax.twinx()
     t, _ = np.histogram(all_stats[:,i], bins)
     mis, _ = np.histogram(fn_stats[:,i], bins)
-    mis_rate, = ax2.plot((bins[:-1] + bins[1:])*0.5, mis / np.maximum(t, 0.00001), 
+    mis_rate, = ax2.plot((bins[:-1] + bins[1:])*0.5, mis / np.maximum(t, 0.00001),
       'm', label='mis rate')
     fract_data, = ax2.plot((bins[:-1] + bins[1:])*0.5, t / np.sum(t),
       'm--', label='data fraction')
@@ -261,7 +261,7 @@ def subplot(plt, Y_X, sz_y_sz_x=(10,10), space_y_x=(0.1,0.1), T=False):
 
 def vis():
   inference_config, model, dataset_val = prepare_for_test()
-  
+
   # Test on a random image
   rng = np.random.RandomState(0)
   mkdir_if_missing(os.path.join(model.model_dir, 'vis'))
@@ -270,7 +270,7 @@ def vis():
     image_id = rng.choice(dataset_val.image_ids)
     original_image, image_meta, gt_class_id, gt_bbox, gt_mask =\
         modellib.load_image_gt(dataset_val, inference_config, image_id, use_mini_mask=False)
-    
+
     log("original_image", original_image)
     log("image_meta", image_meta)
     log("gt_class_id", gt_bbox)
@@ -285,7 +285,7 @@ def vis():
     for i in range(5):
       ax = axes.pop()
       if i < gt_bbox.shape[0]:
-        visualize.display_instances(original_image, gt_bbox[i:i+1,:], 
+        visualize.display_instances(original_image, gt_bbox[i:i+1,:],
           gt_mask[:,:,i:i+1], gt_class_id[i:i+1], class_names, ax=ax, title='')
 
     results = model.detect([original_image], verbose=1)
@@ -295,11 +295,11 @@ def vis():
     for i in range(5):
       ax = axes.pop()
       if i < r['rois'].shape[0]:
-        visualize.display_instances(original_image, r['rois'][i:i+1,:], 
-          r['masks'][:,:,i:i+1], r['class_ids'][i:i+1], class_names, 
+        visualize.display_instances(original_image, r['rois'][i:i+1,:],
+          r['masks'][:,:,i:i+1], r['class_ids'][i:i+1], class_names,
           title='{:0.3f}'.format(r['scores'][i]), ax=ax)
-    
-    # visualize.display_instances(original_image, r['rois'], r['masks'], r['class_ids'], 
+
+    # visualize.display_instances(original_image, r['rois'], r['masks'], r['class_ids'],
     #   dataset_val.class_names, r['scores'], ax=get_ax())
     file_name = os.path.join(model.model_dir, 'vis',
       'vis_{:06d}.png'.format(dataset_val.image_id[image_id]))
@@ -310,7 +310,7 @@ def get_ax(rows=1, cols=1, size=8):
   """Return a Matplotlib Axes array to be used in
   all visualizations in the notebook. Provide a
   central point to control graph sizes.
-  
+
   Change the default size attribute to control the size
   of rendered images
   """
@@ -323,7 +323,7 @@ def main(_):
   config.gpu_options.allow_growth = True
   with tf.Session(config=config) as sess:
     set_session(sess)
-  
+
     if FLAGS.task == 'train':
       train()
 
