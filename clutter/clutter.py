@@ -57,9 +57,9 @@ class ClutterConfig(Config):
 
   # use small validation steps since the epoch is small
   VALIDATION_STEPS = 50
-  
+
   DETECTION_MIN_CONFIDENCE = 0.4
-  
+
   def __init__(self, mean):
     # Overriding things here.
     super().__init__()
@@ -82,12 +82,12 @@ class ClutterDataset(utils.Dataset):
     flips = [0, 1, 2, 3] if imset == 'train' else [0]
 
     count = 0
-    
+
     for i in self.image_id:
-      p = os.path.join(self.base_path, '{:s}_ims'.format(typ), 
+      p = os.path.join(self.base_path, '{:s}_ims'.format(typ),
         'image_{:06d}.png'.format(i))
       count += 1
-      
+
       for flip in flips:
         self.add_image('clutter', image_id=i, path=p, width=256, height=256, flip=flip)
 
@@ -132,13 +132,13 @@ class ClutterDataset(utils.Dataset):
     info = self.image_info[image_id]
     _image_id = info['id']
     Is = []
-    file_name = os.path.join(self.base_path, 'modal_segmasks_project_resized', 
+    file_name = os.path.join(self.base_path, 'modal_segmasks_project_resized',
       'image_{:06d}.png'.format(_image_id))
-    
+
     all_masks = cv2.imread(file_name, cv2.IMREAD_UNCHANGED)
-    
+
     for i in range(25):
-      # file_name = os.path.join(self.base_path, 'occluded_segmasks', 
+      # file_name = os.path.join(self.base_path, 'occluded_segmasks',
       #   'image_{:06d}_channel_{:03d}.png'.format(_image_id, i))
       # I = cv2.imread(file_name, cv2.IMREAD_UNCHANGED) > 0
       I = all_masks == i+1
@@ -175,16 +175,17 @@ def concat_segmasks():
     Is = []
     masks = np.zeros((150, 200), dtype=np.uint8)
     for j in range(21):
-      file_name = os.path.join(base_dir, 'modal_segmasks', 
+      file_name = os.path.join(base_dir, 'modal_segmasks',
         'image_{:06d}_channel_{:03d}.png'.format(i, j))
-      
-      I = cv2.imread(file_name, cv2.IMREAD_UNCHANGED) > 0
-      
-      masks[I] = j+1
-      I = I[:,:,np.newaxis]; Is.append(I)
+
+      im = cv2.imread(file_name, cv2.IMREAD_UNCHANGED)
+      if im is not None:
+        I = im > 0
+        masks[I] = j+1
+        I = I[:,:,np.newaxis]; Is.append(I)
     Is = np.concatenate(Is, 2)
     Is = Is*1
-    file_name = os.path.join(base_dir, 'modal_segmasks_project', 
+    file_name = os.path.join(base_dir, 'modal_segmasks_project',
       'image_{:06d}.png'.format(i))
     cv2.imwrite(file_name, masks)
     bads.append(len(np.where(np.sum(Is,2) > 1)[0]))
@@ -209,12 +210,12 @@ def resize_images(max_dim=512):
       scale = 512 / max(im.shape) # scale so max dimension is 512
       scale_dim = tuple([int(d * scale) for d in im.shape[:2]])
 
-      im = cv2.resize(im, scale_dim)
+      im = cv2.resize(im, scale_dim, interpolation=cv2.INTER_NEAREST)
 
       im_new_path = os.path.join(new_path, im_path)
       cv2.imwrite(im_new_path, im)
-  
+
 if __name__ == '__main__':
   # test_clutter_dataset()
-  # concat_segmasks()
+  concat_segmasks()
   resize_images()
