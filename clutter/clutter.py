@@ -207,10 +207,13 @@ def resize_images(max_dim=512):
       print(im_path)
       im_old_path = os.path.join(old_path, im_path)
       im = cv2.imread(im_old_path, cv2.IMREAD_UNCHANGED)
-      scale = 512 / max(im.shape) # scale so max dimension is 512
+      scale = 512 / min(im.shape) # scale so max dimension is 512
       scale_dim = tuple([int(d * scale) for d in im.shape[:2]])
 
       im = cv2.resize(im, scale_dim, interpolation=cv2.INTER_NEAREST)
+      y_margin = (im.shape[1] - 512) / 2
+      x_margin = (im.shape[0] - 512) / 2
+      im = im[y_margin : im.shape[1] - y_margin, x_margin : im.shape[0] - x_margin]
 
       im_new_path = os.path.join(new_path, im_path)
       cv2.imwrite(im_new_path, im)
