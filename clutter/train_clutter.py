@@ -260,11 +260,34 @@ def subplot(plt, Y_X, sz_y_sz_x=(10,10), space_y_x=(0.1,0.1), T=False):
   return fig, axes, axes_list
 
 def vis():
-  inference_config, model, dataset_val = prepare_for_test()
+  # inference_config, model, dataset_val = prepare_for_test()
 
-  # Test on a random image
-  rng = np.random.RandomState(0)
-  mkdir_if_missing(os.path.join(model.model_dir, 'vis'))
+  # # Test on a random image
+  # rng = np.random.RandomState(0)
+
+  # hacky test
+  m = 166. if FLAGS.im_type=='depth' else 128
+  inference_config = ClutterConfig(mean=m)
+  model_dir = FLAGS.logdir
+
+  # Load dataset.
+  dataset_val = ClutterDataset()
+  dataset_val.load('test', FLAGS.im_type, 0)
+  dataset_val.prepare()
+
+  # end of setup
+  image_id = 1517
+  # original_image, image_meta, gt_class_id, gt_bbox, gt_mask =\
+  #       modellib.load_image_gt(dataset_val, inference_config, image_id, use_mini_mask=False)
+  original_image =\
+        modellib.load_image_gt(dataset_val, inference_config, image_id, use_mini_mask=False)
+  visualize.display_instances(original_image, np.array([]), np.array([]), np.array([]), None)
+  mkdir_if_missing(os.path.join(".", 'vis'))
+  file_name = os.path.join(".", 'vis',
+                           'test_vis_{:06d}.png'.format(image_id))
+  plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
+  plt.close()
+  return
 
   for i in tqdm(range(100)):
     image_id = rng.choice(dataset_val.image_ids)

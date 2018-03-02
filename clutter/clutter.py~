@@ -62,7 +62,7 @@ class ClutterConfig(Config):
 
   def __init__(self, mean):
     # Overriding things here.
-    super(ClutterConfig, self).__init__()
+    super().__init__()
     self.IMAGE_SHAPE[2] = 3
     self.MEAN_PIXEL = np.array([mean, mean, mean])
 
@@ -113,7 +113,6 @@ class ClutterDataset(utils.Dataset):
     # modify path- depth_ims to depth_ims_resized
 
     image = cv2.imread(info['path'].replace('depth_ims', 'depth_ims_resized'), cv2.IMREAD_UNCHANGED)
-    return image
     assert(image is not None)
     if image.ndim == 2: image = np.tile(image[:,:,np.newaxis], [1,1,3])
     image = self.flip(image, info['flip'])
@@ -224,6 +223,6 @@ def test_display_images():
 
 if __name__ == '__main__':
   # test_clutter_dataset()
-  concat_segmasks()
-  resize_images()
-  # test_display_images()
+  # concat_segmasks()
+  # resize_images()
+  test_display_images()
