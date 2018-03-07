@@ -276,17 +276,17 @@ def vis():
   dataset_val.prepare()
 
   # end of setup
-  image_id = 1517
-  # original_image, image_meta, gt_class_id, gt_bbox, gt_mask =\
-  #       modellib.load_image_gt(dataset_val, inference_config, image_id, use_mini_mask=False)
-  original_image =\
-        modellib.load_image_gt(dataset_val, inference_config, image_id, use_mini_mask=False)
-  visualize.display_instances(original_image, np.array([]), np.array([]), np.array([]), None)
-  mkdir_if_missing(os.path.join(".", 'vis'))
-  file_name = os.path.join(".", 'vis',
-                           'test_vis_{:06d}.png'.format(image_id))
-  plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
-  plt.close()
+  for image_id in range(1, 30):
+    # original_image, image_meta, gt_class_id, gt_bbox, gt_mask =\
+        #       modellib.load_image_gt(dataset_val, inference_config, image_id, use_mini_mask=False)
+    original_image =\
+                     modellib.load_image_gt(dataset_val, inference_config, image_id, use_mini_mask=False)
+    visualize.display_instances(original_image, np.array([]), np.array([]), np.array([]), None)
+    mkdir_if_missing(os.path.join(".", 'vis'))
+    file_name = os.path.join(".", 'vis',
+                             'test_vis_{:06d}.png'.format(image_id))
+    plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
+    plt.close()
   return
 
   for i in tqdm(range(100)):

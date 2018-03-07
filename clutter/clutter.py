@@ -112,7 +112,8 @@ class ClutterDataset(utils.Dataset):
 
     # modify path- depth_ims to depth_ims_resized
 
-    image = cv2.imread(info['path'].replace('depth_ims', 'depth_ims_resized'), cv2.IMREAD_UNCHANGED)
+    # image = cv2.imread(info['path'].replace('depth_ims', 'depth_ims_resized'), cv2.IMREAD_UNCHANGED)
+    image = cv2.imread(info['path'])
     return image
     assert(image is not None)
     if image.ndim == 2: image = np.tile(image[:,:,np.newaxis], [1,1,3])
@@ -201,29 +202,24 @@ def resize_images(max_dim=512):
     # create new dirs for resized images
     if not os.path.exists(os.path.join(base_dir, d)):
       os.makedirs(os.path.join(base_dir, d))
-  for d, r_d in zip(dirs, resized_dirs):
+  print dirs, resized_dirs
+  for d, r_d in zip(dirs[1:], resized_dirs[1:]):
     old_path = os.path.join(base_dir, d)
     new_path = os.path.join(base_dir, r_d)
     for im_path in os.listdir(old_path):
-      print(im_path)
       im_old_path = os.path.join(old_path, im_path)
       im = cv2.imread(im_old_path, cv2.IMREAD_UNCHANGED)
-      scale = 512 / max(im.shape) # scale so max dimension is 512
+      scale = 512.0 / min(im.shape) # scale so max dimension is 512
       scale_dim = tuple([int(d * scale) for d in im.shape[:2]])
-
       im = cv2.resize(im, scale_dim, interpolation=cv2.INTER_NEAREST)
-
+      y_margin = (im.shape[1] - 512) // 2
+      x_margin = (im.shape[0] - 512) // 2
+      im = im[y_margin : im.shape[1] - y_margin, x_margin : im.shape[0] - x_margin]
       im_new_path = os.path.join(new_path, im_path)
       cv2.imwrite(im_new_path, im)
 
-def test_display_images():
-  base_id = 8270
-  for i in range(10):
-    mask, _ = load_mask(base_id + i)
-
-
 if __name__ == '__main__':
   # test_clutter_dataset()
-  concat_segmasks()
+  # concat_segmasks()
   resize_images()
   # test_display_images()
