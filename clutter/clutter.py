@@ -205,12 +205,16 @@ def resize_images(max_dim=512):
     if not os.path.exists(os.path.join(base_dir, d)):
       os.makedirs(os.path.join(base_dir, d))
   print(mask_dirs, resized_image_dirs, resized_mask_dirs)
+  vaughan = 0
   for d, md, r_d, r_md in zip(image_dirs, mask_dirs, resized_image_dirs, resized_mask_dirs):
     old_im_path = os.path.join(base_dir, d)
     new_im_path = os.path.join(base_dir, r_d)
     old_mask_path = os.path.join(base_dir, md)
     new_mask_path = os.path.join(base_dir, r_md)
     for im_path in os.listdir(old_im_path):
+      if vaughan % 100 == 0:
+          print "Image #{} processed.".format(vaughan)
+      vaughan += 1
       im_old_path = os.path.join(old_im_path, im_path)
       try:
         mask_old_path = os.path.join(old_mask_path, im_path)
@@ -218,39 +222,57 @@ def resize_images(max_dim=512):
         continue
       im = cv2.imread(im_old_path, cv2.IMREAD_UNCHANGED)
       mask = cv2.imread(mask_old_path, cv2.IMREAD_UNCHANGED)
-      print(zero_crop(im, mask))
-      return
+      if mask.shape[0] == 0 or mask.shape[1] == 0:
+          print("mask empty")
+          continue
+      im_box = zero_crop(im, mask)
+      im = im[im_box[0] : im_box[2], im_box[1] : im_box[3], :]
+      mask = mask[im_box[0] / 4 : im_box[2] / 4, im_box[1] / 4 : im_box[3] / 4]
       im = scale_to_square(im)
       mask = scale_to_square(mask)
-      im, mask = zero_crop(im, mask)
-      new_im_file = os.path.join(new_path, im_path)
-      new_mask_file = os.path.join(new_path, mask_path)
-
+      new_im_file = os.path.join(new_im_path, im_path)
+      new_mask_file = os.path.join(new_mask_path, im_path)
       cv2.imwrite(new_im_file, im)
       cv2.imwrite(new_mask_file, mask)
 
 def scale_to_square(im, dim=512):
   """Resizes an image to a square image of length dim."""
-  scale = 512.0 / max(im.shape) # scale so max dimension is 512
-  scale_dim = tuple([int(d * scale) for d in im.shape[:2]])
+  scale = 512.0 / min(im.shape[0:2]) # scale so min dimension is 512
+  scale_dim = tuple(reversed([int(d * scale) for d in im.shape[:2]]))
   im = cv2.resize(im, scale_dim, interpolation=cv2.INTER_NEAREST)
-  y_margin = (im.shape[1] - 512) // 2
-  x_margin = (im.shape[0] - 512) // 2
-  im = im[y_margin : im.shape[1] - y_margin, x_margin : im.shape[0] - x_margin]
+  y_margin = abs(im.shape[0] - 512) // 2
+  x_margin = abs(im.shape[1] - 512) // 2
+  im = im[y_margin : im.shape[0] - y_margin, x_margin : im.shape[1] - x_margin]
   return im
 
-def zero_crop(im, mask):
-  """Assuming im and mask are already resized, remove any zero-padding while retaining shape"""
+def zero_crop(im, mask, margin=15):
+  """Assuming im and mask are already resized, remove any erroneous zeros while retaining shape"""
   dim = im.shape[0]
-  print(mask.shape)
+  mask = mask.reshape((150, 200, 1))
   boxes = utils.extract_bboxes(mask)
-  print(boxes)
-  return
-  # top = np.min(boxes[, 0])
-  # left = np.min(boxes[, 1])
-  # bot = np.max(boxes[, 2])
-  # right = np.max(boxes[, 3])
-  # return np.array([top, left, bot, right])
+  top = np.min(boxes[:, 0]) * 4
+  left = np.min(boxes[:, 1]) * 4
+  bot = np.max(boxes[:, 2]) * 4
+  right = np.max(boxes[:, 3]) * 4
+
+  # find the location of the farthest points that are non-zero, and set this to be the new bbox
+  im_magnitudes = (im[:, :, 0] + im[:, :, 1] + im[:, :, 2]).reshape(im.shape[0:2])
+  im_magnitudes[im_magnitudes == 0] = 1000
+  new_top = np.max(np.argmin(im_magnitudes, axis=1))
+
+  # don't use left
+  top, left, bot, right = min(top, new_top), 0, 599, 799
+  return np.array([check_bounds(top, 0, 600 - 1), check_bounds(left, 0, 800 - 1),
+                   check_bounds(bot, 0, 600 - 1), check_bounds(right, 0, 800 - 1)])
+
+def check_bounds(x, left, right):
+  """If number is out of bounds of a range, cutoff."""
+  if x < left:
+      return left
+  if x > right:
+      return right
+  return x
+
 
 if __name__ == '__main__':
   # test_clutter_dataset()

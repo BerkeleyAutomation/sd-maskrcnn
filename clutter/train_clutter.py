@@ -10,7 +10,7 @@ from tensorflow.python.platform import flags
 import matplotlib.pyplot as plt
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('task', '', '')
+flags.DEFINE_string('task', 'vis', '')
 flags.DEFINE_string('im_type', 'gray', '')
 # flags.DEFINE_string('logdir_prefix', 'output/', '')
 flags.DEFINE_string('logdir', 'outputs/v1', '')
