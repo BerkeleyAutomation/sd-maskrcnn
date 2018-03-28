@@ -299,8 +299,8 @@ def vis():
           r['masks'][:,:,i:i+1], r['class_ids'][i:i+1], class_names,
           title='{:0.3f}'.format(r['scores'][i]), ax=ax)
 
-    visualize.display_instances(original_image, r['rois'], r['masks'], r['class_ids'],
-      dataset_val.class_names, r['scores'], ax=get_ax())
+    # visualize.display_instances(original_image, r['rois'], r['masks'], r['class_ids'],
+    #   dataset_val.class_names, r['scores'], ax=get_ax())
     file_name = os.path.join(model.model_dir, 'vis',
       'vis_{:06d}.png'.format(dataset_val.image_id[image_id]))
     plt.savefig(file_name, bbox_inches='tight', pad_inches=0)

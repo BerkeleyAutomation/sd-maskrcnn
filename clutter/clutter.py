@@ -111,9 +111,8 @@ class ClutterDataset(utils.Dataset):
     info = self.image_info[image_id]
 
     # modify path- depth_ims to depth_ims_resized
-
-    # image = cv2.imread(info['path'].replace('depth_ims', 'depth_ims_resized'), cv2.IMREAD_UNCHANGED)
-    image = cv2.imread(info['path'])
+    image = cv2.imread(info['path'].replace('depth_ims', 'depth_ims_resized'), cv2.IMREAD_UNCHANGED)
+    # image = cv2.imread(info['path'])
     return image
     assert(image is not None)
     if image.ndim == 2: image = np.tile(image[:,:,np.newaxis], [1,1,3])
@@ -238,13 +237,18 @@ def resize_images(max_dim=512):
 def scale_to_square(im, dim=512):
   """Resizes an image to a square image of length dim."""
   scale = 512.0 / min(im.shape[0:2]) # scale so min dimension is 512
-  scale_dim = tuple(reversed([int(d * scale) for d in im.shape[:2]]))
+  scale_dim = tuple(reversed([int(np.ceil(d * scale)) for d in im.shape[:2]]))
   im = cv2.resize(im, scale_dim, interpolation=cv2.INTER_NEAREST)
   y_margin = abs(im.shape[0] - 512) // 2
   x_margin = abs(im.shape[1] - 512) // 2
-  im = im[y_margin : im.shape[0] - y_margin, x_margin : im.shape[1] - x_margin]
 
-  assert im.shape[0] == 512 and im.shape[1] == 512, "shapes messed up"
+  check_y = 512 - (im.shape[0] - y_margin - y_margin)
+  check_x = 512 - (im.shape[1] - x_margin - x_margin)
+
+  im = im[y_margin : im.shape[0] - y_margin + check_y, x_margin : im.shape[1] - x_margin + check_x]
+
+
+  assert im.shape[0] == 512 and im.shape[1] == 512, "shapes messed up " + str(im.shape)
 
   return im
 
@@ -279,6 +283,6 @@ def check_bounds(x, left, right):
 
 if __name__ == '__main__':
   # test_clutter_dataset()
-  # concat_segmasks()
+  concat_segmasks()
   resize_images()
   # test_display_images()
