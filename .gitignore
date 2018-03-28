@@ -1,3 +1,4 @@
 .cache
 outputs
 **/__pycache__
+.png
