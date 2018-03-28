@@ -213,7 +213,7 @@ def resize_images(max_dim=512):
     new_mask_path = os.path.join(base_dir, r_md)
     for im_path in os.listdir(old_im_path):
       if vaughan % 100 == 0:
-          print "Image #{} processed.".format(vaughan)
+          print("Image #{} processed.".format(vaughan))
       vaughan += 1
       im_old_path = os.path.join(old_im_path, im_path)
       try:
@@ -221,22 +221,13 @@ def resize_images(max_dim=512):
       except:
         continue
       im = cv2.imread(im_old_path, cv2.IMREAD_UNCHANGED)
-<<<<<<< HEAD
-      scale = 512.0 / min(im.shape) # scale so max dimension is 512
-      scale_dim = tuple([int(d * scale) for d in im.shape[:2]])
-
-      im = cv2.resize(im, scale_dim, interpolation=cv2.INTER_NEAREST)
-      y_margin = (im.shape[1] - 512) / 2
-      x_margin = (im.shape[0] - 512) / 2
-      im = im[y_margin : im.shape[1] - y_margin, x_margin : im.shape[0] - x_margin]
-=======
       mask = cv2.imread(mask_old_path, cv2.IMREAD_UNCHANGED)
       if mask.shape[0] == 0 or mask.shape[1] == 0:
           print("mask empty")
           continue
       im_box = zero_crop(im, mask)
       im = im[im_box[0] : im_box[2], im_box[1] : im_box[3], :]
-      mask = mask[im_box[0] / 4 : im_box[2] / 4, im_box[1] / 4 : im_box[3] / 4]
+      mask = mask[im_box[0] // 4 : im_box[2] // 4, im_box[1] // 4 : im_box[3] // 4]
       im = scale_to_square(im)
       mask = scale_to_square(mask)
       new_im_file = os.path.join(new_im_path, im_path)
@@ -252,6 +243,9 @@ def scale_to_square(im, dim=512):
   y_margin = abs(im.shape[0] - 512) // 2
   x_margin = abs(im.shape[1] - 512) // 2
   im = im[y_margin : im.shape[0] - y_margin, x_margin : im.shape[1] - x_margin]
+
+  assert im.shape[0] == 512 and im.shape[1] == 512, "shapes messed up"
+
   return im
 
 def zero_crop(im, mask, margin=15):
@@ -281,7 +275,6 @@ def check_bounds(x, left, right):
   if x > right:
       return right
   return x
->>>>>>> bf0b1182d113af344979c176b5c84a959a05b21e
 
 
 if __name__ == '__main__':

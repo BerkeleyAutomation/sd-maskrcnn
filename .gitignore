@@ -1,4 +1,6 @@
 .cache
 outputs
 **/__pycache__
-.png
+*.png
+vis
+env
