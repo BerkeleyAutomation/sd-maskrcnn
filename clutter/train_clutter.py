@@ -1,4 +1,4 @@
-import os, numpy as np, logging, skimage
+import os, numpy as np, logging, skimage, datetime, itertools
 from tqdm import tqdm
 import model as modellib, visualize, utils, det_utils as du
 import tensorflow as tf
@@ -9,6 +9,8 @@ from tensorflow.python.platform import app
 from tensorflow.python.platform import flags
 import matplotlib.pyplot as plt
 
+import utils
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string('task', '', '')
 flags.DEFINE_string('im_type', 'gray', '')
@@ -16,6 +18,7 @@ flags.DEFINE_string('im_type', 'gray', '')
 flags.DEFINE_string('logdir', 'outputs/v1', '')
 flags.DEFINE_bool('vis_fn', False, '')
 # flags.DEFINE_string('config_name', '', '')
+flags.DEFINE_string('im_dir', '', '')
 
 # CUDA_VISIBLE_DEVICES='2' PYTHONPATH='.:maskrcnn/' python clutter/train_clutter.py \
 #   --logdir outputs/v3_512_40_flip_depth --im_type depth --task train
@@ -29,6 +32,62 @@ def mkdir_if_missing(output_dir):
     except:
       logging.error("Something went wrong in mkdir_if_missing. "
         "Probably some other process created the directory already.")
+
+def tune_params(params, num_epochs=30):
+  """Trains many nets with different hyperparameter settings for fewer epochs
+
+  params: dictionary with the following structure:
+    config_param1: [val1, val2, ..., valn]
+    config_param2: [val1, val2, ..., valm]
+  """
+  m = 166. if FLAGS.im_type=='depth' else 128
+  model_dir = os.path.join(FLAGS.logdir)
+  tune_dir = 'tune_params{:%Y%m%dT%H%M}'.format(datetime.datetime.now())
+
+  model_dir = os.path.join(model_dir, tune_dir)
+  mkdir_if_missing(model_dir)
+
+  config_list = (dict(zip(params, x)) for x in itertools.product(*params.values()))
+  # https://stackoverflow.com/questions/5228158/cartesian-product-of-a-dictionary-of-lists
+  config_txt_path = os.path.join(model_dir, 'configs.txt')
+
+  for i, params in enumerate(config_list):
+    # open, write, close. So we can check on the file halfway through training
+    f = open(config_txt_path, 'a')
+    f.write(str(i) + " " + str(params) + '\n')
+    f.close()
+
+    config = ClutterConfig(mean=m)
+
+    # Set the parameters in the config!
+    print(params)
+    for param, val in params.items():
+      setattr(config, param, val)
+
+    config_name = 'tune_' + str(i) + '_'
+    setattr(config, 'NAME', config_name)
+    config.display()
+
+    # Training dataset
+    dataset_train = ClutterDataset()
+    dataset_train.load('train', FLAGS.im_type, 0)
+    dataset_train.prepare()
+
+    # Validation dataset
+    dataset_val = ClutterDataset()
+    dataset_val.load('test', FLAGS.im_type, 0)
+    dataset_val.prepare()
+
+    # Create the model.
+    model = modellib.MaskRCNN(mode="training", config=config,
+                              model_dir=model_dir)
+    model.train(dataset_train, dataset_val, learning_rate=config.LEARNING_RATE,
+                epochs=num_epochs, layers='all')
+
+    model_name = 'mask_rcnn_clutter_tune_{}.h5'.format(i)
+
+    model_path = os.path.join(model_dir, model_name)
+    model.keras_model.save_weights(model_path)
 
 def train():
   # Load the datasets, configs.
@@ -58,8 +117,6 @@ def train():
   # Passing layers="heads" freezes all layers except the head
   # layers. You can also pass a regular expression to select
   # which layers to train by name pattern.
-
-  print("BEGIN TRAINING")
 
   model.train(dataset_train, dataset_val, learning_rate=config.LEARNING_RATE,
     epochs=100, layers='all')
@@ -259,6 +316,40 @@ def subplot(plt, Y_X, sz_y_sz_x=(10,10), space_y_x=(0.1,0.1), T=False):
     axes_list = axes.ravel()[::-1].tolist()
   return fig, axes, axes_list
 
+def vis_ext():
+  """Visualize predictions on images provided from external location"""
+  mkdir_if_missing(os.path.join(model.model_dir, 'vis_ext'))
+
+  assert FLAGS.im_dir, 'please specify a directory!'
+  im_dir = FLAGS.im_dir
+
+  inference_config, model, dataset_val = prepare_for_test()
+
+  for img in os.scandir(path):
+    im_path = img.path
+    if im_path.endswith('.png'):
+      # Load image
+      image = skimage.io.imread(self.image_info[image_id]['path'])
+      # If grayscale. Convert to RGB for consistency.
+      if image.ndim != 3:
+        image = skimage.color.gray2rgb(image)
+
+      image, window, scale, padding = utils.resize_image(
+        image,
+        min_dim=inference_config.IMAGE_MIN_DIM,
+        max_dim=inference_config.IMAGE_MAX_DIM,
+        padding=inference_config.IMAGE_PADDING)
+
+      results = model.detect([image], verbose=1)
+      r = results[0]
+
+      visualize.display_instances(original_image, r['rois'], r['masks'], r['class_ids'],
+        dataset_val.class_names, r['scores'], ax=get_ax())
+      file_name = os.path.join(model.model_dir, 'vis_ext',
+                               'vis_{:06d}.png'.format(dataset_val.image_id[image_id]))
+      plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
+      plt.close()
+
 def vis():
   inference_config, model, dataset_val = prepare_for_test()
 
@@ -318,7 +409,7 @@ def get_ax(rows=1, cols=1, size=8):
   return ax
 
 def main(_):
-  assert(FLAGS.task in ['train', 'vis', 'bench'])
+  assert(FLAGS.task in ['train', 'vis', 'bench', 'tune'])
   config = tf.ConfigProto()
   config.gpu_options.allow_growth = True
   with tf.Session(config=config) as sess:
@@ -332,6 +423,13 @@ def main(_):
 
     elif FLAGS.task == 'bench':
       benchmark()
+
+    elif FLAGS.task == 'tune':
+      params = {
+        'LEARNING_RATE': [0.0005, 0.001, 0.005],
+        'WEIGHT_DECAY': [0.00005, 0.0001, 0.0005],
+      }
+      tune_params(params, num_epochs=30)
 
     else:
       assert(False), 'Unknown option {:s}.'.format(FLAGS.task)
