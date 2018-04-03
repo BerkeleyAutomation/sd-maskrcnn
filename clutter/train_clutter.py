@@ -318,18 +318,22 @@ def subplot(plt, Y_X, sz_y_sz_x=(10,10), space_y_x=(0.1,0.1), T=False):
 
 def vis_ext():
   """Visualize predictions on images provided from external location"""
+  inference_config, model, dataset_val = prepare_for_test()
+
   mkdir_if_missing(os.path.join(model.model_dir, 'vis_ext'))
 
   assert FLAGS.im_dir, 'please specify a directory!'
   im_dir = FLAGS.im_dir
 
-  inference_config, model, dataset_val = prepare_for_test()
+  print('Directory:', im_dir)
 
-  for img in os.scandir(path):
+  for i, img in enumerate(os.scandir(im_dir)):
     im_path = img.path
+    filename = os.path.split(im_path)[1]
+    print('im_path', im_path)
     if im_path.endswith('.png'):
       # Load image
-      image = skimage.io.imread(self.image_info[image_id]['path'])
+      image = skimage.io.imread(im_path)
       # If grayscale. Convert to RGB for consistency.
       if image.ndim != 3:
         image = skimage.color.gray2rgb(image)
@@ -343,10 +347,10 @@ def vis_ext():
       results = model.detect([image], verbose=1)
       r = results[0]
 
-      visualize.display_instances(original_image, r['rois'], r['masks'], r['class_ids'],
+      visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
         dataset_val.class_names, r['scores'], ax=get_ax())
       file_name = os.path.join(model.model_dir, 'vis_ext',
-                               'vis_{:06d}.png'.format(dataset_val.image_id[image_id]))
+                               'vis_{}.png'.format(filename))
       plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
       plt.close()
 
@@ -409,7 +413,7 @@ def get_ax(rows=1, cols=1, size=8):
   return ax
 
 def main(_):
-  assert(FLAGS.task in ['train', 'vis', 'bench', 'tune'])
+  assert(FLAGS.task in ['train', 'vis', 'bench', 'tune', 'vis_ext'])
   config = tf.ConfigProto()
   config.gpu_options.allow_growth = True
   with tf.Session(config=config) as sess:
@@ -430,6 +434,9 @@ def main(_):
         'WEIGHT_DECAY': [0.00005, 0.0001, 0.0005],
       }
       tune_params(params, num_epochs=30)
+
+    elif FLAGS.task == 'vis_ext':
+      vis_ext()
 
     else:
       assert(False), 'Unknown option {:s}.'.format(FLAGS.task)
