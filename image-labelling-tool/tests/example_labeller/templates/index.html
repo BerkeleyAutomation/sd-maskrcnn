@@ -1,0 +1,38 @@
+{% load labelling_tool_tags %}
+
+<html>
+    <head>
+        <title>UEA Computer Vision - Labelling Tool</title>
+
+        <script src="/static/jquery/jquery-2.1.1.min.js"></script>
+
+        <link rel="stylesheet" href="/static/jquery/jquery-ui.min.css">
+        <script src="/static/jquery/jquery-ui.min.js"></script>
+
+        <script src="/static/d3.min.js"></script>
+        <script src="/static/js.cookie.js"></script>
+        <script src="/static/json2.js"></script>
+        <script src="/static/polyk.js"></script>
+        {% labelling_tool_scripts %}
+    </head>
+
+    <body>
+
+    <h1>UEA Computer Vision - Labelling Tool example Django App</h1>
+
+    {% url 'example_labeller:labelling_tool_api' as ltapi_url %}
+
+    {% labelling_tool 1280 720 label_classes image_descriptors initial_image_index ltapi_url True labelling_tool_config %}
+
+
+    <h4>Admin</h4>
+    <p>The Django admin system can be found <a href="/admin">here</a>.</p>
+
+
+    <h3>Instructions for use</h3>
+
+    {% labelling_tool_instructions labelling_tool_config %}
+
+
+    </body>
+</html>
