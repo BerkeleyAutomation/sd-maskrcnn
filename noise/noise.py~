@@ -1,0 +1,22 @@
+import os
+import numpy as np
+import skimage
+import matplotlib.pyplot as plt
+import autolab_core
+import cv2
+from perception import DepthImage
+
+for i in range(10):
+    path = 'test_case_{}/phoxi/depth_0.npy'.format(i)
+    print(path)
+    img = np.load(path)
+    img = np.reshape(img, img.shape[:2])
+    vec = np.ndarray.flatten(img)
+
+    depth_img = DepthImage(img)
+
+    n, bins, patches = plt.hist(vec, 10, density=True, facecolor="blue")
+
+    plt.xlabel("depth value")
+    plt.ylabel("count")
+    plt.title("depth within region")

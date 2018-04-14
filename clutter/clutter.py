@@ -66,6 +66,7 @@ class ClutterConfig(Config):
     self.IMAGE_SHAPE[2] = 3
     self.MEAN_PIXEL = np.array([mean, mean, mean])
 
+
 class ClutterDataset(utils.Dataset):
   """Generates the shapes synthetic dataset. The dataset consists of simple
   shapes (triangles, squares, circles) placed randomly on a blank surface.
@@ -113,7 +114,6 @@ class ClutterDataset(utils.Dataset):
     # modify path- depth_ims to depth_ims_resized
     image = cv2.imread(info['path'].replace('depth_ims', 'depth_ims_resized'), cv2.IMREAD_UNCHANGED)
     # image = cv2.imread(info['path'])
-    return image
     assert(image is not None)
     if image.ndim == 2: image = np.tile(image[:,:,np.newaxis], [1,1,3])
     image = self.flip(image, info['flip'])
@@ -134,6 +134,92 @@ class ClutterDataset(utils.Dataset):
     _image_id = info['id']
     Is = []
     file_name = os.path.join(self.base_path, 'modal_segmasks_project_resized',
+      'image_{:06d}.png'.format(_image_id))
+
+    all_masks = cv2.imread(file_name, cv2.IMREAD_UNCHANGED)
+
+    for i in range(25):
+      # file_name = os.path.join(self.base_path, 'occluded_segmasks',
+      #   'image_{:06d}_channel_{:03d}.png'.format(_image_id, i))
+      # I = cv2.imread(file_name, cv2.IMREAD_UNCHANGED) > 0
+      I = all_masks == i+1
+      if np.any(I):
+        I = I[:,:,np.newaxis]
+        Is.append(I)
+    if len(Is) > 0: mask = np.concatenate(Is, 2)
+    else: mask = np.zeros([info['height'], info['width'], 0], dtype=np.bool)
+    # Making sure masks are always contiguous.
+    # block = np.any(np.any(mask,0),0)
+    # assert((not np.any(block)) or (not np.any(block[np.where(block)[0][-1]+1:])))
+    # print(block)
+    mask = self.flip(mask, info['flip'])
+    class_ids = np.array([1 for _ in range(mask.shape[2])])
+    return mask, class_ids.astype(np.int32)
+
+
+class RealDataset(ClutterDataset):
+  def load(self, imset, typ='depth', fold=0):
+    # Load the indices for imset.
+    self.base_path = os.path.join('/nfs/diskstation/projects/dex-net/segmentation/datasets/pile_segmasks_01_28_18')
+    split_file = os.path.join(self.base_path, 'splits',
+      'real_{:02d}'.format(fold), '{:s}_indices.npy'.format(imset))
+    self.image_id = np.load(split_file)
+
+    self.add_class('clutter', 1, 'fg')
+    flips = [0]
+
+    count = 0
+
+    for i in self.image_id:
+      p = os.path.join(self.base_path, '{:s}_ims'.format(typ),
+        'image_{:06d}.png'.format(i))
+      count += 1
+
+      for flip in flips:
+        self.add_image('clutter', image_id=i, path=p, width=256, height=256, flip=flip)
+
+  def flip(self, image, flip):
+    if flip == 0:
+      image = image
+    elif flip == 1:
+      image = image[::-1,:,:]
+    elif flip == 2:
+      image = image[:,::-1,:]
+    elif flip == 3:
+      image = image[::-1,::-1,:]
+    return image
+
+  def load_image(self, image_id):
+    """Generate an image from the specs of the given image ID.
+    Typically this function loads the image from a file, but
+    in this case it generates the image on the fly from the
+    specs in image_info.
+    """
+    info = self.image_info[image_id]
+
+    # modify path- depth_ims to depth_ims_resized
+    # image = cv2.imread(info['path'].replace('real_ims', 'depth_ims_resized'), cv2.IMREAD_UNCHANGED)
+    image = cv2.imread(info['path'])
+    assert(image is not None)
+    if image.ndim == 2: image = np.tile(image[:,:,np.newaxis], [1,1,3])
+    image = self.flip(image, info['flip'])
+    return image
+
+  def image_reference(self, image_id):
+    """Return the shapes data of the image."""
+    info = self.image_info[image_id]
+    if info["source"] == "clutter":
+      return info["path"] + "-{:d}".format(info["flip"])
+    else:
+      super(self.__class__).image_reference(self, image_id)
+
+  def load_mask(self, image_id):
+    """Generate instance masks for shapes of the given image ID.
+    """
+    info = self.image_info[image_id]
+    _image_id = info['id']
+    Is = []
+    file_name = os.path.join(self.base_path, 'real_segmasks',
       'image_{:06d}.png'.format(_image_id))
 
     all_masks = cv2.imread(file_name, cv2.IMREAD_UNCHANGED)
