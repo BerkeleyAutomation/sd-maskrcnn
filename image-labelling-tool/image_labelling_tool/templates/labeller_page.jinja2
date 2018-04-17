@@ -1,0 +1,202 @@
+<html>
+    <head>
+        <title>UEA Computer Vision - Labelling Tool</title>
+
+        <script src="/ext_static/jquery/jquery-2.1.1.min.js"></script>
+
+        <link rel="stylesheet" href="/ext_static/jquery/jquery-ui.min.css">
+        <script src="/ext_static/jquery/jquery-ui.min.js"></script>
+
+        <script src="/static/d3.min.js"></script>
+        {% if use_websockets %}
+            <script src="/static/socket.io.min.js"></script>
+        {% endif %}
+        <script src="/static/json2.js"></script>
+        <script src="/static/polyk.js"></script>
+        {% for js_url in tool_js_urls %}
+            <script src="{{ js_url }}"></script>
+        {% endfor %}
+    </head>
+
+    <body>
+
+    <h1>UEA Computer Vision - Labelling Tool example Flask App</h1>
+
+    <div id="labelling_tool"></div>
+
+
+    <h3>Instructions for use</h3>
+
+    <p>To navigate between images:</p>
+        <ul>
+            <li>Using the left and right arrows to navigate the images one by one</li>
+            <li>Enter a number in the box at the top to navigate to a specific image</li>
+        </ul>
+
+    <p>To label regions of the image:</p>
+        <ul>
+            <li><strong>Drawing polygonal regions onto the image:</strong>
+                <ul>
+                    <li>Click the <em>Draw poly</em> button</li>
+                    <li>Within the image pane, left-click to draw polygonal corners of your region</li>
+                    <li>When you have finished the region, right-click to stop</li>
+                    <li>You are still in <em>draw poly</em> mode, so you can start left-clicking again to draw the next region</li>
+                    <li>To exit <em>draw poly</em> mode, right-click a second time.</li>
+                    <li>Fixing mistakes while in drawing mode:
+                        <ul>
+                            <li>The previous vertex is highlighted with a small pink circle. To delete it, press the
+                                '<code>/</code>' key.
+                            </li>
+                            <li>To insert vertices at a different point in the polygon, press the '<code>,</code>'
+                                and '<code>.</code>' keys to cycle through. This also cycles the vertex that is
+                                highlighted as the previous vertex (above), allowing you to select vertices to
+                                delete.</li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+
+            <li><strong>Drawing rectangular regions onto the image:</strong>
+                <ul>
+                    <li>Click the <em>Draw box</em> button</li>
+                    <li>Within the image pane, left-click to place one corner and left click again to place another
+                        corner; the tool will create a box between the two</li>
+                    <li>Repeat the above for each box that you want to create</li>
+                </ul>
+            </li>
+
+            <li><strong>Highlighting points of interest in the image:</strong>
+                <ul>
+                    <li>Click the <em>Add point</em> button</li>
+                    <li>Within the image pane, left-click to place a point marker in the image</li>
+                    <li>Repeat the above for each point that you want to create</li>
+                </ul>
+            </li>
+
+            <li><strong>Selecting regions:</strong>
+                <ul>
+                    <li>Selected regions have a red outline, yellow otherwise</li>
+                    <li>If only <em>one</em> region is selected, clicking the <em>Draw poly</em> button will allow you to modify it; you will go back to <em>draw poly</em> mode</li>
+                    <li>To select a different region, click the <em>Select</em> button and choose a different region by clicking on it. Multiple regions can be selected by holding <em>SHIFT</em> while clicking.</li>
+                    <li>If multiple regions overlap and you wish to select a region that is obscured, move the
+                        pointer over the region that you wish to select; the front-most region will be highlighted.
+                        Press the '<code>[</code>' and '<code>]</code>' keys to cycle through the regions under the
+                        pointer until the one that you need is highlighted. Left-click to select it.
+                    </li>
+                </ul>
+            </li>
+
+            <li><strong>Deleting regions:</strong>
+                <ul>
+                    <li>Select regions using the select tool (see above)</li>
+                    <li>Click the wastebin button to delete them; you will be asked for confirmation</li>
+                </ul>
+            </li>
+
+            <li><strong>Changing the label of a region:</strong>
+                <ul>
+                    <li>Select regions using the select tool (see above)</li>
+                    <li>Use the drop-down (normally reads <em>UNCLASSIFIED</em>) within the <em>Labels</em> section to change the label</li>
+                    <li><strong>Please note:</strong> for regions for which you <em>cannot</em> identify the content, use the <em>Excluded</em> label, this indicates to the system that it should not consider these parts of the image</li>
+                </ul>
+            </li>
+
+            <li><strong>If the coloured regions are obscuring parts of the image that you need to see:</strong>
+                <ul>
+                <li>Within the <em>Labels</em> section under <em>Label visibility</em>, choose between <em>hidden</em>
+                    <em>faint</em> and <em>full</em> to alter the visibility of the labels.</li>
+                <li>Alternatively press the <code>;</code> key to switch between them.</li>
+                </ul>
+            </li>
+
+            <li><strong>When you are done:</strong>
+                <ul>
+                    <li>When you are satisfied that you have marked out all of the regions of interest and that they are correctly labelled, click the <em>Finished</em> checkbox within the <em>Current image</em> section.
+                        This will mark the image as finished within the system.</li>
+                </ul>
+            </li>
+        </ul>
+
+
+    {% if use_websockets %}
+        <h3>Using websockets</h3>
+    {% else %}
+        <h3>Not using websockets</h3>
+    {% endif %}
+
+
+
+
+    <script>
+        // get image descriptor callback function
+        {% if use_websockets %}
+            var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+            socket.on('get_labels_reply', function(label_header) {
+                tool.loadLabels(label_header, null);
+            });
+
+            socket.on('set_labels_reply', function(msg) {
+                tool.notifyLabelUpdateResponse(msg);
+            });
+
+            var get_labels = function(image_id) {
+                socket.emit('get_labels', {image_id: image_id});
+            };
+
+            // set labels callback function
+            var set_labels = function(label_header) {
+                socket.emit('set_labels', {label_header: label_header});
+            };
+
+
+        {% else %}
+            var get_labels = function(image_id) {
+                $.ajax({
+                    type: 'GET',
+                    url: '/labelling/get_labels/' + image_id,
+                    success: function(label_header) {
+                        tool.loadLabels(label_header, null);
+                    },
+                    dataType: 'json'
+                });
+            };
+
+            // set labels callback function
+            var set_labels = function(label_header) {
+                var labels_json_str = JSON.stringify(label_header);
+
+                // Create the POST data
+                var post_data = {
+                    labels: labels_json_str
+                };
+
+                $.ajax({
+                    type: 'POST',
+                    url: '/labelling/set_labels',
+                    data: post_data,
+                    success: function(msg) {
+                        tool.notifyLabelUpdateResponse(msg);
+                    },
+                    dataType: 'json'
+                });
+            };
+        {% endif %}
+
+        // Create the labelling tool
+        // Give it: label classes, dimensions, image descriptors, initial image ID and the callbacks above
+        var tool = new labelling_tool.LabellingTool($("#labelling_tool")[0],
+                {{ label_classes }},
+                1280,
+                720,
+                {{ image_descriptors }},
+                {{ initial_image_index }},
+                get_labels,
+                set_labels,
+                null,
+                {{ config }});
+
+    </script>
+
+    </body>
+</html>
