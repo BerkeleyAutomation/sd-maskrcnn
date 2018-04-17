@@ -1,54 +1,52 @@
-import tensorflow as tf
+# Defines data augmentation functions and provides a
+# method of composing them to operate upon lists of images.
+
 import numpy as np
-import argparse
-import configparser
+import skimage.color
+from perception import DepthImage
 
 
-
-
-def augment(config):
+def inject_noise(img, noise_level=0.0005, noise_threshold=0.05):
     """
-    Using provided image directory and output directory, perform data
-    augmentation methods on each image and save the new copy to the
-    output directory.
+    Add a Gaussian noise to the image.
     """
-    img_path = config["img_path"]
-    out_path = config["out_path"]
+    means = np.zeros(img.shape)
+    std_devs = np.full(img.shape, noise_level)
+    noise = np.random.normal(means, std_devs)
+
+    # don't apply noise to some pixels
+    noise[img <= noise_threshold] = 0.0
+    return img + noise
 
 
+def inpaint(img):
+    """
+    Inpaint the image
+    """
+    # create DepthImage from gray version of img
+    depth_img = DepthImage(skimage.color.rgb2gray(img))
 
-def train(config):
-    pass
-
-
-def read_config():
-    # setting up flag parsing
-    conf_parser = argparse.ArgumentParser(description="Augment data in path folder with various noise filters and transformations")
-
-    # required argument for config file
-    conf_parser.add_argument("--config", action="store", required=True,
-                               dest="conf_file", type=str, help="path to the configuration file")
-    conf_args = conf_parser.parse_args()
-
-    # read in config file information from proper section
-    conf = configparser.ConfigParser()
-    conf.read([conf_args.conf_file])
-    task = conf.get("GENERAL", "task").upper()
-
-    # return a dictionary of the proper arguments
-    return dict(conf.items(task) + ("task", task))
+    # zero out high-gradient areas and inpaint
+    thresh_img = depth_img.threshold_gradients_pctile(0.95)
+    inpaint_img = thresh_img.inpaint()
+    return inpaint_img.data
 
 
-if __name__ == "__main__":
-    # parse the provided configuration file
-    config = read_config()
+def augmenter(fn_lst):
+    """
+    Return a composition of all the desired augmentation functions.
+    """
+    if not fn_lst:
+        return lambda img: img
+    fn = fn_lst.pop(0)
+    return lambda img: augmenter(fn_lst)(fn(img))
 
-    task = config["task"]
-    if task == "AUGMENT":
-        augment(config)
 
-    if task == "train":
-        train(config)
-
-    if task == "benchmark":
-        benchmark(config)
+def augment_img(img, config):
+    fn_lst = []
+    if config["with_noise"]:
+        fn_lst.append(inject_noise)
+    if config["with_inpainting"]:
+        fn_lst.append(inpaint)
+    composed_fn = augmenter(fn_lst)
+    return composed_fn(img)
