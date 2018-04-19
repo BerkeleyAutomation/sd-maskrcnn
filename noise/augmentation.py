@@ -24,7 +24,8 @@ def inpaint(img):
     Inpaint the image
     """
     # create DepthImage from gray version of img
-    depth_img = DepthImage(skimage.color.rgb2gray(img))
+    gray_img = skimage.color.rgb2gray(img)
+    depth_img = DepthImage(gray_img)
 
     # zero out high-gradient areas and inpaint
     thresh_img = depth_img.threshold_gradients_pctile(0.95)
@@ -32,21 +33,21 @@ def inpaint(img):
     return inpaint_img.data
 
 
-def augmenter(fn_lst):
-    """
-    Return a composition of all the desired augmentation functions.
-    """
-    if not fn_lst:
-        return lambda img: img
-    fn = fn_lst.pop(0)
-    return lambda img: augmenter(fn_lst)(fn(img))
+# def augmenter(fn_lst):
+#     """
+#     Return a composition of all the desired augmentation functions.
+#     """
+#     if not fn_lst:
+#         return lambda img: img
+#     fn = fn_lst.pop(0)
+#     return lambda img: augmenter(fn_lst)(fn(img))
 
 
 def augment_img(img, config):
-    fn_lst = []
-    if config["with_noise"]:
-        fn_lst.append(inject_noise)
     if config["with_inpainting"]:
-        fn_lst.append(inpaint)
-    composed_fn = augmenter(fn_lst)
-    return composed_fn(img)
+        img = inpaint(img)
+    if config["with_noise"]:
+        noise_level = config["noise_level"]
+        noise_threshold = config["noise_threshold"]
+        img = inject_noise(img, noise_level, noise_threshold)
+    return img
