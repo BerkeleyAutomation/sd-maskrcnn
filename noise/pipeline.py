@@ -5,6 +5,9 @@ import argparse
 import configparser
 from tqdm import tqdm
 from ast import literal_eval
+import matplotlib
+matplotlib.use('agg')
+from matplotlib import pyplot as plt
 
 import cv2
 import skimage.io
@@ -12,10 +15,10 @@ import numpy as np
 import tensorflow as tf
 
 from augmentation import augment_img
-from train_clutter import mkdir_if_missing
 from eval_coco import *
 
-import model as modellib, visualize
+from train_clutter import mkdir_if_missing
+import model as modellib, visualize, utils
 from clutter import ClutterConfig
 
 def augment_data(config):
@@ -72,17 +75,20 @@ def benchmark(config):
     # TODO: actually do it
 
     # Load gt dataset and generate annotations
-    test_dir = config['test_dir']
-    encode_gt(test_dir)
+    test_dir = config['test_dir'] # directory of test images
+    test_segmasks_dir = config['test_segmasks_dir'] # directory of test image segmasks
+    encode_gt(test_segmasks_dir)
 
     # Load specified model
     class InferenceConfig(ClutterConfig):
         GPU_COUNT = 1
         IMAGES_PER_GPU = 1
 
+    inference_config = InferenceConfig(mean=128)
+
     model_path = config['model_path']
     model_dir, model_name = os.path.split(model_path)
-    model = modellib.MaskRCNN(mode='inference', config=InferenceConfig(mean=128),
+    model = modellib.MaskRCNN(mode='inference', config=inference_config,
                               model_dir=model_dir)
 
     print("Loading weights from ", model_path)
@@ -94,6 +100,7 @@ def benchmark(config):
     N = len([p for p in os.listdir(test_dir) if p.endswith('.png')])
     for i in range(N):
         im_name = str(i) + '.png'
+        print('evaluating', os.path.join(test_dir, im_name))
         image = io.imread(os.path.join(test_dir, im_name))
 
         if image.ndim != 3:
@@ -110,16 +117,32 @@ def benchmark(config):
         # Save masks as .npy
         save_masks = np.stack([r['masks'][:,:,i] for i in range(r['masks'].shape[2])])
         print(save_masks.shape)
-        np.save(str(i) + '.npy')
+        save_masks_path = os.path.join(pred_dir, str(i) + '.npy')
+        np.save(save_masks_path, save_masks)
+        print(save_masks_path)
 
         # Visualize
+        def get_ax(rows=1, cols=1, size=8):
+            """Return a Matplotlib Axes array to be used in
+            all visualizations in the notebook. Provide a
+            central point to control graph sizes.
+
+            Change the default size attribute to control the size
+            of rendered images
+            """
+            _, ax = plt.subplots(rows, cols, figsize=(size*cols, size*rows))
+            return ax
+
+
         visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
-            ['obj'], r['scores'], ax=get_ax())
+                                    ['bg', 'obj'], r['scores'], ax=get_ax())
         file_name = os.path.join(vis_dir, 'vis_{}'.format(im_name))
         plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
         plt.close()
 
     # Generate prediction annotations
+    encode_predictions(pred_dir)
+    coco_benchmark(os.path.join(test_segmasks_dir, 'annos_gt.json'), os.path.join(pred_dir, 'annos_pred.json'))
 
 def read_config():
     # setting up flag parsing
@@ -159,9 +182,8 @@ if __name__ == "__main__":
     if task == "AUGMENT":
         augment_data(config)
 
-    if task == "train":
+    if task == "TRAIN":
         train(config)
 
-    if task == "benchmark":
-        print('BENCHMARKING')
+    if task == "BENCHMARK":
         benchmark(config)
