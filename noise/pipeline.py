@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 import argparse
 import configparser
@@ -11,8 +12,11 @@ import numpy as np
 import tensorflow as tf
 
 from augmentation import augment_img
-from utils import mkdir_if_missing
+from train_clutter import mkdir_if_missing
+from eval_coco import *
 
+import model as modellib, visualize
+from clutter import ClutterConfig
 
 def augment_data(config):
     """
@@ -53,8 +57,69 @@ def train(config):
 
 
 def benchmark(config):
-    pass
+    # Create new directory for run outputs
+    output_dir = config['output_dir'] # In what location should we put this new directory?
+    run_name = config['run_name'] # What is it called
+    mkdir_if_missing(os.path.join(output_dir, run_name))
 
+    # Create subdirectories for masks and visuals
+    pred_dir = os.path.join(output_dir, run_name, 'pred')
+    vis_dir = os.path.join(output_dir, run_name, 'vis')
+    mkdir_if_missing(pred_dir)
+    mkdir_if_missing(vis_dir)
+
+    # Save config
+    # TODO: actually do it
+
+    # Load gt dataset and generate annotations
+    test_dir = config['test_dir']
+    encode_gt(test_dir)
+
+    # Load specified model
+    class InferenceConfig(ClutterConfig):
+        GPU_COUNT = 1
+        IMAGES_PER_GPU = 1
+
+    model_path = config['model_path']
+    model_dir, model_name = os.path.split(model_path)
+    model = modellib.MaskRCNN(mode='inference', config=InferenceConfig(mean=128),
+                              model_dir=model_dir)
+
+    print("Loading weights from ", model_path)
+    model.load_weights(model_path, by_name=True)
+
+
+
+    # Feed images into model one by one. For each image, predict, save, visualize?
+    N = len([p for p in os.listdir(test_dir) if p.endswith('.png')])
+    for i in range(N):
+        im_name = str(i) + '.png'
+        image = io.imread(os.path.join(test_dir, im_name))
+
+        if image.ndim != 3:
+            image = skimage.color.gray2rgb(image)
+
+        image, window, scale, padding = utils.resize_image(
+            image,
+            min_dim=inference_config.IMAGE_MIN_DIM,
+            max_dim=inference_config.IMAGE_MAX_DIM,
+            padding=inference_config.IMAGE_PADDING)
+        results = model.detect([image], verbose=1)
+        r = results[0]
+
+        # Save masks as .npy
+        save_masks = np.stack([r['masks'][:,:,i] for i in range(r['masks'].shape[2])])
+        print(save_masks.shape)
+        np.save(str(i) + '.npy')
+
+        # Visualize
+        visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
+            ['obj'], r['scores'], ax=get_ax())
+        file_name = os.path.join(vis_dir, 'vis_{}'.format(im_name))
+        plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
+        plt.close()
+
+    # Generate prediction annotations
 
 def read_config():
     # setting up flag parsing
@@ -90,6 +155,7 @@ if __name__ == "__main__":
     config = read_config()
 
     task = config["task"]
+    print('config["task"]', config['task'])
     if task == "AUGMENT":
         augment_data(config)
 
@@ -97,4 +163,5 @@ if __name__ == "__main__":
         train(config)
 
     if task == "benchmark":
+        print('BENCHMARKING')
         benchmark(config)

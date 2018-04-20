@@ -3,7 +3,7 @@ from tqdm import tqdm
 import model as modellib, visualize, utils, det_utils as du
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
-from maskrcnn.model import log
+from model import log
 from clutter import ClutterDataset, ClutterConfig
 from tensorflow.python.platform import app
 from tensorflow.python.platform import flags

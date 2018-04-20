@@ -1,4 +1,6 @@
+import os
 import logging
+
 
 def mkdir_if_missing(output_dir):
     if not os.path.exists(output_dir):

@@ -10,9 +10,11 @@ Written by Waleed Abdulla
 """
 
 import numpy as np, cv2, os
-from maskrcnn.config import Config
+from config import Config
+# from maskrcnn.config import Config
 from tqdm import tqdm
-import maskrcnn.utils as utils
+# import maskrcnn.utils as utils
+import utils
 
 # Structure of data from Jeff.
 # depth_ims: image_{:06d}.png
