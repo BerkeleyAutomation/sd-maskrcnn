@@ -24,7 +24,6 @@ def augment_data(config):
     augmentation methods on each image and save the new copy to the
     output directory.
     """
-    print(config)
     img_dir = config["img_dir"]
     out_dir = config["out_dir"]
 
@@ -57,6 +56,7 @@ def train(config):
 
 
 def benchmark(config):
+    print("Benchmarking model.")
     # Create new directory for run outputs
     output_dir = config['output_dir'] # In what location should we put this new directory?
     run_name = config['run_name'] # What is it called
@@ -85,14 +85,14 @@ def benchmark(config):
     model = modellib.MaskRCNN(mode='inference', config=InferenceConfig(mean=128),
                               model_dir=model_dir)
 
-    print("Loading weights from ", model_path)
+    print("Loading weights from {}.\n".format(model_path))
     model.load_weights(model_path, by_name=True)
 
 
 
     # Feed images into model one by one. For each image, predict, save, visualize?
     N = len([p for p in os.listdir(test_dir) if p.endswith('.png')])
-    for i in range(N):
+    for i in tqdm(range(N)):
         im_name = str(i) + '.png'
         image = io.imread(os.path.join(test_dir, im_name))
 
@@ -109,7 +109,6 @@ def benchmark(config):
 
         # Save masks as .npy
         save_masks = np.stack([r['masks'][:,:,i] for i in range(r['masks'].shape[2])])
-        print(save_masks.shape)
         np.save(str(i) + '.npy')
 
         # Visualize
@@ -120,6 +119,9 @@ def benchmark(config):
         plt.close()
 
     # Generate prediction annotations
+
+
+    print("Saved output to {}.\n".format(config["output_dir"]))
 
 def read_config():
     # setting up flag parsing
@@ -144,7 +146,6 @@ def read_config():
     # prevents further need to cast from string to other types
     out = {}
     for key, value in conf_dict.items():
-        print(value)
         out[key] = literal_eval(value)
     out["task"] = task
     return out
@@ -163,5 +164,4 @@ if __name__ == "__main__":
         train(config)
 
     if task == "benchmark":
-        print('BENCHMARKING')
         benchmark(config)
