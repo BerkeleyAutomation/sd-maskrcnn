@@ -14,12 +14,12 @@ import skimage.io
 import numpy as np
 import tensorflow as tf
 
-from augmentation import augment_img
 from eval_coco import *
+from augmentation import augment_img
 
-from train_clutter import mkdir_if_missing
 import model as modellib, visualize, utils
 from clutter import ClutterConfig
+from pipeline_utils import *
 
 def augment_data(config):
     """
@@ -55,7 +55,27 @@ def augment_data(config):
 
 
 def train(config):
-    pass
+    # Load the datasets, configs.
+    train_config = ClutterConfig(mean=config["mean_pixel"])
+    config.display()
+
+    # Training dataset
+    dataset_train = ClutterDataset()
+    dataset_train.load('train', config["img_type"], 0)
+    dataset_train.prepare()
+
+    # Validation dataset
+    dataset_val = ClutterDataset()
+    dataset_val.load('test', config["img_type"], 0)
+    dataset_val.prepare()
+
+    # Create the model.
+    model = get_model(config, train_config)
+
+    model.train(dataset_train, dataset_val, learning_rate=train_config.LEARNING_RATE,
+                epochs=100, layers='all')
+    model_path = os.path.join(model_dir, "mask_rcnn_clutter.h5")
+    model.keras_model.save_weights(model_path)
 
 
 def benchmark(config):
@@ -86,10 +106,8 @@ def benchmark(config):
 
     inference_config = InferenceConfig(mean=128)
 
-    model_path = config['model_path']
-    model_dir, model_name = os.path.split(model_path)
-    model = modellib.MaskRCNN(mode='inference', config=inference_config,
-                              model_dir=model_dir)
+    # retrieve model
+    model = get_model(config, inference_config)
 
     print("Loading weights from {}.\n".format(model_path))
     model.load_weights(model_path, by_name=True)
@@ -144,8 +162,8 @@ def benchmark(config):
     encode_predictions(pred_dir)
     coco_benchmark(os.path.join(test_segmasks_dir, 'annos_gt.json'), os.path.join(pred_dir, 'annos_pred.json'))
 
+    print("Saved benchmarking output to {}.\n".format(config["output_dir"]))
 
-    print("Saved output to {}.\n".format(config["output_dir"]))
 
 def read_config():
     # setting up flag parsing
