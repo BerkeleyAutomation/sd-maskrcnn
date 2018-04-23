@@ -105,6 +105,7 @@ def encode_gt(mask_dir):
             'height': int(I.shape[0]),
             'file_name': im_name
         }
+
         gt_annos['images'].append(im_anno)
 
         # leaving license, flickr_url, coco_url, date_captured
@@ -179,9 +180,12 @@ def coco_benchmark(gt_path, pred_path):
 
     cocoGt = COCO(gt_path)
     cocoDt = cocoGt.loadRes(pred_path)
+
     cocoEval = COCOeval(cocoGt, cocoDt, 'segm')
 
     cocoEval.params.imgIds = cocoGt.getImgIds()
+    cocoEval.params.useCats = False
+
 
     cocoEval.evaluate()
     cocoEval.accumulate()
