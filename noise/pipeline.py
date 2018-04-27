@@ -19,6 +19,7 @@ from augmentation import augment_img
 
 import model as modellib, visualize, utils
 from clutter import ClutterConfig
+from real_dataset import RealImageDataset, prepare_real_image_test
 from pipeline_utils import *
 
 def augment_data(config):
@@ -94,73 +95,70 @@ def benchmark(config):
     # Save config
     # TODO: actually do it
 
-    # Load gt dataset and generate annotations
-    test_dir = config['test_dir'] # directory of test images
-    test_segmasks_dir = config['test_segmasks_dir'] # directory of test image segmasks
-    encode_gt(test_segmasks_dir)
+    model_path = config['model_path']
+    test_dir = config['test_dir'] # directory of test images and segmasks
 
-    # Load specified model
-    class InferenceConfig(ClutterConfig):
-        GPU_COUNT = 1
-        IMAGES_PER_GPU = 1
-
-    inference_config = InferenceConfig(mean=128)
-
-    # retrieve model
-    model = get_model(config, inference_config)
-
-    print("Loading weights from {}.\n".format(model_path))
-    model.load_weights(model_path, by_name=True)
-
-
+    inference_config, model, dataset_real = prepare_real_image_test(model_path, test_dir)
 
     # Feed images into model one by one. For each image, predict, save, visualize?
-    N = len([p for p in os.listdir(test_dir) if p.endswith('.png')])
-    for i in tqdm(range(N)):
-        im_name = str(i) + '.png'
-        print('evaluating', os.path.join(test_dir, im_name))
-        image = io.imread(os.path.join(test_dir, im_name))
+    image_ids = dataset_real.image_ids
 
-        if image.ndim != 3:
-            image = skimage.color.gray2rgb(image)
+    def get_ax(rows=1, cols=1, size=8):
+        """Return a Matplotlib Axes array to be used in
+        all visualizations in the notebook. Provide a
+        central point to control graph sizes.
 
-        image, window, scale, padding = utils.resize_image(
-            image,
-            min_dim=inference_config.IMAGE_MIN_DIM,
-            max_dim=inference_config.IMAGE_MAX_DIM,
-            padding=inference_config.IMAGE_PADDING)
-        results = model.detect([image], verbose=1)
+        Change the default size attribute to control the size
+        of rendered images
+        """
+        _, ax = plt.subplots(rows, cols, figsize=(size*cols, size*rows))
+        return ax
+
+    # create directory in which we save transformed GT segmasks
+    resized_segmask_dir = os.path.join(test_dir, 'modal_segmasks_processed')
+    mkdir_if_missing(resized_segmask_dir)
+
+    for image_id in tqdm(image_ids):
+        # Load image and ground truth data and resize for net
+        image, image_meta, gt_class_id, gt_bbox, gt_mask =\
+          modellib.load_image_gt(dataset_real, inference_config, image_id,
+            use_mini_mask=False)
+
+        # Save copy of transformed GT segmasks to disk in preparation for annotations
+        mask_name = 'image_{:06d}'.format(image_id)
+        mask_path = os.path.join(resized_segmask_dir, mask_name)
+        print(mask_path)
+
+        molded_images = modellib.mold_image(image, inference_config)
+        molded_images = np.expand_dims(molded_images, 0)
+
+        print('molded_images.shape', molded_images.shape)
+        print('gt_mask.shape', gt_mask.shape)
+        # save the transpose so it's (n, h, w) instead of (h, w, n)
+        np.save(mask_path, gt_mask.transpose(2, 0, 1))
+        # gt_stat, stat_name = compute_gt_stats(gt_bbox, gt_mask)
+
+        # Run object detection
+        results = model.detect([image], verbose=0)
         r = results[0]
 
-        # Save masks as .npy
         save_masks = np.stack([r['masks'][:,:,i] for i in range(r['masks'].shape[2])])
-        print(save_masks.shape)
-        save_masks_path = os.path.join(pred_dir, str(i) + '.npy')
+        print('save_masks.shape', save_masks.shape)
+        save_masks_path = os.path.join(pred_dir, str(image_id) + '.npy')
         np.save(save_masks_path, save_masks)
         print(save_masks_path)
 
-        # Visualize
-        def get_ax(rows=1, cols=1, size=8):
-            """Return a Matplotlib Axes array to be used in
-            all visualizations in the notebook. Provide a
-            central point to control graph sizes.
-
-            Change the default size attribute to control the size
-            of rendered images
-            """
-            _, ax = plt.subplots(rows, cols, figsize=(size*cols, size*rows))
-            return ax
-
-
         visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
                                     ['bg', 'obj'], r['scores'], ax=get_ax())
-        file_name = os.path.join(vis_dir, 'vis_{}'.format(im_name))
+        file_name = os.path.join(vis_dir, 'vis_{:06d}'.format(image_id))
         plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
         plt.close()
 
     # Generate prediction annotations
+    encode_gt(resized_segmask_dir)
     encode_predictions(pred_dir)
-    coco_benchmark(os.path.join(test_segmasks_dir, 'annos_gt.json'), os.path.join(pred_dir, 'annos_pred.json'))
+
+    coco_benchmark(os.path.join(resized_segmask_dir, 'annos_gt.json'), os.path.join(pred_dir, 'annos_pred.json'))
 
     print("Saved benchmarking output to {}.\n".format(config["output_dir"]))
 
