@@ -21,6 +21,24 @@ from pipeline_utils import *
 from clutter import ClutterConfig
 import model as modellib, visualize, utils
 from real_dataset import RealImageDataset, prepare_real_image_test
+from sim_dataset import SimImageDataset
+
+"""
+Pipeline Usage Notes:
+
+Please edit "config.ini" to specify the task you wish to perform and the
+necessary parameters for that task.
+
+Run this file with the tag --config [config file name] (in this case,
+config.ini).
+
+You should include in your PYTHONPATH the locations of maskrcnn and clutter
+folders.
+
+Here is an example run command (GPU selection included):
+CUDA_VISIBLE_DEVICES='0' PYTHONPATH='.:maskrcnn/:clutter/' python3 noise/pipeline.py --config noise/config.ini
+"""
+
 
 def augment_data(config):
     """
@@ -56,23 +74,29 @@ def augment_data(config):
 
 
 def train(config):
+    # read information from config
+    dataset_path = config["base_path"]
+    mean_pixel = config["mean_pixel"]
+    img_type = config["img_type"]
+
     # Load the datasets, configs.
-    train_config = ClutterConfig(mean=config["mean_pixel"])
-    config.display()
+    train_config = ClutterConfig(mean=mean_pixel)
+    train_config.display()
 
     # Training dataset
-    dataset_train = ClutterDataset()
-    dataset_train.load('train', config["img_type"], 0)
+    dataset_train = SimImageDataset(dataset_path)
+    dataset_train.load('train')
     dataset_train.prepare()
 
     # Validation dataset
-    dataset_val = ClutterDataset()
-    dataset_val.load('test', config["img_type"], 0)
+    dataset_val = SimImageDataset(dataset_path)
+    dataset_val.load('test')
     dataset_val.prepare()
 
     # Create the model.
     model = get_model(config, train_config)
 
+    # train and save weights to model_path
     model.train(dataset_train, dataset_val, learning_rate=train_config.LEARNING_RATE,
                 epochs=100, layers='all')
     model_path = os.path.join(model_dir, "mask_rcnn_clutter.h5")
