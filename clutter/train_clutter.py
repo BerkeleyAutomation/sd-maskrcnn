@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import utils
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('task', '', '')
+flags.DEFINE_string('task', 'train', '')
 flags.DEFINE_string('im_type', 'gray', '')
 # flags.DEFINE_string('logdir_prefix', 'output/', '')
 flags.DEFINE_string('logdir', 'outputs/v1', '')
@@ -24,6 +24,8 @@ flags.DEFINE_string('im_dir', '', '')
 #   --logdir outputs/v3_512_40_flip_depth --im_type depth --task train
 # CUDA_VISIBLE_DEVICES='3' PYTHONPATH='.:maskrcnn/' python clutter/train_clutter.py \
 #   --logdir outputs/v3_512_40_flip --im_type gray --task benchmark
+# CUDA_VISIBLE_DEVICES='2' PYTHONPATH='.:maskrcnn/' python clutter/train_clutter.py \
+#   --logdir outputs/v3_512_40_flip_depth --im_type depth --task train
 
 def mkdir_if_missing(output_dir):
   if not os.path.exists(output_dir):
@@ -93,6 +95,7 @@ def train():
   # Load the datasets, configs.
   m = 166. if FLAGS.im_type=='depth' else 128
   config = ClutterConfig(mean=m)
+  config.LEARNING_RATE = 5e-6
   config.display()
   model_dir = os.path.join(FLAGS.logdir)
 
@@ -109,14 +112,6 @@ def train():
   # Create the model.
   model = modellib.MaskRCNN(mode="training", config=config,
     model_dir=model_dir)
-
-  # model.load_weights(model.find_last()[1], by_name=True)
-
-  # Train the model.
-  # Train the head branches
-  # Passing layers="heads" freezes all layers except the head
-  # layers. You can also pass a regular expression to select
-  # which layers to train by name pattern.
 
   model.train(dataset_train, dataset_val, learning_rate=config.LEARNING_RATE,
     epochs=100, layers='all')
@@ -413,6 +408,7 @@ def get_ax(rows=1, cols=1, size=8):
   return ax
 
 def main(_):
+  print("Task: {}\n".format(FLAGS.task))
   assert(FLAGS.task in ['train', 'vis', 'bench', 'tune', 'vis_ext'])
   config = tf.ConfigProto()
   config.gpu_options.allow_growth = True

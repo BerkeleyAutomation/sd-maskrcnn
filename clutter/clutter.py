@@ -15,6 +15,7 @@ from config import Config
 from tqdm import tqdm
 # import maskrcnn.utils as utils
 import utils
+import logging
 
 # Structure of data from Jeff.
 # depth_ims: image_{:06d}.png
@@ -24,7 +25,8 @@ import utils
 # unoccluded_segmasks: image_{:06d}_channel_{:03d}.png
 # splits/fold_{:02d}/{train,test}_indices.npy
 
-base_dir = '/nfs/diskstation/projects/dex-net/segmentation/datasets/pile_segmasks_01_28_18'
+base_dir = '/nfs/diskstation/projects/dex-net/segmentation/datasets/segmasks_04_13_18'
+# base_dir = '/nfs/diskstation/projects/dex-net/segmentation/datasets/pile_segmasks_01_28_18'
 
 class ClutterConfig(Config):
   """Configuration for training on the toy shapes dataset.
@@ -76,10 +78,12 @@ class ClutterDataset(utils.Dataset):
   """
   def load(self, imset, typ='depth', fold=0):
     # Load the indices for imset.
-    self.base_path = os.path.join('/nfs/diskstation/projects/dex-net/segmentation/datasets/pile_segmasks_01_28_18')
+    # self.base_path = os.path.join('/nfs/diskstation/projects/dex-net/segmentation/datasets/pile_segmasks_01_28_18')
+    self.base_path = os.path.join("/nfs/diskstation/projects/dex-net/segmentation/datasets/segmasks_04_13_18")
     split_file = os.path.join(self.base_path, 'splits',
       'fold_{:02d}'.format(fold), '{:s}_indices.npy'.format(imset))
     self.image_id = np.load(split_file)
+    self.image_id = self.image_id[self.image_id < 10000]
 
     self.add_class('clutter', 1, 'fg')
     flips = [0, 1, 2, 3] if imset == 'train' else [0]
@@ -87,12 +91,16 @@ class ClutterDataset(utils.Dataset):
     count = 0
 
     for i in self.image_id:
-      p = os.path.join(self.base_path, '{:s}_ims'.format(typ),
+      # make sure that i is not too big if incorrect indices are given
+      if i > 10000:
+        continue
+    # p = os.path.join(self.base_path, 'noisy_{:s}_ims'.format(typ),
+      p = os.path.join(self.base_path, 'noisy_{:s}_ims'.format(typ),
         'image_{:06d}.png'.format(i))
       count += 1
 
       for flip in flips:
-        self.add_image('clutter', image_id=i, path=p, width=256, height=256, flip=flip)
+        self.add_image('clutter', image_id=i, path=p, width=600, height=400, flip=flip)
 
   def flip(self, image, flip):
     if flip == 0:
@@ -114,7 +122,8 @@ class ClutterDataset(utils.Dataset):
     info = self.image_info[image_id]
 
     # modify path- depth_ims to depth_ims_resized
-    image = cv2.imread(info['path'].replace('depth_ims', 'depth_ims_resized'), cv2.IMREAD_UNCHANGED)
+    image = cv2.imread(info['path'].replace('depth_ims', 'noisy_depth_ims'), cv2.IMREAD_UNCHANGED)
+    logging.log(level=1, msg=str(info['path'].replace('depth_ims', 'noisy_depth_ims')))
     # image = cv2.imread(info['path'])
     assert(image is not None)
     if image.ndim == 2: image = np.tile(image[:,:,np.newaxis], [1,1,3])
@@ -162,7 +171,8 @@ class ClutterDataset(utils.Dataset):
 class RealDataset(ClutterDataset):
   def load(self, imset, typ='depth', fold=0):
     # Load the indices for imset.
-    self.base_path = os.path.join('/nfs/diskstation/projects/dex-net/segmentation/datasets/pile_segmasks_01_28_18')
+    # self.base_path = os.path.join('/nfs/diskstation/projects/dex-net/segmentation/datasets/pile_segmasks_01_28_18')
+    self.base_path = os.path.join('/nfs/diskstation/projects/dex-net/segmentation/datasets/segmasks_04_13_18')
     split_file = os.path.join(self.base_path, 'splits',
       'real_{:02d}'.format(fold), '{:s}_indices.npy'.format(imset))
     self.image_id = np.load(split_file)
@@ -173,7 +183,10 @@ class RealDataset(ClutterDataset):
     count = 0
 
     for i in self.image_id:
-      p = os.path.join(self.base_path, '{:s}_ims'.format(typ),
+      if i > 10000:
+        continue
+    # p = os.path.join(self.base_path, '{:s}_ims'.format(typ),
+      p = os.path.join(self.base_path, 'noisy_{:s}_ims'.format(typ),
         'image_{:06d}.png'.format(i))
       count += 1
 
@@ -200,8 +213,8 @@ class RealDataset(ClutterDataset):
     info = self.image_info[image_id]
 
     # modify path- depth_ims to depth_ims_resized
-    # image = cv2.imread(info['path'].replace('real_ims', 'depth_ims_resized'), cv2.IMREAD_UNCHANGED)
-    image = cv2.imread(info['path'])
+    image = cv2.imread(info['path'].replace('depth_ims', 'noisy_depth_ims'), cv2.IMREAD_UNCHANGED)
+    # image = cv2.imread(info['path'])
     assert(image is not None)
     if image.ndim == 2: image = np.tile(image[:,:,np.newaxis], [1,1,3])
     image = self.flip(image, info['flip'])
