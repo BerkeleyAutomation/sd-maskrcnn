@@ -11,7 +11,7 @@ from pycocotools import mask
 
 import numpy as np
 import skimage.io as io
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 # import pylab
 import os
 import json
@@ -61,14 +61,17 @@ def encode_predictions(mask_dir):
 def encode_gt(mask_dir):
     """Given a path to a directory of ground-truth image segmentation masks,
     encodes them into the COCO annotations format using the COCO API.
-    Requires that GT masks are named 0.png, 1.png, etc. in order without any
+    GT segmasks are 3D Numpy arrays of shape (n, h, w) for n predicted instances,
+    in case of overlapping masks.
+    These MUST be the same size as predicted masks, ensure this by using masks returned from
+    model.load_image_gt.
+    DO NOT INCLUDE THE BACKGROUND. model.load_image_gt will automatically remove it.
+    Requires that GT masks are named 000000.npy, 000001.npy, etc. in order without any
     missing numbers.
 
     mask_dir: str, directory in which GT masks are stored. Avoid relative
         paths if possible.
     """
-
-
     # Constructing GT annotation file per COCO format:
     # http://cocodataset.org/#download
     gt_annos = {
@@ -80,29 +83,18 @@ def encode_gt(mask_dir):
              'supercategory': 'object'}
         ]
     }
-    # leaving info and licenses fields incomplete
 
-
-    N = len([p for p in os.listdir(mask_dir) if p.endswith('.png')])
+    N = len([p for p in os.listdir(mask_dir) if p.endswith('.npy')])
 
     for i in range(N):
         # load image
-        im_name = str(i) + '.png'
-        I = io.imread(os.path.join(mask_dir, im_name))
-
-        # POTENTIALLY MAY NEED RESIZING
-
-        # create image annotation
-    #     print('-------------Image Annotation-------------')
-    #     print('id:', i)
-    #     print('(width, height):', I.shape[1], I.shape[0])
-    #     print('file_name:', im_name)
-    #     print('------------------------------------------')
-
+        im_name = 'image_{:06d}.npy'.format(i)
+        I = np.load(os.path.join(mask_dir, im_name))
+        print('I.shape', I.shape)
         im_anno = {
             'id': i,
             'width': int(I.shape[1]),
-            'height': int(I.shape[0]),
+            'height': int(I.shape[2]),
             'file_name': im_name
         }
 
@@ -113,12 +105,15 @@ def encode_gt(mask_dir):
 
 
         # mask each individual object
-        # 0 is background color for UEA Image Annotation Format
-        mask_vals = [int(v) for v in np.delete(np.unique(I), 0)]
-        for val in mask_vals:
+        # NOTE: We assume these masks do not include backgrounds.
+        # This means that the 1st object instance will have index 0!
+        for val in range(I.shape[0]):
             # get binary mask
-            bin_mask = (I == val).astype(np.uint8)
-            instance_id = i * 100 + val # create id for instance
+            bin_mask = I[val,:,:].astype(np.uint8)
+
+
+            print('bin_mask.shape', bin_mask.shape)
+            instance_id = i * 100 + (val + 1) # create id for instance, incrmeent val
 
             # find bounding box
 
@@ -136,7 +131,7 @@ def encode_gt(mask_dir):
             encode_mask['counts'] = encode_mask['counts'].decode('ascii')
             size = int(mask.area(encode_mask))
             x, y, w, h = bbox2(bin_mask)
-
+            print('(val, x, y, w, h)', (val, x, y, w, h))
 
             # create instance annotation
     #         print('-------------Instance Annotation-------------')
@@ -162,9 +157,10 @@ def encode_gt(mask_dir):
             gt_annos['annotations'].append(instance_anno)
 
             # sanity check visualizations
-    #         plt.imshow(bin_mask)
-    #         plt.scatter([x, x, x + w, x + w], [y, y + h, y, y + h])
-    #         plt.show()
+            # plt.imshow(bin_mask)
+            # plt.scatter([x, x, x + w, x + w], [y, y + h, y, y + h])
+            # plt.savefig(os.path.join(mask_dir, 'bin_{:d}.png'.format(instance_id)))
+            # plt.close()
 
     anno_path = os.path.join(mask_dir, 'annos_gt.json')
 
