@@ -17,10 +17,10 @@ import tensorflow as tf
 from eval_coco import *
 from augmentation import augment_img
 
-import model as modellib, visualize, utils
-from clutter import ClutterConfig
-from real_dataset import RealImageDataset, prepare_real_image_test
 from pipeline_utils import *
+from clutter import ClutterConfig
+import model as modellib, visualize, utils
+from real_dataset import RealImageDataset, prepare_real_image_test
 
 def augment_data(config):
     """
