@@ -84,83 +84,27 @@ def benchmark(config):
     # Create new directory for run outputs
     output_dir = config['output_dir'] # In what location should we put this new directory?
     run_name = config['run_name'] # What is it called
-    mkdir_if_missing(os.path.join(output_dir, run_name))
-
-    # Create subdirectories for masks and visuals
-    pred_dir = os.path.join(output_dir, run_name, 'pred')
-    vis_dir = os.path.join(output_dir, run_name, 'vis')
-    mkdir_if_missing(pred_dir)
-    mkdir_if_missing(vis_dir)
+    run_dir = os.path.join(output_dir, run_name)
+    mkdir_if_missing(run_dir)
 
     # Save config
     # TODO: actually do it
-
     model_path = config['model_path']
     test_dir = config['test_dir'] # directory of test images and segmasks
 
     inference_config, model, dataset_real = prepare_real_image_test(model_path, test_dir)
 
-    # Feed images into model one by one. For each image, predict, save, visualize?
-    image_ids = dataset_real.image_ids
 
-    def get_ax(rows=1, cols=1, size=8):
-        """Return a Matplotlib Axes array to be used in
-        all visualizations in the notebook. Provide a
-        central point to control graph sizes.
+    ######## BENCHMARK JUST CREATES THE RUN DIRECTORY ########
+    # code that actually produces outputs should be plug-and-play
+    # depending on what kind of benchmark function we run.
 
-        Change the default size attribute to control the size
-        of rendered images
-        """
-        _, ax = plt.subplots(rows, cols, figsize=(size*cols, size*rows))
-        return ax
 
-    # create directory in which we save transformed GT segmasks
-    resized_segmask_dir = os.path.join(test_dir, 'modal_segmasks_processed')
-    mkdir_if_missing(resized_segmask_dir)
+    coco_benchmark(run_dir, inference_config, model, dataset_real)
 
-    for image_id in tqdm(image_ids):
-        # Load image and ground truth data and resize for net
-        image, image_meta, gt_class_id, gt_bbox, gt_mask =\
-          modellib.load_image_gt(dataset_real, inference_config, image_id,
-            use_mini_mask=False)
 
-        # Save copy of transformed GT segmasks to disk in preparation for annotations
-        mask_name = 'image_{:06d}'.format(image_id)
-        mask_path = os.path.join(resized_segmask_dir, mask_name)
-        print(mask_path)
 
-        molded_images = modellib.mold_image(image, inference_config)
-        molded_images = np.expand_dims(molded_images, 0)
-
-        print('molded_images.shape', molded_images.shape)
-        print('gt_mask.shape', gt_mask.shape)
-        # save the transpose so it's (n, h, w) instead of (h, w, n)
-        np.save(mask_path, gt_mask.transpose(2, 0, 1))
-        # gt_stat, stat_name = compute_gt_stats(gt_bbox, gt_mask)
-
-        # Run object detection
-        results = model.detect([image], verbose=0)
-        r = results[0]
-
-        save_masks = np.stack([r['masks'][:,:,i] for i in range(r['masks'].shape[2])])
-        print('save_masks.shape', save_masks.shape)
-        save_masks_path = os.path.join(pred_dir, str(image_id) + '.npy')
-        np.save(save_masks_path, save_masks)
-        print(save_masks_path)
-
-        visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
-                                    ['bg', 'obj'], r['scores'], ax=get_ax())
-        file_name = os.path.join(vis_dir, 'vis_{:06d}'.format(image_id))
-        plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
-        plt.close()
-
-    # Generate prediction annotations
-    encode_gt(resized_segmask_dir)
-    encode_predictions(pred_dir)
-
-    coco_benchmark(os.path.join(resized_segmask_dir, 'annos_gt.json'), os.path.join(pred_dir, 'annos_pred.json'))
-
-    print("Saved benchmarking output to {}.\n".format(config["output_dir"]))
+    print("Saved benchmarking output to {}.\n".format(run_dir))
 
 
 def read_config():
