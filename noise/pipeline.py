@@ -14,13 +14,13 @@ import skimage.io
 import numpy as np
 import tensorflow as tf
 
-from augmentation import augment_img
 from eval_coco import *
+from augmentation import augment_img
 
-from train_clutter import mkdir_if_missing
 import model as modellib, visualize, utils
 from clutter import ClutterConfig
 from real_dataset import RealImageDataset, prepare_real_image_test
+from pipeline_utils import *
 
 def augment_data(config):
     """
@@ -28,7 +28,6 @@ def augment_data(config):
     augmentation methods on each image and save the new copy to the
     output directory.
     """
-    print(config)
     img_dir = config["img_dir"]
     out_dir = config["out_dir"]
 
@@ -57,10 +56,31 @@ def augment_data(config):
 
 
 def train(config):
-    pass
+    # Load the datasets, configs.
+    train_config = ClutterConfig(mean=config["mean_pixel"])
+    config.display()
+
+    # Training dataset
+    dataset_train = ClutterDataset()
+    dataset_train.load('train', config["img_type"], 0)
+    dataset_train.prepare()
+
+    # Validation dataset
+    dataset_val = ClutterDataset()
+    dataset_val.load('test', config["img_type"], 0)
+    dataset_val.prepare()
+
+    # Create the model.
+    model = get_model(config, train_config)
+
+    model.train(dataset_train, dataset_val, learning_rate=train_config.LEARNING_RATE,
+                epochs=100, layers='all')
+    model_path = os.path.join(model_dir, "mask_rcnn_clutter.h5")
+    model.keras_model.save_weights(model_path)
 
 
 def benchmark(config):
+    print("Benchmarking model.")
     # Create new directory for run outputs
     output_dir = config['output_dir'] # In what location should we put this new directory?
     run_name = config['run_name'] # What is it called
@@ -140,6 +160,9 @@ def benchmark(config):
 
     coco_benchmark(os.path.join(resized_segmask_dir, 'annos_gt.json'), os.path.join(pred_dir, 'annos_pred.json'))
 
+    print("Saved benchmarking output to {}.\n".format(config["output_dir"]))
+
+
 def read_config():
     # setting up flag parsing
     conf_parser = argparse.ArgumentParser(description="Augment data in path folder with various noise filters and transformations")
@@ -163,7 +186,6 @@ def read_config():
     # prevents further need to cast from string to other types
     out = {}
     for key, value in conf_dict.items():
-        print(value)
         out[key] = literal_eval(value)
     out["task"] = task
     return out
