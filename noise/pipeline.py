@@ -15,6 +15,7 @@ import numpy as np
 import tensorflow as tf
 
 from eval_coco import *
+from eval_saurabh import *
 from augmentation import augment_img
 
 from pipeline_utils import *
@@ -94,14 +95,13 @@ def benchmark(config):
 
     inference_config, model, dataset_real = prepare_real_image_test(model_path, test_dir)
 
-
     ######## BENCHMARK JUST CREATES THE RUN DIRECTORY ########
     # code that actually produces outputs should be plug-and-play
     # depending on what kind of benchmark function we run.
 
-
     coco_benchmark(run_dir, inference_config, model, dataset_real)
 
+    s_benchmark(run_dir, inference_config, model, dataset_real)
 
 
     print("Saved benchmarking output to {}.\n".format(run_dir))

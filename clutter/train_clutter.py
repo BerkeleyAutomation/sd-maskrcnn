@@ -246,7 +246,7 @@ def benchmark():
       du.inst_bench(None, None, None, tp=tps, fp=fps, score=scs, numInst=num_insts)
     str_ = 'mAP: {:.3f}, prec: {:.3f}, rec: {:.3f}, npos: {:d}'.format(
       ap[0], np.min(prec), np.max(rec), npos)
-    logging.error('%s', str_)
+    # logging.error('%s', str_)
     # print("mAP: ", ap[0], "prec: ", np.max(prec), "rec: ", np.max(rec), "prec-1: ",
     #   prec[-1], "npos: ", npos)
     plt.style.use('fivethirtyeight') #bmh')
@@ -256,7 +256,7 @@ def benchmark():
     ax.set_title(str_) #'{:5.3f}'.format(ap[0]*100))
     plot_stats(stat_name, gt_stats, tp_inds, fn_inds, axes)
     file_name = os.path.join(model.model_dir, 'pr_stats_{:d}.png'.format(int(thresh*100)))
-    logging.error('plot file name: %s', file_name)
+    # logging.error('plot file name: %s', file_name)
     plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
     plt.close()
 
@@ -277,10 +277,10 @@ def plot_stats(stat_name, gt_stats, tp_inds, fn_inds, axes):
     all_stats_ = all_stats_[np.logical_and(all_stats_ > min_, all_stats_ < max_)]
     _, bins = np.histogram(all_stats_, 'auto')
     bin_size = bins[1]-bins[0]
-    s = np.unique(all_stats_); s = s[1:]-s[:-1]
-    if bin_size < np.min(s):
-      bin_size = np.min(s)
-      bins = np.arange(bins[0], bins[-1]+bin_size, bin_size)
+    # s = np.unique(all_stats_); s = s[1:]-s[:-1]
+    # if bin_size < np.min(s):
+    #   bin_size = np.min(s)
+    bins = np.arange(bins[0], bins[-1]+bin_size, bin_size)
     for j, (m, n) in \
         enumerate(zip([tp_stats[:,i], fn_stats[:,i]], ['tp', 'fn'])):
       ax.hist(m, bins, alpha=0.5, label=n, linewidth=1, linestyle='-', ec='k')
