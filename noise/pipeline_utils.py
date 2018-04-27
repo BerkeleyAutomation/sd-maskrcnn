@@ -12,6 +12,7 @@ def mkdir_if_missing(output_dir):
 
 def get_model(config, clutter_config):
     model_path = config["model_path"]
+    mkdir_if_missing(model_path)
     mode = config["model_mode"]
     model_dir, model_name = os.path.split(model_path)
     model = modellib.MaskRCNN(mode=mode, config=clutter_config,
