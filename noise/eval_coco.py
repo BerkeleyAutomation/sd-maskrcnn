@@ -15,6 +15,12 @@ import matplotlib.pyplot as plt
 # import pylab
 import os
 import json
+from tqdm import tqdm
+import model as modellib, visualize, utils
+from pipeline_utils import *
+from real_dataset import RealImageDataset, prepare_real_image_test
+
+
 
 def encode_predictions(mask_dir):
     """Given a path to a directory of predicted image segmentation masks,
@@ -35,8 +41,6 @@ def encode_predictions(mask_dir):
         # load .npy
         im_name = str(i) + '.npy'
         I = np.load(os.path.join(mask_dir, im_name))
-
-        print(I.shape)
 
         for bin_mask in I:
             # encode mask
@@ -90,7 +94,6 @@ def encode_gt(mask_dir):
         # load image
         im_name = 'image_{:06d}.npy'.format(i)
         I = np.load(os.path.join(mask_dir, im_name))
-        print('I.shape', I.shape)
         im_anno = {
             'id': i,
             'width': int(I.shape[1]),
@@ -110,9 +113,6 @@ def encode_gt(mask_dir):
         for val in range(I.shape[0]):
             # get binary mask
             bin_mask = I[val,:,:].astype(np.uint8)
-
-
-            print('bin_mask.shape', bin_mask.shape)
             instance_id = i * 100 + (val + 1) # create id for instance, incrmeent val
 
             # find bounding box
@@ -131,18 +131,6 @@ def encode_gt(mask_dir):
             encode_mask['counts'] = encode_mask['counts'].decode('ascii')
             size = int(mask.area(encode_mask))
             x, y, w, h = bbox2(bin_mask)
-            print('(val, x, y, w, h)', (val, x, y, w, h))
-
-            # create instance annotation
-    #         print('-------------Instance Annotation-------------')
-    #         print('id:', instance_id)
-    #         print('image_id:', i)
-    #         print('category_id:', 1)
-    #         print('segmentation:', encode_mask)
-    #         print('area:', size)
-    #         print('bbox:', [x, y, w, h])
-    #         print('iscrowd:', 0)
-    #         print('---------------------------------------------')
 
             instance_anno = {
                 "id" : instance_id,
@@ -168,11 +156,22 @@ def encode_gt(mask_dir):
     print("successfully wrote GT annotations to", anno_path)
 
 
-def coco_benchmark(gt_path, pred_path):
-    """Given a path to a COCO ground truth annotations file and a path to a COCO
-    prediction annotations file, compute the COCO evaluation metrics on the
-    predictions.
+def compute_coco_metrics(gt_dir, pred_dir):
+    """Given paths to two directories, one containing a COCO ground truth annotations
+    file and the other a path to a COCO prediction annotations file, compute the COCO
+    evaluation metrics on the predictions.
+
+    Because the COCO API is weird and prints out summary values, we need this
+    terrible hack to capture them from stdout.
+https://stackoverflow.com/questions/16571150/how-to-capture-stdout-output-from-a-python-function-call
     """
+
+    gt_path = os.path.join(gt_dir, 'annos_gt.json')
+    pred_path = os.path.join(pred_dir, 'annos_pred.json')
+
+    import io
+    from contextlib import redirect_stdout
+
 
     cocoGt = COCO(gt_path)
     cocoDt = cocoGt.loadRes(pred_path)
@@ -182,7 +181,84 @@ def coco_benchmark(gt_path, pred_path):
     cocoEval.params.imgIds = cocoGt.getImgIds()
     cocoEval.params.useCats = False
 
-
     cocoEval.evaluate()
     cocoEval.accumulate()
-    cocoEval.summarize()
+
+    f = io.StringIO()
+    with redirect_stdout(f):
+        cocoEval.summarize()
+    out = f.getvalue()
+    print(out)
+
+    with open(os.path.join(pred_dir, 'coco_summary.txt'), 'w') as coco_file:
+        coco_file.write(out)
+        print('COCO Metric Summary written to {}'.format(os.path.join(pred_dir,
+                                                                      'coco_summary.txt')))
+
+
+
+def coco_benchmark(run_dir, inference_config, model, dataset_real):
+    """Given a run directory, a MaskRCNN config object, a MaskRCNN model object,
+    and a Dataset object,
+    - Runs the model on the images
+    - Saves predictions in run directory
+    - Creates and saves visuals for said predictions in run directory
+    - Computes COCO statistics (mAP over certain ranges) on predictions.
+
+    NOTE:
+    The network transforms all inputs to a particular size with scaling and
+    padding operations. This function will apply those transformations to the
+    ground truth segmasks and save them in a new subdirectory of the test image
+    directory. This helps for generating the annotations required to call the
+    COCO API.
+    """
+
+    # Create subdirectories for masks and visuals
+    pred_dir = os.path.join(run_dir, 'pred')
+    mkdir_if_missing(pred_dir)
+    vis_dir = os.path.join(run_dir, 'vis')
+    mkdir_if_missing(vis_dir)
+
+    # Create directory in which we save transformed GT segmasks
+    resized_segmask_dir = os.path.join(run_dir, 'modal_segmasks_processed')
+    mkdir_if_missing(resized_segmask_dir)
+
+    # Feed images into model one by one. For each image, predict, save, visualize?
+    image_ids = dataset_real.image_ids
+
+    for image_id in tqdm(image_ids):
+        # Load image and ground truth data and resize for net
+        image, image_meta, gt_class_id, gt_bbox, gt_mask =\
+          modellib.load_image_gt(dataset_real, inference_config, image_id,
+            use_mini_mask=False)
+
+        # Save copy of transformed GT segmasks to disk in preparation for annotations
+        mask_name = 'image_{:06d}'.format(image_id)
+        mask_path = os.path.join(resized_segmask_dir, mask_name)
+
+        molded_images = modellib.mold_image(image, inference_config)
+        molded_images = np.expand_dims(molded_images, 0)
+
+        # save the transpose so it's (n, h, w) instead of (h, w, n)
+        np.save(mask_path, gt_mask.transpose(2, 0, 1))
+        # gt_stat, stat_name = compute_gt_stats(gt_bbox, gt_mask)
+
+        # Run object detection
+        results = model.detect([image], verbose=0)
+        r = results[0]
+
+        save_masks = np.stack([r['masks'][:,:,i] for i in range(r['masks'].shape[2])])
+        save_masks_path = os.path.join(pred_dir, str(image_id) + '.npy')
+        np.save(save_masks_path, save_masks)
+
+        visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
+                                    ['bg', 'obj'], r['scores'])
+        file_name = os.path.join(vis_dir, 'vis_{:06d}'.format(image_id))
+        plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
+        plt.close()
+
+    # Generate prediction annotations
+    encode_gt(resized_segmask_dir)
+    encode_predictions(pred_dir)
+
+    compute_coco_metrics(resized_segmask_dir, pred_dir)
