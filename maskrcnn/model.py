@@ -1195,6 +1195,7 @@ def load_image_gt(dataset, config, image_id, augment=False,
     # Image meta data
     image_meta = compose_image_meta(image_id, shape, window, active_class_ids)
 
+    # print(image.shape, image_meta, class_ids, bbox, mask.shape)
     return image, image_meta, class_ids, bbox, mask
 
 
@@ -1613,8 +1614,8 @@ def data_generator(dataset, config, shuffle=True, augment=True, random_rois=0,
             # Which class IDs are active in this image?
 
             ### THIS IS THE PROBLEM -Andrew ###
-            if not np.any(gt_class_ids > 0):
-                continue
+            # if not np.any(gt_class_ids > 0):
+            #     continue
 
             # RPN Targets
             rpn_match, rpn_bbox = build_rpn_targets(image.shape, anchors,

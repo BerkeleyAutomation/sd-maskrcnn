@@ -25,8 +25,7 @@ import logging
 # unoccluded_segmasks: image_{:06d}_channel_{:03d}.png
 # splits/fold_{:02d}/{train,test}_indices.npy
 
-base_dir = '/nfs/diskstation/projects/dex-net/segmentation/datasets/segmasks_04_13_18'
-# base_dir = '/nfs/diskstation/projects/dex-net/segmentation/datasets/pile_segmasks_01_28_18'
+base_dir = '/nfs/diskstation/projects/dex-net/segmentation/datasets/noisy_sim_dataset'
 
 class ClutterConfig(Config):
   """Configuration for training on the toy shapes dataset.
@@ -79,9 +78,11 @@ class ClutterDataset(utils.Dataset):
   def load(self, imset, typ='depth', fold=0):
     # Load the indices for imset.
     # self.base_path = os.path.join('/nfs/diskstation/projects/dex-net/segmentation/datasets/pile_segmasks_01_28_18')
-    self.base_path = os.path.join("/nfs/diskstation/projects/dex-net/segmentation/datasets/segmasks_04_13_18")
-    split_file = os.path.join(self.base_path, 'splits',
-      'fold_{:02d}'.format(fold), '{:s}_indices.npy'.format(imset))
+    self.base_path = os.path.join("/nfs/diskstation/projects/dex-net/segmentation/datasets/noisy_sim_dataset")
+    # with folds
+    # split_file = os.path.join(self.base_path, 'splits',
+    # 'fold_{:02d}'.format(fold), '{:s}_indices.npy'.format(imset))
+    split_file = os.path.join(self.base_path, '{:s}_indices.npy'.format(imset))
     self.image_id = np.load(split_file)
     self.image_id = self.image_id[self.image_id < 10000]
 
@@ -94,8 +95,8 @@ class ClutterDataset(utils.Dataset):
       # make sure that i is not too big if incorrect indices are given
       if i > 10000:
         continue
-    # p = os.path.join(self.base_path, 'noisy_{:s}_ims'.format(typ),
-      p = os.path.join(self.base_path, 'noisy_{:s}_ims'.format(typ),
+    # p = os.path.join(self.base_path, '{:s}_ims'.format(typ),
+      p = os.path.join(self.base_path, '{:s}_ims'.format(typ),
         'image_{:06d}.png'.format(i))
       count += 1
 
@@ -122,8 +123,8 @@ class ClutterDataset(utils.Dataset):
     info = self.image_info[image_id]
 
     # modify path- depth_ims to depth_ims_resized
-    image = cv2.imread(info['path'].replace('depth_ims', 'noisy_depth_ims'), cv2.IMREAD_UNCHANGED)
-    logging.log(level=1, msg=str(info['path'].replace('depth_ims', 'noisy_depth_ims')))
+    image = cv2.imread(info['path'], cv2.IMREAD_UNCHANGED)
+    logging.log(level=1, msg=str(info['path']))
     # image = cv2.imread(info['path'])
     assert(image is not None)
     if image.ndim == 2: image = np.tile(image[:,:,np.newaxis], [1,1,3])
@@ -271,7 +272,7 @@ def test_clutter_dataset():
   print(np.mean(np.array(Is)))
 
 def concat_segmasks():
-  print("CONCATENATING SEGMASKS")
+  print("CONCATENATING SEGMASKS IN " + base_dir)
   bads = []
   for i in tqdm(range(10000)):
     Is = []
@@ -385,5 +386,5 @@ def check_bounds(x, left, right):
 if __name__ == '__main__':
   # test_clutter_dataset()
   concat_segmasks()
-  resize_images()
+  # resize_images()
   # test_display_images()

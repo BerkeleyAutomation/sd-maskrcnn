@@ -79,8 +79,18 @@ def train(config):
     mean_pixel = config["mean_pixel"]
     img_type = config["img_type"]
 
+    # learning rate set
+
+
     # Load the datasets, configs.
     train_config = ClutterConfig(mean=mean_pixel)
+
+    # future: override maskrcnn safety checks to allow non power-of-2 shapes
+    # img_width = config["img_width"]
+    # img_height = config["img_height"]
+    # img_nchannels = config["img_nchannels"]
+    # img_shape = (img_height, img_width, img_nchannels)
+    # train_config.IMAGE_SHAPE = img_shape
     train_config.display()
 
     # Training dataset
