@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import logging
 import argparse
 import configparser
@@ -14,8 +15,8 @@ import skimage.io
 import numpy as np
 import tensorflow as tf
 
-from eval_coco import *
-from eval_saurabh import *
+from eval_coco import coco_benchmark
+from eval_saurabh import s_benchmark
 from augmentation import augment_img
 
 from pipeline_utils import *
@@ -74,17 +75,17 @@ def augment_data(config):
     print("Augmentation complete; files saved in {}.\n".format(out_dir))
 
 
-def train(config):
+def train(config_og, config):
     # read information from config
     dataset_path = config["base_path"]
     mean_pixel = config["mean_pixel"]
     img_type = config["img_type"]
 
-    # learning rate set
-
-
     # Load the datasets, configs.
     train_config = ClutterConfig(mean=mean_pixel)
+
+    # learning rate set
+    train_config.LEARNING_RATE = config["learning_rate"]
 
     # future: override maskrcnn safety checks to allow non power-of-2 shapes
     # img_width = config["img_width"]
@@ -105,12 +106,18 @@ def train(config):
     dataset_val.prepare()
 
     # Create the model.
-    model = get_model(config, train_config)
+    model, model_path = get_model_and_path(config, train_config)
+
+    # save config in run folder
+    save_config(config_og, os.path.join(model_path, config["save_conf_name"]))
 
     # train and save weights to model_path
     model.train(dataset_train, dataset_val, learning_rate=train_config.LEARNING_RATE,
-                epochs=100, layers='all')
-    model_path = os.path.join(model_dir, "mask_rcnn_clutter.h5")
+                epochs=50, layers='all')
+
+    # save in the dataset folder
+    current_datetime = time.strftime("%Y%m%d-%H%M%S")
+    model_path = os.path.join(model_path, "mask_rcnn_clutter_{}.h5".format(current_datetime))
     model.keras_model.save_weights(model_path)
 
 
@@ -166,12 +173,20 @@ def read_config():
     for key, value in conf_dict.items():
         out[key] = literal_eval(value)
     out["task"] = task
-    return out
+
+    # return both config and the parsed dictionary
+    return conf, out
+
+
+def save_config(conf, conf_path):
+    # save config for current run in the folder
+    with open(conf_path, "w") as f:
+        conf.write(f)
 
 
 if __name__ == "__main__":
     # parse the provided configuration file
-    config = read_config()
+    config_og, config = read_config()
 
     task = config["task"]
     print('config["task"]', config['task'])
@@ -179,7 +194,7 @@ if __name__ == "__main__":
         augment_data(config)
 
     if task == "TRAIN":
-        train(config)
+        train(config_og, config)
 
     if task == "BENCHMARK":
         benchmark(config)
