@@ -161,13 +161,13 @@ def resize_images(conf):
     base_dir = config["base_path"]
 
     # directories of images that need resizing
-    image_dir = conf_dict["image_dir"]
-    mask_dir = conf_dict["mask_dir"]
+    image_dir = config["img_dir"]
+    mask_dir = config["mask_dir"]
 
     # output: resized images
-    image_out_dir = conf_dict["img_out_dir"]
+    image_out_dir = config["img_out_dir"]
     mkdir_if_missing(os.path.join(base_dir, image_out_dir))
-    mask_out_dir = conf_dict["mask_out_dir"]
+    mask_out_dir = config["mask_out_dir"]
     mkdir_if_missing(os.path.join(base_dir, mask_out_dir))
 
     old_im_path = os.path.join(base_dir, image_dir)
@@ -182,17 +182,18 @@ def resize_images(conf):
             continue
         im = cv2.imread(im_old_path, cv2.IMREAD_UNCHANGED)
         mask = cv2.imread(mask_old_path, cv2.IMREAD_UNCHANGED)
+        print('checking values', np.unique(im), np.unique(mask))
+        print('im.shape, mask.shape', im.shape, mask.shape)
         if mask.shape[0] == 0 or mask.shape[1] == 0:
             print("mask empty")
             continue
-        im = im[im_box[0] : im_box[2], im_box[1] : im_box[3], :]
-        mask = mask[im_box[0] // 4 : im_box[2] // 4, im_box[1] // 4 : im_box[3] // 4]
         im = scale_to_square(im)
         mask = scale_to_square(mask)
+        print('im.shape, mask.shape', im.shape, mask.shape)
         new_im_file = os.path.join(new_im_path, im_path)
         new_mask_file = os.path.join(new_mask_path, im_path)
-        cv2.imwrite(new_im_file, im)
-        cv2.imwrite(new_mask_file, mask)
+        cv2.imwrite(new_im_file, im, [cv2.IMWRITE_PNG_COMPRESSION, 0]) # 0 compression
+        cv2.imwrite(new_mask_file, mask, [cv2.IMWRITE_PNG_COMPRESSION, 0])
 
 
 def read_config():
@@ -235,4 +236,4 @@ if __name__ == "__main__":
         benchmark(conf)
 
     if task == "RESIZE":
-        resize(conf)
+        resize_images(conf)
