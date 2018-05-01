@@ -18,6 +18,7 @@ import tensorflow as tf
 from eval_coco import coco_benchmark
 from eval_saurabh import s_benchmark
 from augmentation import augment_img
+from resize import scale_to_square
 
 from pipeline_utils import *
 from clutter import ClutterConfig
@@ -42,12 +43,14 @@ CUDA_VISIBLE_DEVICES='0' PYTHONPATH='.:maskrcnn/:clutter/' python3 noise/pipelin
 """
 
 
-def augment_data(config):
+def augment_data(conf):
     """
     Using provided image directory and output directory, perform data
     augmentation methods on each image and save the new copy to the
     output directory.
     """
+    config = get_conf_dict(conf)
+
     img_dir = config["img_dir"]
     out_dir = config["out_dir"]
 
@@ -75,7 +78,9 @@ def augment_data(config):
     print("Augmentation complete; files saved in {}.\n".format(out_dir))
 
 
-def train(config_og, config):
+def train(conf):
+    config = get_conf_dict(conf)
+
     # read information from config
     dataset_path = config["base_path"]
     mean_pixel = config["mean_pixel"]
@@ -95,7 +100,7 @@ def train(config_og, config):
     # train_config.IMAGE_SHAPE = img_shape
     train_config.display()
 
-    # Training dataset
+    # Training datasetx
     dataset_train = SimImageDataset(dataset_path)
     dataset_train.load('train')
     dataset_train.prepare()
@@ -109,7 +114,7 @@ def train(config_og, config):
     model, model_path = get_model_and_path(config, train_config)
 
     # save config in run folder
-    save_config(config_og, os.path.join(model_path, config["save_conf_name"]))
+    save_config(conf, os.path.join(model_path, config["save_conf_name"]))
 
     # train and save weights to model_path
     model.train(dataset_train, dataset_val, learning_rate=train_config.LEARNING_RATE,
@@ -121,7 +126,9 @@ def train(config_og, config):
     model.keras_model.save_weights(model_path)
 
 
-def benchmark(config):
+def benchmark(conf):
+    config = get_conf_dict(conf)
+
     print("Benchmarking model.")
     # Create new directory for run outputs
     output_dir = config['output_dir'] # In what location should we put this new directory?
@@ -148,6 +155,46 @@ def benchmark(config):
     print("Saved benchmarking output to {}.\n".format(run_dir))
 
 
+def resize_images(conf):
+    """Resizes all images so their maximum dimension is 512. Saves to new directory."""
+    config = get_conf_dict(conf)
+    base_dir = config["base_path"]
+
+    # directories of images that need resizing
+    image_dir = conf_dict["image_dir"]
+    mask_dir = conf_dict["mask_dir"]
+
+    # output: resized images
+    image_out_dir = conf_dict["img_out_dir"]
+    mkdir_if_missing(os.path.join(base_dir, image_out_dir))
+    mask_out_dir = conf_dict["mask_out_dir"]
+    mkdir_if_missing(os.path.join(base_dir, mask_out_dir))
+
+    old_im_path = os.path.join(base_dir, image_dir)
+    new_im_path = os.path.join(base_dir, image_out_dir)
+    old_mask_path = os.path.join(base_dir, mask_dir)
+    new_mask_path = os.path.join(base_dir, mask_out_dir)
+    for im_path in tqdm(os.listdir(old_im_path)):
+        im_old_path = os.path.join(old_im_path, im_path)
+        try:
+            mask_old_path = os.path.join(old_mask_path, im_path)
+        except:
+            continue
+        im = cv2.imread(im_old_path, cv2.IMREAD_UNCHANGED)
+        mask = cv2.imread(mask_old_path, cv2.IMREAD_UNCHANGED)
+        if mask.shape[0] == 0 or mask.shape[1] == 0:
+            print("mask empty")
+            continue
+        im = im[im_box[0] : im_box[2], im_box[1] : im_box[3], :]
+        mask = mask[im_box[0] // 4 : im_box[2] // 4, im_box[1] // 4 : im_box[3] // 4]
+        im = scale_to_square(im)
+        mask = scale_to_square(mask)
+        new_im_file = os.path.join(new_im_path, im_path)
+        new_mask_file = os.path.join(new_mask_path, im_path)
+        cv2.imwrite(new_im_file, im)
+        cv2.imwrite(new_mask_file, mask)
+
+
 def read_config():
     # setting up flag parsing
     conf_parser = argparse.ArgumentParser(description="Augment data in path folder with various noise filters and transformations")
@@ -160,22 +207,8 @@ def read_config():
     # read in config file information from proper section
     conf = configparser.ConfigParser()
     conf.read([conf_args.conf_file])
-    task = conf.get("GENERAL", "task").upper()
-    task = literal_eval(task)
 
-    # create a dictionary of the proper arguments, including
-    # the requested task
-    conf_dict = dict(conf.items(task))
-
-    # return a type-sensitive version of the dictionary;
-    # prevents further need to cast from string to other types
-    out = {}
-    for key, value in conf_dict.items():
-        out[key] = literal_eval(value)
-    out["task"] = task
-
-    # return both config and the parsed dictionary
-    return conf, out
+    return conf
 
 
 def save_config(conf, conf_path):
@@ -186,15 +219,20 @@ def save_config(conf, conf_path):
 
 if __name__ == "__main__":
     # parse the provided configuration file
-    config_og, config = read_config()
+    conf = read_config()
 
-    task = config["task"]
-    print('config["task"]', config['task'])
+    task = conf.get("GENERAL", "task").upper()
+    task = literal_eval(task)
+
+    print("Task: {}".format(task))
     if task == "AUGMENT":
-        augment_data(config)
+        augment_data(conf)
 
     if task == "TRAIN":
-        train(config_og, config)
+        train(conf)
 
     if task == "BENCHMARK":
-        benchmark(config)
+        benchmark(conf)
+
+    if task == "RESIZE":
+        resize(conf)
