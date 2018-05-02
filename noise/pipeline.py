@@ -67,13 +67,12 @@ def augment_data(conf):
             img_path = os.path.join(img_dir, img_file)
             # img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
             img = skimage.io.imread(img_path, as_grey=True)
-            print(img)
 
             # return list of augmented images and save
             new_img = augment_img(img, config)
             out_path = os.path.join(out_dir, img_file)
             # cv2.imwrite(out_path, new_img)
-            skimage.io.imsave(out_path, new_img)
+            skimage.io.imsave(out_path, skimage.img_as_ubyte(new_img))
         count += 1
 
     print("Augmentation complete; files saved in {}.\n".format(out_dir))
@@ -183,14 +182,14 @@ def resize_images(conf):
             continue
         im = cv2.imread(im_old_path, cv2.IMREAD_UNCHANGED)
         mask = cv2.imread(mask_old_path, cv2.IMREAD_UNCHANGED)
-        print('checking values', np.unique(im), np.unique(mask))
-        print('im.shape, mask.shape', im.shape, mask.shape)
+        # print('checking values', np.unique(im), np.unique(mask))
+        # print('im.shape, mask.shape', im.shape, mask.shape)
         if mask.shape[0] == 0 or mask.shape[1] == 0:
             print("mask empty")
             continue
         im = scale_to_square(im)
         mask = scale_to_square(mask)
-        print('im.shape, mask.shape', im.shape, mask.shape)
+        # print('im.shape, mask.shape', im.shape, mask.shape)
         new_im_file = os.path.join(new_im_path, im_path)
         new_mask_file = os.path.join(new_mask_path, im_path)
         cv2.imwrite(new_im_file, im, [cv2.IMWRITE_PNG_COMPRESSION, 0]) # 0 compression
