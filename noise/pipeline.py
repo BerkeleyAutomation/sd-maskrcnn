@@ -67,6 +67,7 @@ def augment_data(conf):
             img_path = os.path.join(img_dir, img_file)
             # img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
             img = skimage.io.imread(img_path, as_grey=True)
+            print(img)
 
             # return list of augmented images and save
             new_img = augment_img(img, config)
