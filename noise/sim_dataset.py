@@ -54,10 +54,10 @@ class SimImageDataset(utils.Dataset):
         for i in self.image_id:
             p = os.path.join(self.base_path, 'depth_ims',
                              'image_{:06d}.png'.format(i))
-            self.add_image('clutter', image_id=i, path=p, width=600, height=400)
+            self.add_image('clutter', image_id=i, path=p, width=512, height=384)
 
             for flip in flips:
-                self.add_image('clutter', image_id=i, path=p, width=600, height=400, flip=flip)
+                self.add_image('clutter', image_id=i, path=p, width=512, height=384, flip=flip)
 
     def flip(self, image, flip):
         # flips during training for augmentation

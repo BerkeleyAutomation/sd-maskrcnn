@@ -5,3 +5,6 @@ outputs
 vis
 env
 .~
+only_noise_dataset/
+noisy_sim_dataset/
+only_inpainting_dataset/
