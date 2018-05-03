@@ -6,7 +6,7 @@ import skimage.color
 from perception import DepthImage
 
 
-def inject_noise(img, noise_level=0.0005, noise_threshold=0.05):
+def inject_noise(img, noise_level=0.0005):
     """
     Add a Gaussian noise to the image.
     """
@@ -15,7 +15,7 @@ def inject_noise(img, noise_level=0.0005, noise_threshold=0.05):
     noise = np.random.normal(means, std_devs)
 
     # don't apply noise to some pixels
-    noise[img <= noise_threshold] = 0.0
+    # noise[img <= noise_threshold] = 0.0
     return img + noise
 
 
@@ -48,6 +48,5 @@ def augment_img(img, config):
         img = inpaint(img)
     if config["with_noise"]:
         noise_level = config["noise_level"]
-        noise_threshold = config["noise_threshold"]
-        img = inject_noise(img, noise_level, noise_threshold)
+        img = inject_noise(img, noise_level)
     return img
