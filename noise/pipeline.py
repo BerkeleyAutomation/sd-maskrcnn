@@ -19,6 +19,8 @@ from eval_coco import coco_benchmark
 from eval_saurabh import s_benchmark
 from augmentation import augment_img
 from resize import scale_to_square
+from detect_utils import detect, visualize_predictions
+from remove_fp import remove_bin_fps
 
 from pipeline_utils import *
 from clutter import ClutterConfig
@@ -147,9 +149,19 @@ def benchmark(conf):
     # code that actually produces outputs should be plug-and-play
     # depending on what kind of benchmark function we run.
 
-    coco_benchmark(run_dir, inference_config, model, dataset_real)
+    # If we want to remove bin pixels, pass in the directory with
+    # those masks.
+    if config['remove_bin_pixels']:
+        bin_mask_dir = os.path.join(test_dir, config['bin_masks'])
+    else:
+        bin_mask_dir = False
 
-    s_benchmark(run_dir, inference_config, model, dataset_real)
+    pred_mask_dir, pred_info_dir, gt_mask_dir = \
+        detect(run_dir, inference_config, model, dataset_real, bin_mask_dir)
+
+    coco_benchmark(pred_mask_dir, pred_info_dir, gt_mask_dir)
+    visualize_predictions(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir)
+    s_benchmark(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir)
 
 
     print("Saved benchmarking output to {}.\n".format(run_dir))

@@ -357,7 +357,7 @@ class Dataset(object):
         return mask, class_ids
 
 
-def resize_image(image, min_dim=None, max_dim=None, padding=False):
+def resize_image(image, min_dim=None, max_dim=None, padding=False, interp=None):
     """
     Resizes an image keeping the aspect ratio.
 
@@ -392,8 +392,12 @@ def resize_image(image, min_dim=None, max_dim=None, padding=False):
             scale = max_dim / image_max
     # Resize image and mask
     if scale != 1:
-        image = scipy.misc.imresize(
-            image, (round(h * scale), round(w * scale)))
+        if interp is not None:
+            image = scipy.misc.imresize(
+                image, (round(h * scale), round(w * scale)), interp=interp)
+        else:
+            image = scipy.misc.imresize(
+                image, (round(h * scale), round(w * scale)))
     # Need padding?
     if padding:
         # Get new height and width

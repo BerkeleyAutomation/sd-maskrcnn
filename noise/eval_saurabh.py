@@ -18,8 +18,11 @@ import model as modellib, visualize, utils
 
 
 
-def s_benchmark(run_dir, inference_config, model, dataset_real):
+def s_benchmark(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir, \
+                vis_missed=False):
     """Runs Saurabh's old benchmarking code."""
+
+    print("Computing Saurabh's bounding box metrics")
 
     results_dir = os.path.join(run_dir, 'results_saurabh')
     mkdir_if_missing(results_dir)
@@ -46,9 +49,10 @@ def s_benchmark(run_dir, inference_config, model, dataset_real):
         molded_images = np.expand_dims(molded_images, 0)
         gt_stat, stat_name = compute_gt_stats(gt_bbox, gt_mask)
 
-        # Run object detection
-        results = model.detect([image], verbose=0)
-        r = results[0]
+        r = np.load(os.path.join(pred_info_dir, 'image_{:06}.npy'.format(image_id))).item()
+        r_masks = np.load(os.path.join(pred_mask_dir, 'image_{:06}.npy'.format(image_id)))
+        # Must transpose from (n, h, w) to (h, w, n)
+        r['masks'] = np.transpose(r_masks, (1, 2, 0))
 
         # Make sure scores are sorted.
         sc = r['scores']
@@ -85,6 +89,7 @@ def s_benchmark(run_dir, inference_config, model, dataset_real):
             plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
             plt.close()
 
+    print('Computing AP and plotting PR curves...')
     # Compute AP
     for tps, fps, scs, num_insts, dup_dets, inst_ids, ovs, tp_inds, fn_inds, \
         gt_stats, thresh in ms:
