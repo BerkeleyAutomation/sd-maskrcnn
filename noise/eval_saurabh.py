@@ -85,23 +85,23 @@ def s_benchmark(run_dir, inference_config, model, dataset_real):
             plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
             plt.close()
 
-        # Compute AP
-        for tps, fps, scs, num_insts, dup_dets, inst_ids, ovs, tp_inds, fn_inds, \
-            gt_stats, thresh in ms:
-            ap, rec, prec, npos, _ = \
-              du.inst_bench(None, None, None, tp=tps, fp=fps, score=scs, numInst=num_insts)
-            str_ = 'mAP: {:.3f}, prec: {:.3f}, rec: {:.3f}, npos: {:d}'.format(
-              ap[0], np.min(prec), np.max(rec), npos)
-            # logging.error('%s', str_)
-            # print("mAP: ", ap[0], "prec: ", np.max(prec), "rec: ", np.max(rec), "prec-1: ",
-            #   prec[-1], "npos: ", npos)
-            plt.style.use('fivethirtyeight') #bmh')
-            fig, _, axes = subplot(plt, (3,4), (8,8), space_y_x=(0.2,0.2))
-            ax = axes.pop(); ax.plot(rec, prec, 'r'); ax.set_xlim([0,1]); ax.set_ylim([0,1]);
-            ax.set_xlabel('Recall'); ax.set_ylabel('Precision')
-            ax.set_title(str_) #'{:5.3f}'.format(ap[0]*100))
-            plot_stats(stat_name, gt_stats, tp_inds, fn_inds, axes)
-            file_name = os.path.join(results_dir, 'pr_stats_{:d}.png'.format(int(thresh*100)))
-            # logging.error('plot file name: %s', file_name)
-            plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
-            plt.close()
+    # Compute AP
+    for tps, fps, scs, num_insts, dup_dets, inst_ids, ovs, tp_inds, fn_inds, \
+        gt_stats, thresh in ms:
+        ap, rec, prec, npos, _ = \
+          du.inst_bench(None, None, None, tp=tps, fp=fps, score=scs, numInst=num_insts)
+        str_ = 'mAP: {:.3f}, prec: {:.3f}, rec: {:.3f}, npos: {:d}'.format(
+          ap[0], np.min(prec), np.max(rec), npos)
+        # logging.error('%s', str_)
+        # print("mAP: ", ap[0], "prec: ", np.max(prec), "rec: ", np.max(rec), "prec-1: ",
+        #   prec[-1], "npos: ", npos)
+        plt.style.use('fivethirtyeight') #bmh')
+        fig, _, axes = subplot(plt, (3,4), (8,8), space_y_x=(0.2,0.2))
+        ax = axes.pop(); ax.plot(rec, prec, 'r'); ax.set_xlim([0,1]); ax.set_ylim([0,1]);
+        ax.set_xlabel('Recall'); ax.set_ylabel('Precision')
+        ax.set_title(str_) #'{:5.3f}'.format(ap[0]*100))
+        plot_stats(stat_name, gt_stats, tp_inds, fn_inds, axes)
+        file_name = os.path.join(results_dir, 'pr_stats_{:d}.png'.format(int(thresh*100)))
+        # logging.error('plot file name: %s', file_name)
+        plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
+        plt.close()

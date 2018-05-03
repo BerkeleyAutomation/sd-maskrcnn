@@ -183,14 +183,14 @@ def resize_images(conf):
             continue
         im = cv2.imread(im_old_path, cv2.IMREAD_UNCHANGED)
         mask = cv2.imread(mask_old_path, cv2.IMREAD_UNCHANGED)
-        print('checking values', np.unique(im), np.unique(mask))
-        print('im.shape, mask.shape', im.shape, mask.shape)
+#        print('checking values', np.unique(im), np.unique(mask))
+#        print('im.shape, mask.shape', im.shape, mask.shape)
         if mask.shape[0] == 0 or mask.shape[1] == 0:
             print("mask empty")
             continue
         im = scale_to_square(im)
         mask = scale_to_square(mask)
-        print('im.shape, mask.shape', im.shape, mask.shape)
+#        print('im.shape, mask.shape', im.shape, mask.shape)
         new_im_file = os.path.join(new_im_path, im_path)
         new_mask_file = os.path.join(new_mask_path, im_path)
         cv2.imwrite(new_im_file, im, [cv2.IMWRITE_PNG_COMPRESSION, 0]) # 0 compression
