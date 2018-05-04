@@ -1,26 +1,28 @@
-Hi Andrew
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Mask-RCNN Data Pipeline
+## Overview
+blah blah blah
+## Requirements
+feiwjf
+## Standard Dataset Format
+feiwofjoe
+## Files
+Note that most of these files reside within the subfolder "noise"
+### pipeline.py
+yadyadya
+### config.ini
+blakjfa
+### pipeline_utils.py
+blah
+### real_dataset.py/sim_dataset.py
+blah
+### augmentation.py
+blah
+### eval_coco.py/eval_saurabh.py
+whee
+### noise.py
+cheese
+### resize.py
+yes
 
 
 
