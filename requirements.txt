@@ -1,4 +1,9 @@
+numpy
+skimage
+tensorflow-gpu
+jupyter
 opencv-python
 pytest
 keras
 tqdm
+matplotlib

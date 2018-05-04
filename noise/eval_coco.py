@@ -21,48 +21,6 @@ from pipeline_utils import *
 from real_dataset import RealImageDataset, prepare_real_image_test
 
 
-
-def encode_predictions(mask_dir):
-    """Given a path to a directory of predicted image segmentation masks,
-    encodes them into the COCO annotations format using the COCO API.
-    Predictions are 3D Numpy arrays of shape (n, h, w) for n predicted
-    instances, in case of overlapping masks.
-    Requires that pred masks are named image_000000.npy, image_000001.npy,
-    etc. in order without any missing numbers and correspond to the
-    associated GT masks.
-
-    mask_dir: str, directory in which pred masks are stored. Avoid relative
-        paths if possible.
-    """
-    annos = []
-
-    N = len([p for p in os.listdir(mask_dir) if p.endswith('.npy')])
-
-    for i in range(N):
-        # load .npy
-        im_name = 'image_{:06d}.npy'.format(i)
-        I = np.load(os.path.join(mask_dir, im_name))
-
-        for bin_mask in I:
-            # encode mask
-            encode_mask = mask.encode(np.asfortranarray(bin_mask))
-            encode_mask['counts'] = encode_mask['counts'].decode('ascii')
-
-            # assume one category (object)
-            pred_anno = {
-                'image_id': i,
-                'category_id': 1,
-                'segmentation': encode_mask,
-                'score': 1.0
-            }
-
-            annos.append(pred_anno)
-
-    anno_path = os.path.join(mask_dir, 'annos_pred.json')
-    json.dump(annos, open(anno_path, 'w+'))
-    print("successfully wrote prediction annotations to", anno_path)
-
-
 def encode_gt(mask_dir):
     """Given a path to a directory of ground-truth image segmentation masks,
     encodes them into the COCO annotations format using the COCO API.
@@ -107,7 +65,6 @@ def encode_gt(mask_dir):
         # leaving license, flickr_url, coco_url, date_captured
         # fields incomplete
 
-
         # mask each individual object
         # NOTE: We assume these masks do not include backgrounds.
         # This means that the 1st object instance will have index 0!
@@ -117,15 +74,12 @@ def encode_gt(mask_dir):
             instance_id = i * 100 + (val + 1) # create id for instance, incrmeent val
 
             # find bounding box
-
             def bbox2(img):
                 rows = np.any(img, axis=1)
                 cols = np.any(img, axis=0)
                 rmin, rmax = np.where(rows)[0][[0, -1]]
                 cmin, cmax = np.where(cols)[0][[0, -1]]
-    #             return rmin, rmax, cmin, cmax
                 return int(cmin), int(rmin), int(cmax - cmin), int(rmax - rmin)
-
 
             # encode mask
             encode_mask = mask.encode(np.asfortranarray(bin_mask))
@@ -152,9 +106,48 @@ def encode_gt(mask_dir):
             # plt.close()
 
     anno_path = os.path.join(mask_dir, 'annos_gt.json')
-
     json.dump(gt_annos, open(anno_path, 'w+'))
     print("successfully wrote GT annotations to", anno_path)
+
+
+def encode_predictions(mask_dir):
+    """Given a path to a directory of predicted image segmentation masks,
+    encodes them into the COCO annotations format using the COCO API.
+    Predictions are 3D Numpy arrays of shape (n, h, w) for n predicted
+    instances, in case of overlapping masks.
+    Requires that pred masks are named image_000000.npy, image_000001.npy,
+    etc. in order without any missing numbers and correspond to the
+    associated GT masks.
+
+    mask_dir: str, directory in which pred masks are stored. Avoid relative
+        paths if possible.
+    """
+    annos = []
+
+    N = len([p for p in os.listdir(mask_dir) if p.endswith('.npy')])
+
+    for i in range(N):
+        # load .npy
+        im_name = 'image_{:06d}.npy'.format(i)
+        I = np.load(os.path.join(mask_dir, im_name))
+
+        for bin_mask in I:
+            # encode mask
+            encode_mask = mask.encode(np.asfortranarray(bin_mask))
+            encode_mask['counts'] = encode_mask['counts'].decode('ascii')
+
+            # assume one category (object)
+            pred_anno = {
+                'image_id': i,
+                'category_id': 1,
+                'segmentation': encode_mask,
+                'score': 1.0
+            }
+            annos.append(pred_anno)
+
+    anno_path = os.path.join(mask_dir, 'annos_pred.json')
+    json.dump(annos, open(anno_path, 'w+'))
+    print("successfully wrote prediction annotations to", anno_path)
 
 
 def compute_coco_metrics(gt_dir, pred_dir):
@@ -195,7 +188,6 @@ https://stackoverflow.com/questions/16571150/how-to-capture-stdout-output-from-a
         coco_file.write(out)
         print('COCO Metric Summary written to {}'.format(os.path.join(pred_dir,
                                                                       'coco_summary.txt')))
-
 
 
 def coco_benchmark(pred_mask_dir, pred_info_dir, gt_mask_dir):

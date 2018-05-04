@@ -20,7 +20,6 @@ from eval_saurabh import s_benchmark
 from augmentation import augment_img
 from resize import scale_to_square
 from detect_utils import detect, visualize_predictions
-from remove_fp import remove_bin_fps
 
 from pipeline_utils import *
 from clutter import ClutterConfig
@@ -129,12 +128,16 @@ def train(conf):
 
 
 def benchmark(conf):
-    config = get_conf_dict(conf)
+    """Benchmarks a model, computes and stores model predictions and then
+    evaluates them on COCO metrics and Saurabh's old benchmarking script."""
 
+    config = get_conf_dict(conf)
     print("Benchmarking model.")
     # Create new directory for run outputs
-    output_dir = config['output_dir'] # In what location should we put this new directory?
-    run_name = config['run_name'] # What is it called
+    # In what location should we put this new directory?
+    output_dir = config['output_dir']
+    # What is it called?
+    run_name = config['run_name']
     run_dir = os.path.join(output_dir, run_name)
     mkdir_if_missing(run_dir)
 
@@ -142,7 +145,8 @@ def benchmark(conf):
     save_config(conf, os.path.join(run_dir, config["save_conf_name"]))
 
     model_path = config['model_path']
-    test_dir = config['test_dir'] # directory of test images and segmasks
+    # directory of test images and segmasks
+    test_dir = config['test_dir']
 
     inference_config, model, dataset_real = prepare_real_image_test(model_path, test_dir)
 
@@ -159,13 +163,13 @@ def benchmark(conf):
         bin_mask_dir = False
         overlap_thresh = 0
 
+    # Create predictions and record where everything gets stored.
     pred_mask_dir, pred_info_dir, gt_mask_dir = \
         detect(run_dir, inference_config, model, dataset_real, bin_mask_dir, overlap_thresh)
 
     coco_benchmark(pred_mask_dir, pred_info_dir, gt_mask_dir)
     visualize_predictions(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir)
     s_benchmark(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir)
-
 
     print("Saved benchmarking output to {}.\n".format(run_dir))
 
