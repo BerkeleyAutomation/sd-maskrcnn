@@ -1,25 +1,24 @@
 # Mask-RCNN Data Pipeline
-  ## Overview
-  blah blah blah
-  ## Files
-     ### noise folder
-        #### pipeline.py
-        yadyadya
-        #### config.ini
-        blakjfa
-        #### pipeline_utils.py
-        blah
-        #### real_dataset.py/sim_dataset.py
-        blah
-        #### augmentation.py
-        blah
-        #### eval_coco.py/eval_saurabh.py
-        whee
-        #### noise.py
-        cheese
-        #### resize.py
-        yes
-
+## Overview
+blah blah blah
+## Files
+### noise folder
+#### pipeline.py
+yadyadya
+#### config.ini
+blakjfa
+#### pipeline_utils.py
+blah
+#### real_dataset.py/sim_dataset.py
+blah
+#### augmentation.py
+blah
+#### eval_coco.py/eval_saurabh.py
+whee
+#### noise.py
+cheese
+#### resize.py
+yes
 
 
 Deprecated README text from Saraubh's code:
