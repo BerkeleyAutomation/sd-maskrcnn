@@ -16,8 +16,8 @@ from train_clutter import mkdir_if_missing
 import model as modellib, visualize, utils
 
 """
-RealImageDataset creates a Matterport dataset for a directory of real images
-in order to ensure compatibility with functions from Saurabh's code and
+RealImageDataset creates a Matterport dataset object for a directory of real
+images in order to ensure compatibility with functions from Saurabh's code and
 MaskRCNN code, e.g. old benchmarking tools and image resizing for networks.
 
 Directory structure must be as follows:
@@ -91,8 +91,9 @@ class RealImageDataset(utils.Dataset):
         return mask, class_ids.astype(np.int32)
 
 
-def prepare_real_image_test(model_path, dataset_path, config_path=''):
+def prepare_real_image_test(model_path, dataset_path, indices_name, config_path=''):
     """Loads model with the appropriate config and prepares dataset.
+    Set indices_name to name of appropriate indices file (<name>_indices.npy).
     Returns network inference config, loaded model, and dataset."""
 
     # TODO: inference configuration needs to match what the model was trained with
@@ -114,7 +115,7 @@ def prepare_real_image_test(model_path, dataset_path, config_path=''):
     model.load_weights(model_path, by_name=True)
 
     dataset_real = RealImageDataset(dataset_path)
-    dataset_real.load('test')
+    dataset_real.load(indices_name)
     dataset_real.prepare()
 
     return inference_config, model, dataset_real

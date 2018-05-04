@@ -143,12 +143,14 @@ def benchmark(conf):
 
     # Save config in run directory
     save_config(conf, os.path.join(run_dir, config["save_conf_name"]))
-
     model_path = config['model_path']
     # directory of test images and segmasks
     test_dir = config['test_dir']
+    # get indices file name
+    indices_name = config['indices_name']
 
-    inference_config, model, dataset_real = prepare_real_image_test(model_path, test_dir)
+    inference_config, model, dataset_real = prepare_real_image_test(model_path, test_dir,
+                                                                    indices_name)
 
     ######## BENCHMARK JUST CREATES THE RUN DIRECTORY ########
     # code that actually produces outputs should be plug-and-play

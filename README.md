@@ -12,9 +12,55 @@ This operation runs the training for Mask-RCNN on the standard dataset (describe
 #### Benchmark
 This operation, given model weights, runs both COCO benchmarks and Saurabh's benchmarking code on a new, test dataset.
 ## Requirements
-See requirements.txt.
+```
+- numpy
+- scipy
+- skimage
+- tensorflow-gpu
+- jupyter
+- opencv-python
+- pytest
+- keras
+- tqdm
+- matplotlib
+- flask (if labelling images)
+```
+
+Additionally, in order to compute COCO benchmarks, the COCO API must be installed inside the repository root directory.
+Get it [here.](https://github.com/cocodataset/cocoapi)
+Then, navigate to `cocoapi/PythonAPI/` and run `make install`.
+
+
+`image-labelling-tool` contains a tool for labelling segmasks.
+More instructions are contained in `image-labelling-tool/save_masks.ipynb`.
+
 ## Standard Dataset Format
-feiwofjoe
+All datasets, both real and sim, are assumed to be in the following format:
+```
+<dataset root directory>/
+    depth_ims/
+        image_000000.png
+        image_000001.png
+        ...
+    modal_segmasks/
+        image_000000.png
+        image_000001.png
+        ...
+    segmasks/ (optional)
+    train_indices.npy
+    <other names>_indices.npy
+    ...
+```
+All segmasks inside `modal_segmasks/` must be single-layer .pngs with 0 corresponding to the background and 1, 2, ... corresponding to a particular instance.
+To convert from multiple channel segmasks to a single segmask per case, open `clutter/clutter.py`, point `base_dir` to your particular dataset, and run said file.
+This will put the "stacked" segmasks in a new directory, `modal_segmasks_project`, which should be renamed.
+Additionally, depth images and ground truth segmasks must be the same size; perform the "RESIZE" task in the pipeline to accomplish this.
+If using bin-vs-no bin segmasks to toss out spurious predictions, `segmasks/` must contain those segmasks.
+These should be binary (0 if bin, 255 if object).
+
+
+## Benchmark Output Format
+
 ## Files
 Note that most of these files reside within the subfolder "noise".
 ### pipeline.py
