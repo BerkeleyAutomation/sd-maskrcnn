@@ -15,14 +15,16 @@ blah blah blah
 - matplotlib
 - flask (if labelling images)
 ```
+These can all be installed by running `pip3 install -r requirements.txt`.
+(TODO: get version numbers)
 
 Additionally, in order to compute COCO benchmarks, the COCO API must be installed inside the repository root directory.
 Get it [here.](https://github.com/cocodataset/cocoapi)
 Then, navigate to `cocoapi/PythonAPI/` and run `make install`.
 
 
-`image-labelling-tool` contains a tool for labelling segmasks.
-More instructions are contained in `image-labelling-tool/save_masks.ipynb`.
+`image-labelling-tool` contains a lightweight web application for labelling segmasks.
+More instructions on how to use it are contained in `image-labelling-tool/save_masks.ipynb`.
 
 ## Standard Dataset Format
 All datasets, both real and sim, are assumed to be in the following format:
@@ -44,15 +46,37 @@ All datasets, both real and sim, are assumed to be in the following format:
 All segmasks inside `modal_segmasks/` must be single-layer .pngs with 0 corresponding to the background and 1, 2, ... corresponding to a particular instance.
 To convert from multiple channel segmasks to a single segmask per case, open `clutter/clutter.py`, point `base_dir` to your particular dataset, and run said file.
 This will put the "stacked" segmasks in a new directory, `modal_segmasks_project`, which should be renamed.
+
 Additionally, depth images and ground truth segmasks must be the same size; perform the "RESIZE" task in the pipeline to accomplish this.
 If using bin-vs-no bin segmasks to toss out spurious predictions, `segmasks/` must contain those segmasks.
 These should be binary (0 if bin, 255 if object).
 
 
 ## Benchmark Output Format
+Running the "BENCHMARK" option will output a folder containing results, which is structured as follows:
+
+```
+bench_<name>/ (results of one benchmarking run)
+    modal_segmasks_processed/
+    pred_info/
+    pred_masks/
+        coco_summary.txt
+    results_saurabh/
+    vis/
+    ...
+```
+
+COCO performance scores are located in `pred_masks/coco_summary.txt`.
+Images of the network's predictions for each test case can be found in `vis/`.
+Saurabh's benchmarking outputs (plots, missed images) can be found in `results_saurabh`.
+
+In order to maintain the decoupled nature of the pipeline, the network must write its predictions  and post-processed GT segmasks to disk.
+At the moment, these are written in uncompressed Numpy arrays, meaning outputs will become very large.
+Until this issue is resolved, we **do not recommend** running the "BENCHMARK" task on datasets larger than 50 images unless there is a lot of disk space free.
 
 ## Files
-Note that most of these files reside within the subfolder "noise"
+Note that most of these files reside within the subfolder "noise".
+Saurabh's files have been left mostly intact as much of the pipeline's functionality depends on some parts of his code.
 ### pipeline.py
 yadyadya
 ### config.ini
@@ -72,7 +96,7 @@ yes
 
 
 
-Deprecated README text from Saraubh's code:
+# Deprecated README text from Saraubh's code:
 
 ### Code for running Mask-RCNN on images of object piles.
 
