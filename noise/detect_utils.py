@@ -28,7 +28,10 @@ def detect(run_dir, inference_config, model, dataset_real, bin_mask_dir=False,
       for annotation
     - Makes predictions on images
     - Saves prediction masks in a certain directory
-    - Saves other prediction data (scores, bboxes) in a separate directory
+    - Saves other prediction info (scores, bboxes) in a separate directory
+
+    Returns paths to directories for prediction masks, prediction info, and
+    modified GT masks.
 
     If bin_mask_dir is specified, then we will be checking predictions against
     the "bin-vs-no bin" mask for the test case.
@@ -86,7 +89,7 @@ def detect(run_dir, inference_config, model, dataset_real, bin_mask_dir=False,
                 # compute the area of the overlap.
                 inter = np.logical_and(bin_mask, r['masks'][:,:,k])
                 frac_overlap =  np.sum(inter) / np.sum(r['masks'][:,:,k])
-                if frac_overlap <= 0.5:
+                if frac_overlap <= overlap_thresh:
                     deleted_masks.append(k)
 
             r['masks'] = np.stack([r['masks'][:,:,k] for k in range(num_detects)
