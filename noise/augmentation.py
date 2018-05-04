@@ -44,6 +44,9 @@ def inpaint(img):
 
 
 def augment_img(img, config):
+    """
+    Compose augmentations.
+    """
     if config["with_inpainting"]:
         img = inpaint(img)
     if config["with_noise"]:

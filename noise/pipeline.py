@@ -102,7 +102,7 @@ def train(conf):
     # train_config.IMAGE_SHAPE = img_shape
     train_config.display()
 
-    # Training datasetx
+    # Training dataset
     dataset_train = SimImageDataset(dataset_path)
     dataset_train.load('train')
     dataset_train.prepare()
