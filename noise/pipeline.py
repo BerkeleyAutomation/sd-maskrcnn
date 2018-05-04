@@ -138,8 +138,9 @@ def benchmark(conf):
     run_dir = os.path.join(output_dir, run_name)
     mkdir_if_missing(run_dir)
 
-    # Save config
-    # TODO: actually do it
+    # Save config in run directory
+    save_config(conf, os.path.join(run_dir, config["save_conf_name"]))
+
     model_path = config['model_path']
     test_dir = config['test_dir'] # directory of test images and segmasks
 
@@ -153,11 +154,13 @@ def benchmark(conf):
     # those masks.
     if config['remove_bin_pixels']:
         bin_mask_dir = os.path.join(test_dir, config['bin_masks'])
+        overlap_thresh = config['overlap_thresh']
     else:
         bin_mask_dir = False
+        overlap_thresh = 0
 
     pred_mask_dir, pred_info_dir, gt_mask_dir = \
-        detect(run_dir, inference_config, model, dataset_real, bin_mask_dir)
+        detect(run_dir, inference_config, model, dataset_real, bin_mask_dir, overlap_thresh)
 
     coco_benchmark(pred_mask_dir, pred_info_dir, gt_mask_dir)
     visualize_predictions(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir)
