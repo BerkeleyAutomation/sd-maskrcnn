@@ -19,7 +19,8 @@ from pipeline_utils import *
 from real_dataset import RealImageDataset, prepare_real_image_test
 
 
-def detect(run_dir, inference_config, model, dataset_real, bin_mask_dir=False):
+def detect(run_dir, inference_config, model, dataset_real, bin_mask_dir=False,
+           overlap_thresh=0.5):
     """
     Given a run directory, a MaskRCNN config object, a MaskRCNN model object,
     and a Dataset object,
@@ -29,8 +30,10 @@ def detect(run_dir, inference_config, model, dataset_real, bin_mask_dir=False):
     - Saves prediction masks in a certain directory
     - Saves other prediction data (scores, bboxes) in a separate directory
 
-    If bin_mask_dir is specified, will mask out any pixels we know to be bin
-    pixels.
+    If bin_mask_dir is specified, then we will be checking predictions against
+    the "bin-vs-no bin" mask for the test case.
+    For each predicted instance, if less than overlap_thresh of the mask actually
+    consists of non-bin pixels, we will toss out the mask.
     """
 
     # Create subdirectory for prediction masks
@@ -77,16 +80,14 @@ def detect(run_dir, inference_config, model, dataset_real, bin_mask_dir=False):
             )
 
             bin_mask = bin_mask[:,:,0]
-            for k in range(gt_mask.shape[2]):
-                gt_mask[:,:,k] = np.logical_and(bin_mask, gt_mask[:,:,k])
-
-            deleted_masks = [] # which segmasks are all zero?
-            for k in range(r['masks'].shape[2]):
-                r['masks'][:,:,k] = np.logical_and(bin_mask, r['masks'][:,:,k])
-                if not r['masks'][:,:,k].any():
-                    deleted_masks.append(k)
-
+            deleted_masks = [] # which segmasks are gonna be tossed?
             num_detects = r['masks'].shape[2]
+            for k in range(num_detects):
+                # compute the area of the overlap.
+                inter = np.logical_and(bin_mask, r['masks'][:,:,k])
+                frac_overlap =  np.sum(inter) / np.sum(r['masks'][:,:,k])
+                if frac_overlap <= 0.5:
+                    deleted_masks.append(k)
 
             r['masks'] = np.stack([r['masks'][:,:,k] for k in range(num_detects)
                                    if k not in deleted_masks], axis=2)
