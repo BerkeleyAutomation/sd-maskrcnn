@@ -118,11 +118,11 @@ This is where all the parameters for each task are specified, as well as the cur
 ### pipeline\_utils.py
 This file contains some general helper functions that are used in pipeline.py.
 ### real\_dataset.py/sim\_dataset.py
-blah
+These files contain subclasses of `ClutterDataset` defined in `clutter/clutter.py`, each contains methods for loading and preprocessing images before they are fed into the model.
 ### Augmentation.py
 This file contains the noise and inpainting functions that are used to modify an image dataset before it is resized and trained upon.
 ### eval\_coco.py/eval\_saurabh.py
-whee
+These files contain methods for evaluating predictions using COCO metrics and Saurabh's benchmarking code, respectively.
 ### resize.py
 Resizing function for 512x512 images.
 ### noise.py
