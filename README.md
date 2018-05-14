@@ -90,12 +90,8 @@ We primarily use four datasets for training and benchmarking.
 
 - `/nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset` contains 10000 simulated depth images (8000 train, 2000 val) generated from the Dex-Net clutter simulator.
 - `/nfs/diskstation/projects/dex-net/segmentation/datasets/noisy_sim_dataset` is identical to above (same test cases, same train/val split) except every image is injected with Gaussian noise, SD = 0.001.
-
-
-`/nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_easy_04_30_18/images` contains 25 "easy" real test cases taken with the Phoxi, as well as their associated hand-labelled segmentation masks.
-
-
-`/nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_04_29_18/images` contains 50 "hard" real test cases, also taken with the Phoxi.
+- `/nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_easy_04_30_18/images` contains 25 "easy" real test cases taken with the Phoxi, as well as their associated hand-labelled segmentation masks.
+- `/nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_04_29_18/images` contains 50 "hard" real test cases, also taken with the Phoxi.
 
 ### Models 
 We trained one model for each of the noisy and no noise datasets with a learning rate of 0.001 for 80 epochs. 
