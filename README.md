@@ -61,7 +61,6 @@ Additionally, depth images and ground truth segmasks must be the same size; perf
 If using bin-vs-no bin segmasks to toss out spurious predictions, `segmasks/` must contain those segmasks.
 These should be binary (0 if bin, 255 if object).
 
-
 ## Benchmark Output Format
 Running the "BENCHMARK" option will output a folder containing results, which is structured as follows:
 
@@ -83,6 +82,14 @@ Saurabh's benchmarking outputs (plots, missed images) can be found in `results_s
 In order to maintain the decoupled nature of the pipeline, the network must write its predictions  and post-processed GT segmasks to disk.
 At the moment, these are written in uncompressed Numpy arrays, meaning outputs will become very large.
 Until this issue is resolved, we **do not recommend** running the "BENCHMARK" task on datasets larger than 50 images unless there is a lot of disk space free.
+
+## Currently Used Resources
+
+### Datasets
+We primarily use four datasets for training and benchmarking.
+`/nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset` and `/nfs/diskstation/projects/dex-net/segmentation/datasets/noisy_sim_dataset` contain 10000 simulated depth images (8000 train, 2000 val), with the only difference being that `noisy_sim_dataset/` had Gaussian noise injected.
+`/nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_easy_04_30_18/images` contains 25 "easy" real test cases taken with the Phoxi, as well as their associated hand-labelled segmentation masks.
+`/nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_04_29_18/images` contains 50 "hard" real test cases, also taken with the Phoxi.
 
 ## Files
 Note that most of these files reside within the subfolder "noise".
