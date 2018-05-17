@@ -83,7 +83,7 @@ In order to maintain the decoupled nature of the pipeline, the network must writ
 At the moment, these are written in uncompressed Numpy arrays, meaning outputs will become very large.
 Until this issue is resolved, we **do not recommend** running the "BENCHMARK" task on datasets larger than 50 images unless there is a lot of disk space free.
 
-## Currently Used Resources
+## Currently Used Resources and Associated Numbers (as of May 17th, 2018)
 
 ### Datasets
 We primarily use four datasets for training and benchmarking.
@@ -100,6 +100,26 @@ We trained one model for each of the noisy and no noise datasets with a learning
 - Noise: <andrew li>
     
 TF model checkpoints are also saved in the same folder as the model, so loss curves can be viewed by running Tensorboard in the directory containing the model.
+
+### Results
+Full result logs are stored at `/nfs/diskstation/projects/dex-net/segmentation/results_maskrcnn_050418`, with each run bearing a descriptive name.
+
+#### No Noise Injection
+| Test Set        | Precision           |Recall   |
+| :-----------: |:-------------:|:-----:|
+| Simulated Test (no noise)      | 0.528 | 0.688 |
+| Simulated Test (noise-injected      | <andrew li>      | <andrew li> |
+| Real, "easy" |    0.177   |   0.616 |
+| Real, "hard" |  0.153 | 0.519 |
+
+#### With Noise Injection
+| Test Set        | Precision           |Recall   |
+| :-----------: |:-------------:|:-----:|
+| Simulated Test (no noise)      | <andrew li> | <andrew li> |
+| Simulated Test (noise-injected      | <andrew li>      | <andrew li> |
+| Real, "easy" |    0.461   |   0.643 |
+| Real, "hard" |  0.267 | 0.518 |
+
 
 ## Files
 Note that most of these files reside within the subfolder "noise".
