@@ -97,7 +97,7 @@ We primarily use four datasets for training and benchmarking.
 We trained one model for each of the noisy and no noise datasets with a learning rate of 0.001 for 80 epochs. 
 
 - No noise: `/nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset/train_no_noise_lr1e-3_80e/mask_rcnn_clutter_20180506-160851.h5`
-- Noise: <andrew li>
+- Noise: andrew li
     
 TF model checkpoints are also saved in the same folder as the model, so loss curves can be viewed by running Tensorboard in the directory containing the model.
 
@@ -108,15 +108,15 @@ Full result logs are stored at `/nfs/diskstation/projects/dex-net/segmentation/r
 | Test Set        | Precision           |Recall   |
 | :-----------: |:-------------:|:-----:|
 | Simulated Test (no noise)      | 0.528 | 0.688 |
-| Simulated Test (noise-injected      | <andrew li>      | <andrew li> |
+| Simulated Test (noise-injected      | andrew li      | andrew li |
 | Real, "easy" |    0.177   |   0.616 |
 | Real, "hard" |  0.153 | 0.519 |
 
 #### With Noise Injection
 | Test Set        | Precision           |Recall   |
 | :-----------: |:-------------:|:-----:|
-| Simulated Test (no noise)      | <andrew li> | <andrew li> |
-| Simulated Test (noise-injected      | <andrew li>      | <andrew li> |
+| Simulated Test (no noise)      | andrew li | andrew li |
+| Simulated Test (noise-injected      | andrew li      | andrew li |
 | Real, "easy" |    0.461   |   0.643 |
 | Real, "hard" |  0.267 | 0.518 |
 
