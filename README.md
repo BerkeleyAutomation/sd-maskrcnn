@@ -15,21 +15,22 @@ This operation, given model weights, runs both COCO benchmarks and Saurabh's ben
 ```
 - numpy
 - scipy
-- skimage
-- tensorflow-gpu
+- scikit-image
+- tensorflow-gpu (v1.7)
 - jupyter
 - opencv-python
 - pytest
 - keras
 - tqdm
 - matplotlib
+- perception (from BerkeleyAutomation)
+- cython (for COCO API)
 - flask (if labelling images)
 ```
-These can all be installed by running `pip3 install -r requirements.txt`.
-(TODO: get version numbers)
+These can all be installed by running `pip3 install -r requirements.txt`, except for `perception`, which must be cloned from `BerkeleyAutomation`. It can then be installed using `pip3 install -e .` from inside the `perception` folder.
 
 Additionally, in order to compute COCO benchmarks, the COCO API must be installed inside the repository root directory.
-Get it [here.](https://github.com/cocodataset/cocoapi)
+Get it [here.](https://github.com/cocodataset/cocoapi).
 Then, navigate to `cocoapi/PythonAPI/` and run `make install`.
 
 
