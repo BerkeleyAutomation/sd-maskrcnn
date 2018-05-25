@@ -1,5 +1,5 @@
 numpy
-skimage
+scikit-image
 tensorflow-gpu
 jupyter
 opencv-python
