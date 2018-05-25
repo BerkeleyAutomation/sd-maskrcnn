@@ -443,9 +443,10 @@ class GroupLabel (AbstractLabel):
         self.component_labels = component_labels
 
     def flatten(self):
-        for comp in self.component_labels:
-            for f in comp.flatten():
-                yield f
+        yield self
+        #for comp in self.component_labels:
+        #    for f in comp.flatten():
+        #        yield f
 
     def bounding_box(self, ctx=None):
         lowers, uppers = list(zip(*[comp.bounding_box(ctx) for comp in self.component_labels]))
@@ -478,7 +479,7 @@ class GroupLabel (AbstractLabel):
     def new_instance_from_json(cls, label_json, object_table):
         components = [AbstractLabel.from_json(comp, object_table)
                       for comp in label_json['component_models']]
-        return CompositeLabel(components, label_json.get('object_id'), label_json['label_class'])
+        return GroupLabel(components, label_json.get('object_id'), label_json['label_class'])
 
 
 
@@ -1146,6 +1147,7 @@ class PersistentLabelledImage (AbsractLabelledImage):
     @classmethod
     def for_directory(cls, dir_path, image_filename_pattern='*.png', with_labels_only=False, labels_dir=None, readonly=False):
         image_paths = glob.glob(os.path.join(dir_path, image_filename_pattern))
+        image_paths = sorted(image_paths)
         limgs = []
         for img_path in image_paths:
             labels_path = cls.__compute_labels_path(img_path, labels_dir=labels_dir)
