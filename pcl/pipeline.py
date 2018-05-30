@@ -11,7 +11,7 @@ from eval_coco import coco_benchmark
 # from eval_saurabh import s_benchmark
 from pcl_detect import detect, EuclideanClusterExtractor, RegionGrowingSegmentor
 from pcl_utils import get_conf_dict, mkdir_if_missing
-from pcl_vis import visualize_predictions
+from pcl_vis import visualize_predictions, s_benchmark
 
 """
 Pipeline Usage Notes:
@@ -55,7 +55,6 @@ def benchmark(conf):
     indices_name = config['indices_name'] + '_indices.npy'
     indices_arr = np.load(os.path.join(test_dir, indices_name))
 
-
     # Get location of file for relative path to binaries
     file_dir = os.path.dirname(__file__)
 
@@ -82,18 +81,15 @@ def benchmark(conf):
 
     # If we want to remove bin pixels, pass in the directory with
     # those masks.
-    if config['remove_bin_pixels']:
-        bin_mask_dir = os.path.join(test_dir, config['bin_masks'])
-    else:
-        bin_mask_dir = None
+    bin_mask_dir = os.path.join(test_dir, config['bin_masks'])
 
     # Create predictions and record where everything gets stored.
     pred_mask_dir, pred_info_dir, gt_mask_dir = \
         detect(pcl_detector, run_dir, test_dir, indices_arr, bin_mask_dir)
 
     coco_benchmark(pred_mask_dir, pred_info_dir, gt_mask_dir)
-    visualize_predictions(run_dir, test_dir, pred_mask_dir, pred_info_dir, indices_arr)
-    # s_benchmark(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir)
+    visualize_predictions(run_dir, test_dir, indices_arr, pred_mask_dir, pred_info_dir)
+    s_benchmark(run_dir, test_dir, indices_arr, pred_mask_dir, pred_info_dir, gt_mask_dir)
 
     print("Saved benchmarking output to {}.\n".format(run_dir))
 
