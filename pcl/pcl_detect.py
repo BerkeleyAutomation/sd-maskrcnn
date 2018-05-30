@@ -7,10 +7,7 @@ import shutil
 import subprocess
 
 from perception import DepthImage, BinaryImage, CameraIntrinsics
-
-def mkdir_if_missing(dirname):
-    if not os.path.exists(dirname):
-        os.makedirs(dirname)
+from pcl_utils import mkdir_if_missing
 
 def detect(pcl_detector, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
     """Run PCL-based detection on a depth-image-based dataset.
@@ -87,13 +84,12 @@ def detect(pcl_detector, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
 
         # Save out ground-truth mask as array of shape (n, h, w)
         indiv_gt_masks = []
-        gt_mask = cv2.imread(os.path.join(gt_mask_dir, base_name + '.png')).astype(np.uint8)
+        gt_mask = cv2.imread(os.path.join(gt_mask_dir, base_name + '.png')).astype(np.uint8)[:,:,0]
         num_gt_masks = np.max(gt_mask)
         for i in range(1, num_gt_masks+1):
             indiv_gt_masks.append(gt_mask == i)
         gt_mask_output = np.stack(indiv_gt_masks)
         np.save(os.path.join(resized_segmask_dir, base_name + '.npy'), gt_mask_output)
-
         # Set up predicted masks and metadata
         indiv_pred_masks = []
         r_info = {
@@ -116,7 +112,7 @@ def detect(pcl_detector, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
             r_info['class_ids'].append(1)
 
         # Write the predicted masks and metadata
-        pred_mask_output = np.stack(indiv_pred_masks)
+        pred_mask_output = np.stack(indiv_pred_masks).astype(np.uint8)
         np.save(os.path.join(pred_dir, base_name + '.npy'), pred_mask_output)
         np.save(os.path.join(pred_info_dir, base_name + '.npy'), r_info)
 
@@ -132,6 +128,8 @@ def detect(pcl_detector, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
     print('Saved prediction masks to:\t {}'.format(pred_dir))
     print('Saved prediction info (bboxes, scores, classes) to:\t {}'.format(pred_info_dir))
     print('Saved transformed GT segmasks to:\t {}'.format(resized_segmask_dir))
+
+    return pred_dir, pred_info_dir, resized_segmask_dir
 
 
 class PCLDetector(object):
