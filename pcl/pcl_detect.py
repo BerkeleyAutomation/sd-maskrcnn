@@ -111,6 +111,9 @@ def detect(pcl_detector, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
             r_info['scores'].append(1.0)
             r_info['class_ids'].append(1)
 
+        r_info['rois'] = np.array(r_info['rois'])
+        r_info['scores'] = np.array(r_info['scores'])
+        r_info['class_ids'] = np.array(r_info['class_ids'])
         # Write the predicted masks and metadata
         pred_mask_output = np.stack(indiv_pred_masks).astype(np.uint8)
         np.save(os.path.join(pred_dir, base_name + '.npy'), pred_mask_output)
