@@ -5,6 +5,7 @@ import numpy as np
 import os
 import shutil
 import subprocess
+from tqdm import tqdm
 
 from perception import DepthImage, BinaryImage, CameraIntrinsics
 from pcl_utils import mkdir_if_missing
@@ -66,7 +67,7 @@ def detect(pcl_detector, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
     ##################################################################
     # Process each image
     ##################################################################
-    for index in indices_arr:
+    for index in tqdm(indices_arr):
         base_name = 'image_{:06d}'.format(index)
         depth_image_fn = base_name + '.npy'
 
