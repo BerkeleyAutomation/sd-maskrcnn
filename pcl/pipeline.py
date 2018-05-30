@@ -11,6 +11,7 @@ from eval_coco import coco_benchmark
 # from eval_saurabh import s_benchmark
 from pcl_detect import detect, EuclideanClusterExtractor, RegionGrowingSegmentor
 from pcl_utils import get_conf_dict, mkdir_if_missing
+from pcl_vis import visualize_predictions
 
 """
 Pipeline Usage Notes:
@@ -91,7 +92,7 @@ def benchmark(conf):
         detect(pcl_detector, run_dir, test_dir, indices_arr, bin_mask_dir)
 
     coco_benchmark(pred_mask_dir, pred_info_dir, gt_mask_dir)
-    # visualize_predictions(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir)
+    visualize_predictions(run_dir, test_dir, pred_mask_dir, pred_info_dir, indices_arr)
     # s_benchmark(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir)
 
     print("Saved benchmarking output to {}.\n".format(run_dir))

@@ -4,7 +4,8 @@ import numpy as np
 import os
 import visualize
 from pcl_utils import mkdir_if_missing
-
+from perception import DepthImage
+import matplotlib.pyplot as plt
 
 def visualize_predictions(run_dir, dataset_dir, pred_mask_dir, pred_info_dir, indices_arr):
     """Visualizes predictions."""
