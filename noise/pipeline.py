@@ -14,6 +14,7 @@ import cv2
 import skimage.io
 import numpy as np
 import tensorflow as tf
+from keras.backend.tensorflow_backend import set_session
 
 from eval_coco import coco_benchmark
 from eval_saurabh import s_benchmark
@@ -119,6 +120,54 @@ def train(conf):
 
     # train and save weights to model_path
     model.train(dataset_train, dataset_val, learning_rate=train_config.LEARNING_RATE,
+                epochs=config["epochs"], layers='all')
+
+    # save in the dataset folder
+    current_datetime = time.strftime("%Y%m%d-%H%M%S")
+    model_path = os.path.join(model_path, "mask_rcnn_clutter_{}.h5".format(current_datetime))
+    model.keras_model.save_weights(model_path)
+
+def tune(conf):
+    config = get_conf_dict(conf)
+
+    # read information from config
+    dataset_path = config["base_path"]
+    mean_pixel = config["mean_pixel"]
+    img_type = config["img_type"]
+
+    # Load the datasets, configs.
+    tune_config = ClutterConfig(mean=mean_pixel)
+
+    # learning rate set
+    tune_config.LEARNING_RATE = config["learning_rate"]
+
+    # future: override maskrcnn safety checks to allow non power-of-2 shapes
+    # img_width = config["img_width"]
+    # img_height = config["img_height"]
+    # img_nchannels = config["img_nchannels"]
+    # img_shape = (img_height, img_width, img_nchannels)
+    # train_config.IMAGE_SHAPE = img_shape
+    tune_config.display()
+
+    # Training dataset
+    dataset_train = SimImageDataset(dataset_path)
+    dataset_train.load('train')
+    dataset_train.prepare()
+
+    # Validation dataset
+    dataset_val = SimImageDataset(dataset_path)
+    dataset_val.load('test')
+    dataset_val.prepare()
+
+    # Create the model.
+    model, model_path = get_model_and_path(config, tune_config)
+    model.load_weights(os.path.join(dataset_path, config["base_model_path"]))
+
+    # save config in run folder
+    save_config(conf, os.path.join(model_path, config["save_conf_name"]))
+
+    # train and save weights to model_path
+    model.train(dataset_train, dataset_val, learning_rate=tune_config.LEARNING_RATE,
                 epochs=config["epochs"], layers='all')
 
     # save in the dataset folder
@@ -247,14 +296,22 @@ if __name__ == "__main__":
     task = literal_eval(task)
 
     print("Task: {}".format(task))
-    if task == "AUGMENT":
-        augment_data(conf)
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    with tf.Session(config=config) as sess:
+        set_session(sess)
 
-    if task == "TRAIN":
-        train(conf)
+        if task == "AUGMENT":
+            augment_data(conf)
 
-    if task == "BENCHMARK":
-        benchmark(conf)
+        elif task == "TRAIN":
+            train(conf)
 
-    if task == "RESIZE":
-        resize_images(conf)
+        elif task == "TUNE":
+            tune(conf)
+
+        elif task == "BENCHMARK":
+            benchmark(conf)
+
+        elif task == "RESIZE":
+            resize_images(conf)
