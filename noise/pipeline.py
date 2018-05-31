@@ -161,7 +161,7 @@ def tune(conf):
 
     # Create the model.
     model, model_path = get_model_and_path(config, tune_config)
-    model.load_weights(os.path.join(dataset_path, config["base_model_path"]))
+    model.load_weights(config["base_model_path"])
 
     # save config in run folder
     save_config(conf, os.path.join(model_path, config["save_conf_name"]))
