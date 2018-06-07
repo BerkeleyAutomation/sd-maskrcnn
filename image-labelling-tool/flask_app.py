@@ -32,10 +32,7 @@ def run_app(slic, readonly):
 
     # Specify our 3 label classes.
     # `LabelClass` parameters are: symbolic name, human readable name for UI, and RGB colour as list
-    label_classes = [labelling_tool.LabelClass('tree', 'Trees', [0, 255, 192]),
-                     labelling_tool.LabelClass('building', 'Buldings', [255, 128, 0]),
-                     labelling_tool.LabelClass('lake', 'Lake', [0, 128, 255]),
-                     ]
+    label_classes = [labelling_tool.LabelClass('obj', 'objects', [255, 128, 0])]
     if slic:
         import glob
         from matplotlib import pyplot as plt
