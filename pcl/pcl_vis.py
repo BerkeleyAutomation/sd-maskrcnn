@@ -9,8 +9,7 @@ import visualize, utils
 
 from pcl_utils import mkdir_if_missing
 from perception import DepthImage
-from train_clutter import compute_gt_stats, subplot, plot_stats
-import det_utils as du
+from eval_utils import *
 
 def visualize_predictions(run_dir, dataset_dir, indices_arr, pred_mask_dir, pred_info_dir):
     """Visualizes predictions."""
@@ -86,8 +85,7 @@ def s_benchmark(run_dir, dataset_dir, indices_arr, pred_mask_dir, pred_info_dir,
 
         for tps, fps, scs, num_insts, dup_dets, inst_ids, ovs, tp_inds, fn_inds, \
             gt_stats, thresh in ms:
-            tp, fp, sc, num_inst, dup_det, inst_id, ov = \
-                                                        du.inst_bench_image(dt, gt, {'minoverlap': thresh}, overlaps)
+            tp, fp, sc, num_inst, dup_det, inst_id, ov = inst_bench_image(dt, gt, {'minoverlap': thresh}, overlaps)
             tp_ind = np.sort(inst_id[tp]); fn_ind = np.setdiff1d(np.arange(num_inst), tp_ind);
             tps.append(tp); fps.append(fp); scs.append(sc); num_insts.append(num_inst);
             dup_dets.append(dup_det); inst_ids.append(inst_id); ovs.append(ov);
@@ -115,8 +113,7 @@ def s_benchmark(run_dir, dataset_dir, indices_arr, pred_mask_dir, pred_info_dir,
     # Compute AP
     for tps, fps, scs, num_insts, dup_dets, inst_ids, ovs, tp_inds, fn_inds, \
         gt_stats, thresh in ms:
-        ap, rec, prec, npos, _ = \
-          du.inst_bench(None, None, None, tp=tps, fp=fps, score=scs, numInst=num_insts)
+        ap, rec, prec, npos, _ = inst_bench(None, None, None, tp=tps, fp=fps, score=scs, numInst=num_insts)
         str_ = 'mAP: {:.3f}, prec: {:.3f}, rec: {:.3f}, npos: {:d}'.format(
           ap[0], np.min(prec), np.max(rec), npos)
         # logging.error('%s', str_)
