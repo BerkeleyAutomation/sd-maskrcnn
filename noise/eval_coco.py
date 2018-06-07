@@ -18,8 +18,7 @@ import json
 from tqdm import tqdm
 import model as modellib, visualize, utils
 from pipeline_utils import *
-from real_dataset import RealImageDataset, prepare_real_image_test
-
+from datasets import RealImageDataset, prepare_real_image_test
 
 def encode_gt(mask_dir):
     """Given a path to a directory of ground-truth image segmentation masks,

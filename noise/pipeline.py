@@ -19,14 +19,12 @@ from keras.backend.tensorflow_backend import set_session
 from eval_coco import coco_benchmark
 from eval_saurabh import s_benchmark
 from augmentation import augment_img
-from resize import scale_to_square
 from detect_utils import detect, visualize_predictions
 
 from pipeline_utils import *
-from clutter import ClutterConfig
+from configs import ClutterConfig
 import model as modellib, visualize, utils
-from real_dataset import RealImageDataset, prepare_real_image_test
-from sim_dataset import SimImageDataset
+from datasets import SimImageDataset, RealImageDataset, prepare_real_image_test
 
 """
 Pipeline Usage Notes:

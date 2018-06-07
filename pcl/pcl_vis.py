@@ -9,7 +9,7 @@ import visualize, utils
 
 from pcl_utils import mkdir_if_missing
 from perception import DepthImage
-from train_clutter import compute_gt_stats, subplot, plot_stats
+from eval_utils import compute_gt_stats, subplot, plot_stats
 import det_utils as du
 
 def visualize_predictions(run_dir, dataset_dir, indices_arr, pred_mask_dir, pred_info_dir):
