@@ -13,10 +13,8 @@ from eval_coco import *
 from augmentation import augment_img
 
 from pipeline_utils import *
-from train_clutter import *
+from eval_utils import compute_gt_stats, subplot, plot_stats
 import model as modellib, visualize, utils
-
-
 
 def s_benchmark(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir, \
                 vis_missed=False):
