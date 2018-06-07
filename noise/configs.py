@@ -7,7 +7,7 @@ class ClutterConfig(Config):
   to the toy shapes dataset.
   """
   # Give the configuration a recognizable name
-  NAME = "clutter"
+  NAME = "hsr_tune_noisy"
 
   # Train on 1 GPU and 8 images per GPU. We can put multiple images on each
   # GPU because the images are small. Batch size is 8 (GPUs * images/GPU).
@@ -30,7 +30,7 @@ class ClutterConfig(Config):
   #TRAIN_ROIS_PER_IMAGE = 32
 
   # Use a small epoch since the data is simple
-  STEPS_PER_EPOCH = 8000/IMAGES_PER_GPU
+  STEPS_PER_EPOCH = 168/IMAGES_PER_GPU
 
   # use small validation steps since the epoch is small
   #VALIDATION_STEPS = 50

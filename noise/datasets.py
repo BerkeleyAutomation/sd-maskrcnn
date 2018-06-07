@@ -10,9 +10,6 @@ import tensorflow as tf
 
 from configs import ClutterConfig
 from augmentation import augment_img
-from eval_coco import *
-
-from pipeline_utils import mkdir_if_missing
 import model as modellib, visualize, utils
 
 """

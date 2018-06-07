@@ -19,7 +19,6 @@ from keras.backend.tensorflow_backend import set_session
 from eval_coco import coco_benchmark
 from eval_saurabh import s_benchmark
 from augmentation import augment_img
-from detect_utils import detect, visualize_predictions
 
 from pipeline_utils import *
 from configs import ClutterConfig
