@@ -13,8 +13,9 @@ from eval_coco import *
 from augmentation import augment_img
 
 from pipeline_utils import *
-from eval_utils import compute_gt_stats, subplot, plot_stats
+from eval_utils import *
 import model as modellib, visualize, utils
+import
 
 def s_benchmark(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir, \
                 vis_missed=False):
@@ -62,8 +63,7 @@ def s_benchmark(run_dir, dataset_real, inference_config, pred_mask_dir, pred_inf
 
         for tps, fps, scs, num_insts, dup_dets, inst_ids, ovs, tp_inds, fn_inds, \
             gt_stats, thresh in ms:
-            tp, fp, sc, num_inst, dup_det, inst_id, ov = \
-                                                        du.inst_bench_image(dt, gt, {'minoverlap': thresh}, overlaps)
+            tp, fp, sc, num_inst, dup_det, inst_id, ov = inst_bench_image(dt, gt, {'minoverlap': thresh}, overlaps)
             tp_ind = np.sort(inst_id[tp]); fn_ind = np.setdiff1d(np.arange(num_inst), tp_ind);
             tps.append(tp); fps.append(fp); scs.append(sc); num_insts.append(num_inst);
             dup_dets.append(dup_det); inst_ids.append(inst_id); ovs.append(ov);
@@ -91,8 +91,7 @@ def s_benchmark(run_dir, dataset_real, inference_config, pred_mask_dir, pred_inf
     # Compute AP
     for tps, fps, scs, num_insts, dup_dets, inst_ids, ovs, tp_inds, fn_inds, \
         gt_stats, thresh in ms:
-        ap, rec, prec, npos, _ = \
-          du.inst_bench(None, None, None, tp=tps, fp=fps, score=scs, numInst=num_insts)
+        ap, rec, prec, npos, _ = inst_bench(None, None, None, tp=tps, fp=fps, score=scs, numInst=num_insts)
         str_ = 'mAP: {:.3f}, prec: {:.3f}, rec: {:.3f}, npos: {:d}'.format(
           ap[0], np.min(prec), np.max(rec), npos)
         # logging.error('%s', str_)
