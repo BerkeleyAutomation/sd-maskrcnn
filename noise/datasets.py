@@ -183,6 +183,9 @@ class RealImageDataset(utils.Dataset):
         class_ids = np.array([1 for _ in range(mask.shape[2])])
         return mask, class_ids.astype(np.int32)
 
+    @property
+    def indices(self):
+        return self.image_id
 
 def prepare_real_image_test(model_path, dataset_path, indices_name, config_path=''):
     """Loads model with the appropriate config and prepares dataset.
