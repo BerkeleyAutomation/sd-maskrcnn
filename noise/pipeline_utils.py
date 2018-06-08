@@ -93,9 +93,9 @@ def detect(run_dir, inference_config, model, dataset_real, bin_mask_dir=False,
 
     # Feed images into model one by one. For each image, predict, save, visualize?
     image_ids = dataset_real.image_ids
-
+    indices = dataset_real.indices
     print('MAKING PREDICTIONS')
-    for image_id in tqdm(image_ids):
+    for (image_id,index) in tqdm(zip(image_ids,indices)):
         # Load image and ground truth data and resize for net
         image, image_meta, gt_class_id, gt_bbox, gt_mask =\
           modellib.load_image_gt(dataset_real, inference_config, image_id,
@@ -110,7 +110,7 @@ def detect(run_dir, inference_config, model, dataset_real, bin_mask_dir=False,
         # Then, delete the mask, score, class id, and bbox corresponding
         # to each mask that is entirely bin pixels.
         if bin_mask_dir:
-            name = 'image_{:06d}.png'.format(image_id)
+            name = 'image_{:06d}.png'.format(index)
             bin_mask = io.imread(os.path.join(bin_mask_dir, name))
             # HACK: stack bin_mask 3x
             bin_mask = np.stack((bin_mask, bin_mask, bin_mask), axis=2)
