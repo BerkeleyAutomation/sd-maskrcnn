@@ -95,7 +95,7 @@ def detect(run_dir, inference_config, model, dataset_real, bin_mask_dir=False,
     image_ids = dataset_real.image_ids
     indices = dataset_real.indices
     print('MAKING PREDICTIONS')
-    for (image_id,index) in tqdm(zip(image_ids,indices)):
+    for image_id in tqdm(image_ids):
         # Load image and ground truth data and resize for net
         image, image_meta, gt_class_id, gt_bbox, gt_mask =\
           modellib.load_image_gt(dataset_real, inference_config, image_id,
@@ -110,7 +110,7 @@ def detect(run_dir, inference_config, model, dataset_real, bin_mask_dir=False,
         # Then, delete the mask, score, class id, and bbox corresponding
         # to each mask that is entirely bin pixels.
         if bin_mask_dir:
-            name = 'image_{:06d}.png'.format(index)
+            name = 'image_{:06d}.png'.format(indices[image_id])
             bin_mask = io.imread(os.path.join(bin_mask_dir, name))
             # HACK: stack bin_mask 3x
             bin_mask = np.stack((bin_mask, bin_mask, bin_mask), axis=2)
@@ -188,9 +188,6 @@ def visualize_predictions(run_dir, dataset_real, inference_config, pred_mask_dir
           modellib.load_image_gt(dataset_real, inference_config, image_id,
             use_mini_mask=False)
 
-        molded_images = modellib.mold_image(image, inference_config)
-        molded_images = np.expand_dims(molded_images, 0)
-
         # load mask and info
         r = np.load(os.path.join(pred_info_dir, 'image_{:06}.npy'.format(image_id))).item()
         r_masks = np.load(os.path.join(pred_mask_dir, 'image_{:06}.npy'.format(image_id)))
@@ -200,5 +197,28 @@ def visualize_predictions(run_dir, dataset_real, inference_config, pred_mask_dir
         visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
                                     ['bg', 'obj'], r['scores'])
         file_name = os.path.join(vis_dir, 'vis_{:06d}'.format(image_id))
+        plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
+        plt.close()
+
+def visualize_gts(run_dir, dataset_real, inference_config):
+    """Visualizes predictions."""
+    # Create subdirectory for prediction visualizations
+    vis_dir = os.path.join(run_dir, 'gt_vis')
+    mkdir_if_missing(vis_dir)
+
+    # Feed images into model one by one. For each image, predict, save, visualize?
+    image_ids = dataset_real.image_ids
+
+    print('VISUALIZING GROUND TRUTHS')
+    for image_id in tqdm(image_ids):
+        # Load image and ground truth data and resize for net
+        image, image_meta, gt_class_id, gt_bbox, gt_mask =\
+          modellib.load_image_gt(dataset_real, inference_config, image_id,
+            use_mini_mask=False)
+
+        # Visualize
+        visualize.display_instances(image, gt_bbox, gt_mask, gt_class_id,
+                                    ['bg', 'obj'], np.ones(gt_class_id.size))
+        file_name = os.path.join(vis_dir, 'gt_vis_{:06d}'.format(image_id))
         plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
         plt.close()

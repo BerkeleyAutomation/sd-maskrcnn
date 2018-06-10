@@ -217,6 +217,7 @@ def benchmark(conf):
 
     coco_benchmark(pred_mask_dir, pred_info_dir, gt_mask_dir)
     visualize_predictions(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir)
+    visualize_gts(run_dir, dataset_real, inference_config)
     s_benchmark(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir)
 
     print("Saved benchmarking output to {}.\n".format(run_dir))

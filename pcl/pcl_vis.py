@@ -18,12 +18,13 @@ def visualize_predictions(run_dir, dataset_dir, indices_arr, pred_mask_dir, pred
     depth_dir = os.path.join(dataset_dir, 'depth_ims_numpy')
     mkdir_if_missing(vis_dir)
 
+    image_ids = np.arange(indices_arr.size)
     ##################################################################
     # Process each image
     ##################################################################
     print('VISUALIZING PREDICTIONS')
-    for image_id in tqdm(indices_arr):
-        base_name = 'image_{:06d}'.format(image_id)
+    for image_id in tqdm(image_ids):
+        base_name = 'image_{:06d}'.format(indices_arr[image_id])
         depth_image_fn = base_name + '.npy'
 
         # Load image and ground truth data and resize for net
@@ -34,7 +35,10 @@ def visualize_predictions(run_dir, dataset_dir, indices_arr, pred_mask_dir, pred
         r = np.load(os.path.join(pred_info_dir, 'image_{:06}.npy'.format(image_id))).item()
         r_masks = np.load(os.path.join(pred_mask_dir, 'image_{:06}.npy'.format(image_id)))
         # Must transpose from (n, h, w) to (h, w, n)
-        r['masks'] = np.transpose(r_masks, (1, 2, 0))
+        if r_masks.any():
+            r['masks'] = np.transpose(r_masks, (1, 2, 0))
+        else:
+            r['masks'] = r_masks
         # Visualize
         visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
                                     ['bg', 'obj'], r['scores'])
@@ -60,10 +64,11 @@ def s_benchmark(run_dir, dataset_dir, indices_arr, pred_mask_dir, pred_info_dir,
     ms.append(thresh_all)
     ms = list(zip(*ms))
 
-    for image_id in tqdm(indices_arr):
+    image_ids = np.arange(indices_arr.size)
+    for image_id in tqdm(image_ids):
         
         # Load image and ground truth data
-        image = cv2.imread(os.path.join(dataset_dir, 'depth_ims', 'image_{:06}.png'.format(image_id)))
+        image = cv2.imread(os.path.join(dataset_dir, 'depth_ims', 'image_{:06}.png'.format(indices_arr[image_id])))
         image = np.transpose(image, (1, 0, 2))
         gt_mask = np.load(os.path.join(gt_mask_dir, 'image_{:06}.npy'.format(image_id))).transpose()
         gt_class_id = np.array([1 for _ in range(gt_mask.shape[2])]).astype(np.int32)
@@ -105,7 +110,7 @@ def s_benchmark(run_dir, dataset_dir, indices_arr, pred_mask_dir, pred_info_dir,
                                             gt_mask[:,:,j:j+1], gt_class_id[j:j+1], class_names,
                                             ax=ax, title='')
             file_name = os.path.join(results_dir, 'vis_fn',
-                                     'vis_{:06d}.png'.format(np.flatnonzero(indices_arr == image_id)[0]))
+                                     'vis_{:06d}.png'.format(image_id))
             plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
             plt.close()
 

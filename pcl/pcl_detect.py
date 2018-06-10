@@ -64,11 +64,14 @@ def detect(pcl_detector, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
     camera_intrinsics_fn = os.path.join(dataset_dir, 'camera_intrinsics.intr')
     camera_intrs = CameraIntrinsics.load(camera_intrinsics_fn)
 
+    image_ids = np.arange(indices_arr.size)
+
     ##################################################################
     # Process each image
     ##################################################################
-    for index in tqdm(indices_arr):
-        base_name = 'image_{:06d}'.format(index)
+    for image_id in tqdm(image_ids):
+        base_name = 'image_{:06d}'.format(indices_arr[image_id])
+        output_name = 'image_{:06d}'.format(image_id)
         depth_image_fn = base_name + '.npy'
 
         # Extract depth image
@@ -90,7 +93,7 @@ def detect(pcl_detector, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
         for i in range(1, num_gt_masks+1):
             indiv_gt_masks.append(gt_mask == i)
         gt_mask_output = np.stack(indiv_gt_masks)
-        np.save(os.path.join(resized_segmask_dir, base_name + '.npy'), gt_mask_output)
+        np.save(os.path.join(resized_segmask_dir, output_name + '.npy'), gt_mask_output)
         # Set up predicted masks and metadata
         indiv_pred_masks = []
         r_info = {
@@ -115,10 +118,14 @@ def detect(pcl_detector, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
         r_info['rois'] = np.array(r_info['rois'])
         r_info['scores'] = np.array(r_info['scores'])
         r_info['class_ids'] = np.array(r_info['class_ids'])
+
         # Write the predicted masks and metadata
-        pred_mask_output = np.stack(indiv_pred_masks).astype(np.uint8)
-        np.save(os.path.join(pred_dir, base_name + '.npy'), pred_mask_output)
-        np.save(os.path.join(pred_info_dir, base_name + '.npy'), r_info)
+        if indiv_pred_masks:
+            pred_mask_output = np.stack(indiv_pred_masks).astype(np.uint8)
+        else:
+            pred_mask_output = np.array(indiv_pred_masks).astype(np.uint8)
+        np.save(os.path.join(pred_dir, output_name + '.npy'), pred_mask_output)
+        np.save(os.path.join(pred_info_dir, output_name + '.npy'), r_info)
 
         if False: # Visualization of masks
             from visualization import Visualizer2D as vis
