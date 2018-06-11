@@ -58,22 +58,24 @@ def benchmark(conf):
     # Get location of file for relative path to binaries
     file_dir = os.path.dirname(__file__)
 
+    min_cluster_size = config['min_cluster_size']
+    max_cluster_size = config['max_cluster_size']
+
     # Get type of PCL detector and options for each
     detector_type = config['detector_type']
     if detector_type == 'euclidean':
-        pcl_detector = EuclideanClusterExtractor(os.path.join(file_dir, 'euclidean_cluster_extraction'))
         tolerance = config['tolerance']
+        pcl_detector = EuclideanClusterExtractor(os.path.join(file_dir, 'euclidean_cluster_extraction'), 
+                                                 min_cluster_size=min_cluster_size, max_cluster_size=max_cluster_size, tolerance=tolerance)
     elif detector_type == 'region_growing':
-        pcl_detector = RegionGrowingSegmentor(os.path.join(file_dir, 'region_growing_segmentation'))
         n_neighbors = config['n_neighbors']
         smoothness = config['smoothness']
         curvature = config['curvature']
+        pcl_detector = RegionGrowingSegmentor(os.path.join(file_dir, 'region_growing_segmentation'), min_cluster_size=min_cluster_size, max_cluster_size=max_cluster_size,
+                                              n_neighbors=n_neighbors, smoothness=smoothness, curvature=curvature)
     else:
         print('PCL detector type not supported')
         exit()
-
-    min_cluster_size = config['min_cluster_size']
-    max_cluster_size = config['max_cluster_size']
 
     ######## BENCHMARK JUST CREATES THE RUN DIRECTORY ########
     # code that actually produces outputs should be plug-and-play
@@ -88,8 +90,10 @@ def benchmark(conf):
         detect(pcl_detector, run_dir, test_dir, indices_arr, bin_mask_dir)
 
     coco_benchmark(pred_mask_dir, pred_info_dir, gt_mask_dir)
-    visualize_predictions(run_dir, test_dir, indices_arr, pred_mask_dir, pred_info_dir)
-    s_benchmark(run_dir, test_dir, indices_arr, pred_mask_dir, pred_info_dir, gt_mask_dir)
+    if config['output_pred_vis']:
+        visualize_predictions(run_dir, test_dir, indices_arr, pred_mask_dir, pred_info_dir, show_bbox=config['show_bbox_pred'], show_class=config['show_class_pred'])
+    if config['output_s_bench']:
+        s_benchmark(run_dir, test_dir, indices_arr, pred_mask_dir, pred_info_dir, gt_mask_dir)
 
     print("Saved benchmarking output to {}.\n".format(run_dir))
 

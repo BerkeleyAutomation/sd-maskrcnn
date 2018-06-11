@@ -216,9 +216,12 @@ def benchmark(conf):
         detect(run_dir, inference_config, model, dataset_real, bin_mask_dir, overlap_thresh)
 
     coco_benchmark(pred_mask_dir, pred_info_dir, gt_mask_dir)
-    visualize_predictions(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir, show_bbox=config['show_bbox_pred'], show_class=config['show_class_pred'])
-    visualize_gts(run_dir, dataset_real, inference_config, show_scores=False, show_bbox=config['show_bbox_gt'], show_class=config['show_class_gt'])
-    s_benchmark(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir)
+    if config['output_pred_vis']:
+        visualize_predictions(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir, show_bbox=config['show_bbox_pred'], show_class=config['show_class_pred'])
+    if config['output_gt_vis']:
+        visualize_gts(run_dir, dataset_real, inference_config, show_scores=False, show_bbox=config['show_bbox_gt'], show_class=config['show_class_gt'])
+    if config['output_s_bench']:
+        s_benchmark(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir)
 
     print("Saved benchmarking output to {}.\n".format(run_dir))
 
