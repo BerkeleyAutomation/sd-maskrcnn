@@ -71,7 +71,6 @@ def encode_gt(mask_dir):
             # get binary mask
             bin_mask = I[val,:,:].astype(np.uint8)
             instance_id = i * 100 + (val + 1) # create id for instance, incrmeent val
-
             # find bounding box
             def bbox2(img):
                 rows = np.any(img, axis=1)
