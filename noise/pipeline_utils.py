@@ -172,7 +172,7 @@ def detect(run_dir, inference_config, model, dataset_real, bin_mask_dir=False,
     return pred_dir, pred_info_dir, resized_segmask_dir
 
 
-def visualize_predictions(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir):
+def visualize_predictions(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir, show_bbox=True, show_class=True):
     """Visualizes predictions."""
     # Create subdirectory for prediction visualizations
     vis_dir = os.path.join(run_dir, 'vis')
@@ -195,12 +195,12 @@ def visualize_predictions(run_dir, dataset_real, inference_config, pred_mask_dir
         r['masks'] = np.transpose(r_masks, (1, 2, 0))
         # Visualize
         visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
-                                    ['bg', 'obj'], r['scores'])
+                                    ['bg', 'obj'], r['scores'], show_bbox=show_bbox, show_class=show_class)
         file_name = os.path.join(vis_dir, 'vis_{:06d}'.format(image_id))
         plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
         plt.close()
 
-def visualize_gts(run_dir, dataset_real, inference_config):
+def visualize_gts(run_dir, dataset_real, inference_config, show_scores=False, show_bbox=True, show_class=True):
     """Visualizes predictions."""
     # Create subdirectory for prediction visualizations
     vis_dir = os.path.join(run_dir, 'gt_vis')
@@ -217,8 +217,9 @@ def visualize_gts(run_dir, dataset_real, inference_config):
             use_mini_mask=False)
 
         # Visualize
+        scores = np.ones(gt_class_id.size) if show_scores else None
         visualize.display_instances(image, gt_bbox, gt_mask, gt_class_id,
-                                    ['bg', 'obj'], np.ones(gt_class_id.size))
+                                    ['bg', 'obj'], scores, show_bbox=show_bbox, show_class=show_class)
         file_name = os.path.join(vis_dir, 'gt_vis_{:06d}'.format(image_id))
         plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
         plt.close()
