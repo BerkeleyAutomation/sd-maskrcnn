@@ -81,6 +81,7 @@ def detect(pcl_detector, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
         # Mask out bin pixels if appropriate/necessary
         if bin_mask_dir:
             mask_im = BinaryImage.open(os.path.join(bin_mask_dir, base_name +'.png'), camera_intrs.frame)
+            mask_im = mask_im.resize(depth_im.shape[:2])
             depth_im = depth_im.mask_binary(mask_im)
 
         # Run PCL detector
@@ -88,7 +89,8 @@ def detect(pcl_detector, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
 
         # Save out ground-truth mask as array of shape (n, h, w)
         indiv_gt_masks = []
-        gt_mask = cv2.imread(os.path.join(gt_mask_dir, base_name + '.png')).astype(np.uint8)[:,:,0]
+        gt_mask = cv2.imread(os.path.join(gt_mask_dir, base_name + '.png'))
+        gt_mask = cv2.resize(gt_mask, (depth_im.shape[1], depth_im.shape[0])).astype(np.uint8)[:,:,0]
         num_gt_masks = np.max(gt_mask)
         for i in range(1, num_gt_masks+1):
             indiv_gt_masks.append(gt_mask == i)
@@ -128,13 +130,13 @@ def detect(pcl_detector, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
         np.save(os.path.join(pred_info_dir, output_name + '.npy'), r_info)
 
         if False: # Visualization of masks
-            from visualization import Visualizer2D as vis
+            from visualization import Visualizer2D as vis2d
             print(num_pred_masks)
             bi = BinaryImage(pred_mask)
             bi._data = pred_mask * 10
-            vis.figure()
-            vis.imshow(bi)
-            vis.show()
+            vis2d.figure()
+            vis2d.imshow(bi)
+            vis2d.show()
 
     print('Saved prediction masks to:\t {}'.format(pred_dir))
     print('Saved prediction info (bboxes, scores, classes) to:\t {}'.format(pred_info_dir))
