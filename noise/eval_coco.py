@@ -171,10 +171,15 @@ https://stackoverflow.com/questions/16571150/how-to-capture-stdout-output-from-a
     cocoEval = COCOeval(cocoGt, cocoDt, 'segm')
 
     cocoEval.params.imgIds = cocoGt.getImgIds()
-    cocoEval.params.useCats = False
+    cocoEval.params.useCats = 0
+    cocoEval.params.areaRng = [[0 ** 2, 1e5 ** 2]]
+    cocoEval.params.areaRngLbl = ['all']
+    cocoEval.params.maxDets = np.arange(1,101)
 
     cocoEval.evaluate()
     cocoEval.accumulate()
+
+    np.save(os.path.join(pred_dir, 'coco_eval.npy'), cocoEval.eval)
 
     f = io.StringIO()
     with redirect_stdout(f):
