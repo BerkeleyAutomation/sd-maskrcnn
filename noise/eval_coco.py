@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 # import pylab
 import os
 import json
+import fnmatch
 from tqdm import tqdm
 import model as modellib, visualize, utils
 from pipeline_utils import *
@@ -46,7 +47,7 @@ def encode_gt(mask_dir):
         ]
     }
 
-    N = len([p for p in os.listdir(mask_dir) if p.endswith('.npy')])
+    N = len(fnmatch.filter(os.listdir(mask_dir), 'image_*.npy'))
 
     for i in range(N):
         # load image
@@ -122,7 +123,7 @@ def encode_predictions(mask_dir):
     """
     annos = []
 
-    N = len([p for p in os.listdir(mask_dir) if p.endswith('.npy')])
+    N = len(fnmatch.filter(os.listdir(mask_dir), 'image_*.npy'))
 
     for i in range(N):
         # load .npy
