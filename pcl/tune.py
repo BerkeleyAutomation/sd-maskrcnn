@@ -78,7 +78,7 @@ elif args.detector_type == 'region_growing':
     for i in np.linspace(0.01, 0.1, 19):
         for j in np.linspace(100, 1000, 19):
             for k in np.arange(4,11):
-                for l in np.linspace(0.05, 0.5, 19):
+                for l in np.linspace(0.01, 0.2, 19):
                     config['BENCHMARK']['curvature'] = str(i)
                     config['BENCHMARK']['min_cluster_size'] = str(int(j))
                     config['BENCHMARK']['n_neighbors'] = str(k)
