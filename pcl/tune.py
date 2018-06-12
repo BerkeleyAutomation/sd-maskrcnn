@@ -60,7 +60,10 @@ if args.detector_type == 'euclidean':
                 max_recall = run_recall
                 best_rec_tol = i
                 best_rec_min_cluster = int(j)
-
+    # Print results at the end
+    print('Results for Detector: {0}'.format(args.detector_type))
+    print('Max Precision: {:.3f}, Best Tol: {:.3f}, Best Min Cluster: {:d}'.format(max_precision,best_prec_tol,best_prec_min_cluster))
+    print('Max Recall: {:.3f}, Best Tol: {:.3f}, Best Min Cluster: {:d}'.format(max_recall,best_rec_tol,best_rec_min_cluster))
 
 # Loop over 4 params meaningful for region growing and record best runs
 elif args.detector_type == 'region_growing':
@@ -96,14 +99,12 @@ elif args.detector_type == 'region_growing':
                         best_rec_min_cluster = int(j)
                         best_rec_knn = k
                         best_rec_smoothness = l
+    # Print results at the end
+    print('Results for Detector: {0}'.format(args.detector_type))
+    print('Max Precision: {:.3f}, Best Curvature: {:.3f}, Best Min Cluster: {:d}, Best KNN: {:d}, Best Smoothness: {:.4f}'.format(max_precision,best_prec_curvature,best_prec_min_cluster,best_prec_knn,best_prec_smoothness))
+    print('Max Recall: {:.3f}, Best Curvature: {:.3f}, Best Min Cluster: {:d}, Best KNN: {:d}, Best Smoothness: {:.4f}'.format(max_recall,best_rec_curvature,best_rec_min_cluster,best_rec_knn,best_rec_smoothness))
 else:
     print('Detector Type not supported for tuning')
-    exit()
-
-# Print results at the end
-print('Results for Detector: {0}'.format(args.detector_type))
-print('Max Precision: {:.3f}, Best Tol: {:.3f}, Best Min Cluster: {:d}'.format(max_precision,best_prec_tol,best_prec_min_cluster))
-print('Max Recall: {:.3f}, Best Tol: {:.3f}, Best Min Cluster: {:d}'.format(max_recall,best_rec_tol,best_rec_min_cluster))
 
             
 
