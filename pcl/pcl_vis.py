@@ -40,6 +40,7 @@ def visualize_predictions(run_dir, dataset_dir, indices_arr, pred_mask_dir, pred
         else:
             r['masks'] = r_masks
         # Visualize
+        image,_,_,_ = utils.resize_image(image, min_dim=r['masks'].shape[0], max_dim=r['masks'].shape[1], padding=True)
         visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
                                     ['bg', 'obj'], r['scores'], show_bbox=show_bbox, show_class=show_class)
         file_name = os.path.join(vis_dir, 'vis_{:06d}'.format(image_id))

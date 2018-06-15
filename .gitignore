@@ -11,3 +11,5 @@ noisy_sim_dataset/
 only_inpainting_dataset/
 image-labelling-tool/images/
 image-labelling-tool/.*
+gop/build
+*.npy

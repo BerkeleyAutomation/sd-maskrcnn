@@ -29,6 +29,27 @@ Here is an example run command (GPU selection included):
 CUDA_VISIBLE_DEVICES='0' PYTHONPATH='.:maskrcnn/:clutter/' python3 noise/pipeline.py --config noise/config.ini
 """
 
+def vis_only(conf):
+
+    config = get_conf_dict(conf)
+    print("Benchmarking PCL method.")
+
+    # Create new directory for run outputs
+    # In what location should we put this new directory?
+    run_dir = config['run_dir']
+    pred_mask_dir = os.path.join(run_dir, 'pred_masks')
+    pred_info_dir = os.path.join(run_dir, 'pred_info')
+
+    # directory of test images and segmasks
+    test_dir = config['test_dir']
+    
+    # get indices file name
+    indices_name = config['indices_name'] + '_indices.npy'
+    indices_arr = np.load(os.path.join(test_dir, indices_name))
+
+    visualize_predictions(run_dir, test_dir, indices_arr, pred_mask_dir, pred_info_dir, show_bbox=True, show_class=False)
+    print("Saved benchmarking output to {}.\n".format(run_dir))
+
 def benchmark(conf):
     """Benchmarks a model, computes and stores model predictions and then
     evaluates them on COCO metrics and Saurabh's old benchmarking script."""
@@ -131,3 +152,5 @@ if __name__ == "__main__":
 
     if task == "BENCHMARK":
         benchmark(conf)
+    elif task == "VIS":
+        vis_only(conf)
