@@ -192,7 +192,7 @@ def visualize_predictions(run_dir, dataset_real, inference_config, pred_mask_dir
         r = np.load(os.path.join(pred_info_dir, 'image_{:06}.npy'.format(image_id))).item()
         r_masks = np.load(os.path.join(pred_mask_dir, 'image_{:06}.npy'.format(image_id)))
         # Must transpose from (n, h, w) to (h, w, n)
-        r['masks'] = np.transpose(r_masks, (1, 2, 0))
+        r['masks'] = np.transpose(r_masks, (1, 2, 0))      
         # Visualize
         visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
                                     ['bg', 'obj'], r['scores'], show_bbox=show_bbox, show_class=show_class)
