@@ -1,66 +1,96 @@
+"""
+Benchmark Usage Notes:
+
+Please edit "cfg/benchmark.yaml" to specify the necessary parameters for that task.
+
+Run this file with the tag --config [config file name] (in this case,
+cfg/benchmark.yaml).
+
+Here is an example run command (GPU selection included):
+CUDA_VISIBLE_DEVICES='0' python3 sd_maskrcnn/benchmark.py --config cfg/benchmark.yaml
+"""
+
 import os
-import json
+import sys
+import argparse
 from tqdm import tqdm
-from ast import literal_eval
 import numpy as np
 import skimage.io as io
 import matplotlib.pyplot as plt
 
-from pycocotools.coco import COCO
-from pycocotools.cocoeval import COCOeval
-from pycocotools import mask
+from autolab_core import YamlConfig
 
-import model as modellib, visualize, utils
-from datasets import RealImageDataset, prepare_real_image_test
+import utils
+from config import MaskConfig
+from dataset import ImageDataset
+from coco_benchmark import coco_benchmark
+from saurabh_benchmark import s_benchmark
 
-def mkdir_if_missing(output_dir):
-    if not os.path.exists(output_dir):
-        try:
-            os.makedirs(output_dir)
-        except:
-            print("Something went wrong in mkdir_if_missing. "
-                  "Probably some other process created the directory already.")
+# Root directory of the project
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
+# Import Mask R-CNN repo
+sys.path.append(ROOT_DIR) # To find local version of the library
+from maskrcnn.mrcnn import model as modellib, utils as utilslib, visualize
 
-def get_model_and_path(config, clutter_config):
-    mode = config["model_mode"]
-    model_folder = config["model_weights_folder"]
-    base_path = config["base_path"]
-    model_path = os.path.join(base_path, model_folder)
-    print(model_path)
-    mkdir_if_missing(model_path)
-    model = modellib.MaskRCNN(mode=mode, config=clutter_config,
-                              model_dir=model_path)
-    return model, model_path
+def benchmark(config):
+    """Benchmarks a model, computes and stores model predictions and then
+    evaluates them on COCO metrics and Saurabh's old benchmarking script."""
 
+    print("Benchmarking model.")
 
-def get_conf_dict(config_obj):
-    # create a dictionary of the proper arguments, including
-    # the requested task
-    task = config_obj.get("GENERAL", "task").upper()
-    task = literal_eval(task)
-    conf_dict = dict(config_obj.items(task))
+    # Create new directory for outputs
+    output_dir = config['output_dir']
+    utils.mkdir_if_missing(output_dir)
 
-    # return a type-sensitive version of the dictionary;
-    # prevents further need to cast from string to other types
-    out = {}
-    for key, value in conf_dict.items():
-        out[key] = literal_eval(value)
+    # Save config in output directory
+    config.save(os.path.join(output_dir, config['save_conf_name']))
+    inference_config = MaskConfig(config['model']['settings'])
+    inference_config.GPU_COUNT = 1
+    inference_config.IMAGES_PER_GPU = 1
+    
+    model_dir, _ = os.path.split(config['model']['path'])
+    model = modellib.MaskRCNN(mode='inference', config=inference_config,
+                              model_dir=model_dir)
 
-    out["task"] = task
+    # Load trained weights
+    print("Loading weights from ", config['model']['path'])
+    model.load_weights(config['model']['path'], by_name=True)
 
-    return out
+    # Create dataset
+    test_dataset = ImageDataset(config['test']['path'], config['test']['img_type'])
+    test_dataset.load(config['test']['indices'])
+    test_dataset.prepare()
 
-def scale_to_square(im, dim=512):
-    """Resizes an image to a square image of length dim."""
-    scale = 512.0 / max(im.shape[0:2]) # scale so min dimension is 512
-    scale_dim = tuple(reversed([int(np.ceil(d * scale)) for d in im.shape[:2]]))
-    im = cv2.resize(im, scale_dim, interpolation=cv2.INTER_NEAREST)
+    ######## BENCHMARK JUST CREATES THE RUN DIRECTORY ########
+    # code that actually produces outputs should be plug-and-play
+    # depending on what kind of benchmark function we run.
 
-    return im
+    # If we want to remove bin pixels, pass in the directory with
+    # those masks.
+    if config['mask']['remove_bin_pixels']:
+        bin_mask_dir = os.path.join(config['test']['path'], config['mask']['bin_masks'])
+        overlap_thresh = config['mask']['overlap_thresh']
+    else:
+        bin_mask_dir = False
+        overlap_thresh = 0
 
-def detect(run_dir, inference_config, model, dataset_real, bin_mask_dir=False,
-           overlap_thresh=0.5):
+    # Create predictions and record where everything gets stored.
+    pred_mask_dir, pred_info_dir, gt_mask_dir = \
+        detect(config['output_dir'], inference_config, model, test_dataset, bin_mask_dir, overlap_thresh)
+
+    coco_benchmark(pred_mask_dir, pred_info_dir, gt_mask_dir)
+    if config['vis']['predictions']:
+        visualize_predictions(config['output_dir'], test_dataset, inference_config, pred_mask_dir, pred_info_dir, 
+                              show_bbox=config['vis']['show_bbox_pred'], show_scores=config['vis']['show_scores_pred'], show_class=config['vis']['show_class_pred'])
+    if config['vis']['ground_truth']:
+        visualize_gts(config['output_dir'], test_dataset, inference_config, show_scores=False, show_bbox=config['vis']['show_bbox_gt'], show_class=config['vis']['show_class_gt'])
+    if config['vis']['s_bench']:
+        s_benchmark(config['output_dir'], test_dataset, inference_config, pred_mask_dir, pred_info_dir)
+
+    print("Saved benchmarking output to {}.\n".format(config['output_dir']))
+
+def detect(run_dir, inference_config, model, dataset, bin_mask_dir=False, overlap_thresh=0.5):
     """
     Given a run directory, a MaskRCNN config object, a MaskRCNN model object,
     and a Dataset object,
@@ -81,24 +111,24 @@ def detect(run_dir, inference_config, model, dataset_real, bin_mask_dir=False,
 
     # Create subdirectory for prediction masks
     pred_dir = os.path.join(run_dir, 'pred_masks')
-    mkdir_if_missing(pred_dir)
+    utils.mkdir_if_missing(pred_dir)
 
     # Create subdirectory for prediction scores & bboxes
     pred_info_dir = os.path.join(run_dir, 'pred_info')
-    mkdir_if_missing(pred_info_dir)
+    utils.mkdir_if_missing(pred_info_dir)
 
     # Create subdirectory for transformed GT segmasks
     resized_segmask_dir = os.path.join(run_dir, 'modal_segmasks_processed')
-    mkdir_if_missing(resized_segmask_dir)
+    utils.mkdir_if_missing(resized_segmask_dir)
 
     # Feed images into model one by one. For each image, predict, save, visualize?
-    image_ids = dataset_real.image_ids
-    indices = dataset_real.indices
+    image_ids = dataset.image_ids
+    indices = dataset.indices
     print('MAKING PREDICTIONS')
     for image_id in tqdm(image_ids):
         # Load image and ground truth data and resize for net
-        image, image_meta, gt_class_id, gt_bbox, gt_mask =\
-          modellib.load_image_gt(dataset_real, inference_config, image_id,
+        image, _, _, _, gt_mask =\
+          modellib.load_image_gt(dataset, inference_config, image_id,
             use_mini_mask=False)
 
         # Run object detection
@@ -114,12 +144,11 @@ def detect(run_dir, inference_config, model, dataset_real, bin_mask_dir=False,
             bin_mask = io.imread(os.path.join(bin_mask_dir, name))
             # HACK: stack bin_mask 3x
             bin_mask = np.stack((bin_mask, bin_mask, bin_mask), axis=2)
-            bin_mask, window, scale, padding = utils.resize_image(
+            bin_mask, _, _, _, _ = utilslib.resize_image(
                 bin_mask,
                 max_dim=inference_config.IMAGE_MAX_DIM,
                 min_dim=inference_config.IMAGE_MIN_DIM,
-                padding=inference_config.IMAGE_PADDING,
-                interp='nearest'
+                mode=inference_config.IMAGE_RESIZE_MODE
             )
 
             bin_mask = bin_mask[:,:,0]
@@ -171,22 +200,19 @@ def detect(run_dir, inference_config, model, dataset_real, bin_mask_dir=False,
 
     return pred_dir, pred_info_dir, resized_segmask_dir
 
-
-def visualize_predictions(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir, show_bbox=True, show_class=True):
+def visualize_predictions(run_dir, dataset, inference_config, pred_mask_dir, pred_info_dir, show_bbox=True, show_scores=True, show_class=True):
     """Visualizes predictions."""
     # Create subdirectory for prediction visualizations
     vis_dir = os.path.join(run_dir, 'vis')
-    mkdir_if_missing(vis_dir)
+    utils.mkdir_if_missing(vis_dir)
 
     # Feed images into model one by one. For each image, predict, save, visualize?
-    image_ids = dataset_real.image_ids
+    image_ids = dataset.image_ids
 
     print('VISUALIZING PREDICTIONS')
     for image_id in tqdm(image_ids):
         # Load image and ground truth data and resize for net
-        image, image_meta, gt_class_id, gt_bbox, gt_mask =\
-          modellib.load_image_gt(dataset_real, inference_config, image_id,
-            use_mini_mask=False)
+        image, _, _, _, _ = modellib.load_image_gt(dataset, inference_config, image_id, use_mini_mask=False)
 
         # load mask and info
         r = np.load(os.path.join(pred_info_dir, 'image_{:06}.npy'.format(image_id))).item()
@@ -194,27 +220,27 @@ def visualize_predictions(run_dir, dataset_real, inference_config, pred_mask_dir
         # Must transpose from (n, h, w) to (h, w, n)
         r['masks'] = np.transpose(r_masks, (1, 2, 0))      
         # Visualize
+        scores = r['scores'] if show_scores else None
         visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
-                                    ['bg', 'obj'], r['scores'], show_bbox=show_bbox, show_class=show_class)
+                                    ['bg', 'obj'], scores=scores, show_bbox=show_bbox, show_class=show_class)
         file_name = os.path.join(vis_dir, 'vis_{:06d}'.format(image_id))
         plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
         plt.close()
 
-def visualize_gts(run_dir, dataset_real, inference_config, show_scores=False, show_bbox=True, show_class=True):
+def visualize_gts(run_dir, dataset, inference_config, show_bbox=True, show_scores=False, show_class=True):
     """Visualizes predictions."""
     # Create subdirectory for prediction visualizations
     vis_dir = os.path.join(run_dir, 'gt_vis')
-    mkdir_if_missing(vis_dir)
+    utils.mkdir_if_missing(vis_dir)
 
     # Feed images into model one by one. For each image, predict, save, visualize?
-    image_ids = dataset_real.image_ids
+    image_ids = dataset.image_ids
 
     print('VISUALIZING GROUND TRUTHS')
     for image_id in tqdm(image_ids):
         # Load image and ground truth data and resize for net
-        image, image_meta, gt_class_id, gt_bbox, gt_mask =\
-          modellib.load_image_gt(dataset_real, inference_config, image_id,
-            use_mini_mask=False)
+        image, _, gt_class_id, gt_bbox, gt_mask = modellib.load_image_gt(dataset, inference_config, image_id,
+                                                                        use_mini_mask=False)
 
         # Visualize
         scores = np.ones(gt_class_id.size) if show_scores else None
@@ -223,3 +249,16 @@ def visualize_gts(run_dir, dataset_real, inference_config, show_scores=False, sh
         file_name = os.path.join(vis_dir, 'gt_vis_{:06d}'.format(image_id))
         plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
         plt.close()
+
+if __name__ == "__main__":
+
+    # parse the provided configuration file, set tf settings, and benchmark
+    conf_parser = argparse.ArgumentParser(description="Benchmark SD Mask RCNN model")
+    conf_parser.add_argument("--config", action="store", required=True,
+                               dest="conf_file", type=str, help="path to the configuration file")
+    conf_args = conf_parser.parse_args()
+
+    # read in config file information from proper section
+    config = YamlConfig(conf_args.conf_file)
+    utils.set_tf_config()
+    benchmark(config)
