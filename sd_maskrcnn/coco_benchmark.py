@@ -12,14 +12,19 @@ from pycocotools import mask
 import numpy as np
 import skimage.io as io
 import matplotlib.pyplot as plt
-# import pylab
 import os
+import sys
 import json
 import fnmatch
 from tqdm import tqdm
-import model as modellib, visualize, utils
-from pipeline_utils import *
-from datasets import RealImageDataset, prepare_real_image_test
+# from pipeline_utils import *
+
+# Root directory of the project
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+
+# Import Mask R-CNN repo
+sys.path.append(ROOT_DIR) # To find local version of the library
+from maskrcnn.mrcnn import model as modellib, visualize, utils
 
 def encode_gt(mask_dir):
     """Given a path to a directory of ground-truth image segmentation masks,
@@ -132,7 +137,7 @@ def encode_predictions(mask_dir):
 
         for bin_mask in I:
             # encode mask
-            encode_mask = mask.encode(np.asfortranarray(bin_mask))
+            encode_mask = mask.encode(np.asfortranarray(bin_mask.astype(np.uint8)))
             encode_mask['counts'] = encode_mask['counts'].decode('ascii')
 
             # assume one category (object)
@@ -153,18 +158,10 @@ def compute_coco_metrics(gt_dir, pred_dir):
     """Given paths to two directories, one containing a COCO ground truth annotations
     file and the other a path to a COCO prediction annotations file, compute the COCO
     evaluation metrics on the predictions.
-
-    Because the COCO API is weird and prints out summary values, we need this
-    terrible hack to capture them from stdout.
-https://stackoverflow.com/questions/16571150/how-to-capture-stdout-output-from-a-python-function-call
     """
 
     gt_path = os.path.join(gt_dir, 'annos_gt.json')
     pred_path = os.path.join(pred_dir, 'annos_pred.json')
-
-    import io
-    from contextlib import redirect_stdout
-
 
     cocoGt = COCO(gt_path)
     cocoDt = cocoGt.loadRes(pred_path)
@@ -176,23 +173,42 @@ https://stackoverflow.com/questions/16571150/how-to-capture-stdout-output-from-a
     cocoEval.params.areaRng = [[0 ** 2, 1e5 ** 2]]
     cocoEval.params.areaRngLbl = ['all']
     cocoEval.params.maxDets = np.arange(1,101)
+    cocoEval.params.iouThrs = np.linspace(0.0,1.0,101)
 
     cocoEval.evaluate()
     cocoEval.accumulate()
 
     np.save(os.path.join(pred_dir, 'coco_eval.npy'), cocoEval.eval)
+    np.save(os.path.join(pred_dir, 'coco_evalImgs.npy'), cocoEval.evalImgs)
 
-    f = io.StringIO()
-    with redirect_stdout(f):
-        cocoEval.summarize()
-    out = f.getvalue()
-    print(out)
+    recalls = []
+    precisions = []
+    for iou in np.arange(50,100,5):
+        for im in cocoEval.evalImgs: 
+            gtMatches = im['gtMatches'][iou]
+            dtMatches = im['dtMatches'][iou]
+            if np.any(gtMatches):
+                recalls.append(np.sum(gtMatches > 0)/gtMatches.size)
+            else:
+                recalls.append(0)
+            if np.any(dtMatches):
+                precisions.append(np.sum(dtMatches > 0)/dtMatches.size)
+            else:
+                precisions.append(0)
+    ap = np.mean(precisions)
+    ar = np.mean(recalls)
+    iStr = ' {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ] = {:0.3f}\n'
+    precStr = iStr.format('Average Precision', '(AP)', '0.5:0.05:0.95', 'all', 100, ap)
+    recStr = iStr.format('Average Recall', '(AR)', '0.5:0.05:0.95', 'all', 100, ar)
+    print(precStr)
+    print(recStr)
 
     with open(os.path.join(pred_dir, 'coco_summary.txt'), 'w') as coco_file:
-        coco_file.write(out)
+        coco_file.write(precStr)
+        coco_file.write(recStr)
         print('COCO Metric Summary written to {}'.format(os.path.join(pred_dir,
                                                                       'coco_summary.txt')))
-
+    return ap, ar
 
 def coco_benchmark(pred_mask_dir, pred_info_dir, gt_mask_dir):
     """Given directories for prediction masks, prediction infos (bboxes, scores, classes),
@@ -202,4 +218,4 @@ def coco_benchmark(pred_mask_dir, pred_info_dir, gt_mask_dir):
     # Generate prediction annotations
     encode_gt(gt_mask_dir)
     encode_predictions(pred_mask_dir)
-    compute_coco_metrics(gt_mask_dir, pred_mask_dir)
+    return compute_coco_metrics(gt_mask_dir, pred_mask_dir)

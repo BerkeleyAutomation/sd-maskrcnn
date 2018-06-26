@@ -1,18 +1,25 @@
 import numpy as np
-from config import Config
+import os, sys
 
-class ClutterConfig(Config):
+# Root directory of the project
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+
+# Import Mask R-CNN repo
+sys.path.append(ROOT_DIR) # To find local version of the library
+from maskrcnn.mrcnn.config import Config
+
+class MaskConfig(Config):
   """Configuration for training on the toy shapes dataset.
   Derives from the base Config class and overrides values specific
   to the toy shapes dataset.
   """
   # Give the configuration a recognizable name
-  NAME = "primesense_tune_slow"
+  NAME = "res50_update"
 
   # Train on 1 GPU and 8 images per GPU. We can put multiple images on each
   # GPU because the images are small. Batch size is 8 (GPUs * images/GPU).
-  GPU_COUNT = 1
-  IMAGES_PER_GPU = 4
+  # GPU_COUNT = 1
+  # IMAGES_PER_GPU = 4
 
   # Number of classes (including background)
   NUM_CLASSES = 1 + 1  # background + 3 shapes
@@ -22,6 +29,8 @@ class ClutterConfig(Config):
   IMAGE_MIN_DIM = 512
   IMAGE_MAX_DIM = 512
 
+  BACKBONE="resnet50"
+
   # Use smaller anchors because our image and objects are small
   # RPN_ANCHOR_SCALES = (8, 16, 32, 64, 128)  # anchor side in pixels
 
@@ -30,15 +39,15 @@ class ClutterConfig(Config):
   #TRAIN_ROIS_PER_IMAGE = 32
 
   # Use a small epoch since the data is simple
-  STEPS_PER_EPOCH = 60/IMAGES_PER_GPU
+  # STEPS_PER_EPOCH = 8000/IMAGES_PER_GPU
 
   # use small validation steps since the epoch is small
   #VALIDATION_STEPS = 50
 
   # DETECTION_MIN_CONFIDENCE = 0.99
 
-  def __init__(self, mean):
+  def __init__(self, config):
     # Overriding things here.
-    super(ClutterConfig, self).__init__()
-    self.IMAGE_SHAPE[2] = 3
-    self.MEAN_PIXEL = np.array([mean, mean, mean])
+    for x in config:
+      setattr(self, x.upper(), config[x])
+    super(MaskConfig, self).__init__()

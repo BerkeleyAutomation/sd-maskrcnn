@@ -3,12 +3,19 @@
 import cv2
 import numpy as np
 import os
+import sys
 import shutil
 import subprocess
 from tqdm import tqdm
 
 from perception import DepthImage, BinaryImage, CameraIntrinsics
-from pcl_utils import mkdir_if_missing
+
+# Root directory of the project
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+
+# Import utils
+sys.path.append(ROOT_DIR) # To find local version of the library
+from sd_maskrcnn.utils import mkdir_if_missing
 
 def detect(pcl_detector, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
     """Run PCL-based detection on a depth-image-based dataset.
@@ -128,15 +135,6 @@ def detect(pcl_detector, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
             pred_mask_output = np.array(indiv_pred_masks).astype(np.uint8)
         np.save(os.path.join(pred_dir, output_name + '.npy'), pred_mask_output)
         np.save(os.path.join(pred_info_dir, output_name + '.npy'), r_info)
-
-        if False: # Visualization of masks
-            from visualization import Visualizer2D as vis2d
-            print(num_pred_masks)
-            bi = BinaryImage(pred_mask)
-            bi._data = pred_mask * 10
-            vis2d.figure()
-            vis2d.imshow(bi)
-            vis2d.show()
 
     print('Saved prediction masks to:\t {}'.format(pred_dir))
     print('Saved prediction info (bboxes, scores, classes) to:\t {}'.format(pred_info_dir))
