@@ -1,9 +1,0 @@
-six
-numpy>=1.9
-scikit-image>=0.10
-pillow>=2.7
-flask>=0.10
-click
-jupyter>=1.0
-notebook>=4.2
-widgetsnbextension>=1.2
