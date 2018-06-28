@@ -1,5 +1,0 @@
-numpy
-Pillow
-scikit-image
-
-[testing]
