@@ -2,5 +2,5 @@
     path = cocoapi
     url = git@github.com:cocodataset/cocoapi.git
 [submodule "maskrcnn"]
-	path = maskrcnn
+	path = Mask_RCNN
 	url = git@github.com:BerkeleyAutomation/Mask_RCNN.git
