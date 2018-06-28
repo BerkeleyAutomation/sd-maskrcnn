@@ -1,3 +1,6 @@
 [submodule "cocoapi"]
-    path = cocoapi
-    url = git@github.com:cocodataset/cocoapi.git
+	path = cocoapi
+	url = git@github.com:cocodataset/cocoapi.git
+[submodule "maskrcnn"]
+	path = maskrcnn
+	url = git@github.com:BerkeleyAutomation/Mask_RCNN.git
