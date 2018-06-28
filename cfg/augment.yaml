@@ -1,0 +1,7 @@
+img_dir: /nfs/diskstation/projects/dex-net/segmentation/datasets/segmasks_04_13_18/depth_ims  # location of all the images to be augmented
+out_dir: ./inpainted_dataset                     # output location of the augmented images
+
+inject_noise: 1     # use noise injection
+noise_level: 0.01   # level of noise injection (given that MAX_VAL of a pixel is 1.0) 
+
+inpaint: 0          # inpaint images
