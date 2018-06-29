@@ -17,13 +17,13 @@ ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__
 sys.path.append(ROOT_DIR) # To find local version of the library
 from sd_maskrcnn.utils import mkdir_if_missing
 
-def detect(pcl_detector, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
+def detect(config, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
     """Run PCL-based detection on a depth-image-based dataset.
 
     Parameters
     ----------
-    pcl_detector : PCLDetector
-        Some pre-initialized PCL Detector.
+    config : dict
+        config for a PCL detector
     run_dir : str
         Directory to save outputs in. Output will be saved in pred_masks, pred_info,
         and modal_segmasks_processed subdirectories.
@@ -70,6 +70,26 @@ def detect(pcl_detector, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
     # Input camera intrinsics
     camera_intrinsics_fn = os.path.join(dataset_dir, 'camera_intrinsics.intr')
     camera_intrs = CameraIntrinsics.load(camera_intrinsics_fn)
+
+    # Get location of file for relative path to binaries
+    file_dir = os.path.dirname(__file__)
+
+    # Create the appropriate PCL detector
+    if config['type'] == 'euclidean':
+        pcl_detector = EuclideanClusterExtractor(os.path.join(file_dir, 'euclidean_cluster_extraction'), 
+                                                 min_cluster_size=config['min_cluster_size'], 
+                                                 max_cluster_size=config['max_cluster_size'], 
+                                                 tolerance=config['tolerance'])
+    elif config['type'] == 'region_growing':
+        pcl_detector = RegionGrowingSegmentor(os.path.join(file_dir, 'region_growing_segmentation'), 
+                                                 min_cluster_size=config['min_cluster_size'], 
+                                                 max_cluster_size=config['max_cluster_size'], 
+                                                 n_neighbors=config['n_neighbors'],
+                                                 smoothness=config['smoothness'], 
+                                                 curvature=config['curvature'])
+    else:
+        print('PCL detector type not supported')
+        exit()
 
     image_ids = np.arange(indices_arr.size)
 

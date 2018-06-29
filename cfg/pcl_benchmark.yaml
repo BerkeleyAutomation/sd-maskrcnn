@@ -2,18 +2,18 @@ output_dir: /nfs/diskstation/projects/dex-net/segmentation/results_test/pcl_test
 save_conf_name: config.yaml
 
 detector:
-  type: region_growing              # Type of PCL detector (either euclidean or region_growing)
-  min_cluster_size: 100             # Minimum size of a cluster (default 500)
-  max_cluster_size: 1000000         # Maximum size of a cluster (default 1000000)
-  tolerance: 0.002                  # Max distance between closest points in same cluster (Euclidean only) (default 0.002)
+  type: euclidean              # Type of PCL detector (either euclidean or region_growing)
+  min_cluster_size: 100            # Minimum size of a cluster (default 500)
+  max_cluster_size: 10000         # Maximum size of a cluster (default 1000000)
+  tolerance: 0.005                  # Max distance between closest points in same cluster (Euclidean only) (default 0.002)
   n_neighbors: 5                    # Number of neighbors to use for kNN (Region only) (default 5)
-  smoothness: 0.1745                # Max allowed angle in radians between nearby points in same cluster (Region only) (default 10*pi/180, 0.1745)
+  smoothness: 0.3                # Max allowed angle in radians between nearby points in same cluster (Region only) (default 10*pi/180, 0.1745)
   curvature: 0.05                   # Max allowed curvature (Region only) (default 0.05)          
 
 test:
   path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/phoxi/images
   bin_masks: segmasks_filled        # Directory containing bin masks
-  indices: test_indices.npy
+  indices: py_test_indices.npy
 
 # Visualization settings
 vis:
