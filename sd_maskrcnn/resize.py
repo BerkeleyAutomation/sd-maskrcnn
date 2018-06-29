@@ -52,9 +52,9 @@ def scale_to_square(im, dim=512):
 
 if __name__ == "__main__":
 
-    # parse the provided configuration file, set tf settings, and benchmark
+    # parse the provided configuration file and resize
     conf_parser = argparse.ArgumentParser(description="Resize images for SD Mask RCNN model")
-    conf_parser.add_argument("--config", action="store", required=True,
+    conf_parser.add_argument("--config", action="store", default="cfg/resize.yaml",
                                dest="conf_file", type=str, help="path to the configuration file")
     conf_args = conf_parser.parse_args()
 

@@ -22,7 +22,8 @@ import matplotlib.pyplot as plt
 from autolab_core import YamlConfig
 from perception import DepthImage
 
-from detector import detect, EuclideanClusterExtractor, RegionGrowingSegmentor
+# from cppdetect import detect
+from pydetect import detect
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
@@ -53,31 +54,9 @@ def benchmark(config):
     indices_arr = np.load(os.path.join(test_dir, config['test']['indices']))
     bin_mask_dir = os.path.join(test_dir, config['test']['bin_masks'])
 
-    # Get location of file for relative path to binaries
-    file_dir = os.path.dirname(__file__)
-
-    min_cluster_size = config['detector']['min_cluster_size']
-    max_cluster_size = config['detector']['max_cluster_size']
-
-    # Get type of PCL detector and options for each
-    detector_type = config['detector']['type']
-    if detector_type == 'euclidean':
-        tolerance = config['detector']['tolerance']
-        pcl_detector = EuclideanClusterExtractor(os.path.join(file_dir, 'euclidean_cluster_extraction'), 
-                                                 min_cluster_size=min_cluster_size, max_cluster_size=max_cluster_size, tolerance=tolerance)
-    elif detector_type == 'region_growing':
-        n_neighbors = config['detector']['n_neighbors']
-        smoothness = config['detector']['smoothness']
-        curvature = config['detector']['curvature']
-        pcl_detector = RegionGrowingSegmentor(os.path.join(file_dir, 'region_growing_segmentation'), min_cluster_size=min_cluster_size, max_cluster_size=max_cluster_size,
-                                              n_neighbors=n_neighbors, smoothness=smoothness, curvature=curvature)
-    else:
-        print('PCL detector type not supported')
-        exit()
-
     # Create predictions and record where everything gets stored.
     pred_mask_dir, pred_info_dir, gt_mask_dir = \
-        detect(pcl_detector, output_dir, test_dir, indices_arr, bin_mask_dir)
+        detect(config['detector'], output_dir, test_dir, indices_arr, bin_mask_dir)
 
     ap, ar = coco_benchmark(pred_mask_dir, pred_info_dir, gt_mask_dir)
     if config['vis']['predictions']:
@@ -117,6 +96,7 @@ def visualize_predictions(run_dir, dataset_dir, indices_arr, pred_mask_dir, pred
             r['masks'] = np.transpose(r_masks, (1, 2, 0))
         else:
             r['masks'] = r_masks
+        image = cv2.resize(image, (r['masks'].shape[1], r['masks'].shape[0]))
         # Visualize
         visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
                                     ['bg', 'obj'], show_bbox=show_bbox, show_class=show_class)
@@ -216,7 +196,7 @@ if __name__ == "__main__":
 
     # parse the provided configuration file, set tf settings, and benchmark
     conf_parser = argparse.ArgumentParser(description="Benchmark SD Mask RCNN model")
-    conf_parser.add_argument("--config", action="store", required=True,
+    conf_parser.add_argument("--config", action="store", default="cfg/pcl_benchmark.yaml",
                                dest="conf_file", type=str, help="path to the configuration file")
     conf_args = conf_parser.parse_args()
 
