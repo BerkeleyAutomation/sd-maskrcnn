@@ -96,7 +96,6 @@ def visualize_predictions(run_dir, dataset_dir, indices_arr, pred_mask_dir, pred
             r['masks'] = np.transpose(r_masks, (1, 2, 0))
         else:
             r['masks'] = r_masks
-        image = cv2.resize(image, (r['masks'].shape[1], r['masks'].shape[0]))
         # Visualize
         visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
                                     ['bg', 'obj'], show_bbox=show_bbox, show_class=show_class)

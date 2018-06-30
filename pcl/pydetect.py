@@ -8,7 +8,8 @@ import pcl
 from tqdm import tqdm
 
 from perception import DepthImage, BinaryImage, CameraIntrinsics
-from autolab_core import PointCloud
+from visualization import Visualizer3D as vis3d, Visualizer2D as vis2d
+from autolab_core import PointCloud, YamlConfig
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
@@ -70,7 +71,6 @@ def detect(config, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
     # Input camera intrinsics
     camera_intrinsics_fn = os.path.join(dataset_dir, 'camera_intrinsics.intr')
     camera_intrs = CameraIntrinsics.load(camera_intrinsics_fn)
-    camera_intrs = camera_intrs.resize(0.2)
 
     image_ids = np.arange(indices_arr.size)
 
@@ -85,7 +85,7 @@ def detect(config, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
         # Extract depth image
         depth_data = np.load(os.path.join(depth_dir, depth_image_fn))
         depth_im = DepthImage(depth_data, camera_intrs.frame)
-        depth_im = depth_im.resize(0.2)
+        depth_im = depth_im.inpaint(0.25)
 
         # Mask out bin pixels if appropriate/necessary
         if bin_mask_dir:
@@ -94,6 +94,7 @@ def detect(config, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
             depth_im = depth_im.mask_binary(mask_im)
         
         point_cloud = camera_intrs.deproject(depth_im)
+        point_cloud.remove_zero_points()
         pcl_cloud = pcl.PointCloud(point_cloud.data.T.astype(np.float32))
         tree = pcl_cloud.make_kdtree()
         if config['type'] == 'euclidean':
@@ -123,8 +124,7 @@ def detect(config, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
         for i,cluster in enumerate(cluster_indices):
             points = pcl_cloud.to_array()[cluster]
             indiv_pred_mask = camera_intrs.project_to_image(PointCloud(points.T, frame=camera_intrs.frame)).to_binary()
-            # indiv_pred_mask = indiv_pred_mask.resize(depth_data.shape)
-            indiv_pred_mask.data[indiv_pred_mask.data>0] = i+1
+            indiv_pred_mask.data[indiv_pred_mask.data>0] = 1
             indiv_pred_masks.append(indiv_pred_mask.data)
 
             # Compute bounding box, score, class_id
@@ -171,4 +171,7 @@ if __name__ == '__main__':
     bin_mask_dir = 'segmasks_filled'
     run_dir = './run'
 
-    detect('euclidean', run_dir, dataset_dir, indices_arr, bin_mask_dir=bin_mask_dir)
+    config = YamlConfig()
+    config = {'type': 'euclidean', 'min_cluster_size': 100, 'max_cluster_size': 1000000, 'tolerance': 0.004}
+
+    detect(config, run_dir, dataset_dir, indices_arr, bin_mask_dir=bin_mask_dir)
