@@ -195,6 +195,7 @@ def compute_coco_metrics(gt_dir, pred_dir):
                 precisions.append(np.sum(dtMatches > 0)/dtMatches.size)
             else:
                 precisions.append(0)
+    
     ap = np.mean(precisions)
     ar = np.mean(recalls)
     iStr = ' {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ] = {:0.3f}\n'
