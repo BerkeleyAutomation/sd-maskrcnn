@@ -11,7 +11,7 @@ detector:
   curvature: 0.05                   # Max allowed curvature (Region only) (default 0.05)          
 
 test:
-  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/phoxi/images
+  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/wisdom/wisdom-real/high-res
   bin_masks: segmasks_filled        # Directory containing bin masks
   indices: test_indices.npy
 

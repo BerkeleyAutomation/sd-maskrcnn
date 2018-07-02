@@ -2,19 +2,20 @@ output_dir: /nfs/diskstation/projects/dex-net/segmentation/results_test/sd_mask_
 save_conf_name: config.yaml
 
 model:
-  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset/model_weights/res50_update20180620T1706/mask_rcnn_res50_update_0150.h5
+  # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset/model_weights/res50_update20180620T1706/mask_rcnn_res50_update_0150.h5
+  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset/model_weights/no_noise_lr1e-2_e80_clutter_mod/mask_rcnn_clutter_0080.h5
   settings:
     mean_pixel: [119,119,119]
     image_shape: [512,512,3]
-    backbone: resnet50
+    backbone: resnet35
     num_classes: 2
     gpu_count: 1
     images_per_gpu: 1
 
 test:
-  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/phoxi/images
-  indices: test_indices.npy
+  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/wisdom/wisdom-real/high-res
   img_type: depth_ims
+  indices: test_indices.npy
 
 mask:                                                                                                                                                              
   remove_bin_pixels: 1              # Set to True if we want to discard predictions based on if they have bin pixels
