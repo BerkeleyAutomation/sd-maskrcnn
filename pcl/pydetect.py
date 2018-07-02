@@ -8,7 +8,6 @@ import pcl
 from tqdm import tqdm
 
 from perception import DepthImage, BinaryImage, CameraIntrinsics
-from visualization import Visualizer3D as vis3d, Visualizer2D as vis2d
 from autolab_core import PointCloud, YamlConfig
 
 # Root directory of the project

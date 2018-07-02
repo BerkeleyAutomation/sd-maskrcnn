@@ -179,25 +179,29 @@ def compute_coco_metrics(gt_dir, pred_dir):
     cocoEval.accumulate()
 
     np.save(os.path.join(pred_dir, 'coco_eval.npy'), cocoEval.eval)
+    # import pdb; pdb.set_trace()
     np.save(os.path.join(pred_dir, 'coco_evalImgs.npy'), cocoEval.evalImgs)
 
-    recalls = []
-    precisions = []
-    for iou in np.arange(50,100,5):
-        for im in cocoEval.evalImgs: 
-            gtMatches = im['gtMatches'][iou]
-            dtMatches = im['dtMatches'][iou]
-            if np.any(gtMatches):
-                recalls.append(np.sum(gtMatches > 0)/gtMatches.size)
-            else:
-                recalls.append(0)
-            if np.any(dtMatches):
-                precisions.append(np.sum(dtMatches > 0)/dtMatches.size)
-            else:
-                precisions.append(0)
+    # recalls = []
+    # precisions = []
+    # for iou in np.arange(50,100,5):
+    #     for im in cocoEval.evalImgs: 
+    #         gtMatches = im['gtMatches'][iou]
+    #         dtMatches = im['dtMatches'][iou]
+    #         if np.any(gtMatches):
+    #             recalls.append(np.sum(gtMatches > 0)/gtMatches.size)
+    #         else:
+    #             recalls.append(0)
+    #         if np.any(dtMatches):
+    #             precisions.append(np.sum(dtMatches > 0)/dtMatches.size)
+    #         else:
+    #             precisions.append(0)
+
+    precisions = cocoEval.eval['precision'].squeeze()[50:100:5,:,-1]
+    recalls = cocoEval.eval['recall'].squeeze()[50:100:5,-1]
     
-    ap = np.mean(precisions)
-    ar = np.mean(recalls)
+    ap = np.mean(precisions[precisions>-1])
+    ar = np.mean(recalls[recalls>-1])
     iStr = ' {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ] = {:0.3f}\n'
     precStr = iStr.format('Average Precision', '(AP)', '0.5:0.05:0.95', 'all', 100, ap)
     recStr = iStr.format('Average Recall', '(AR)', '0.5:0.05:0.95', 'all', 100, ar)
