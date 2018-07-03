@@ -2,7 +2,7 @@ output_dir: /nfs/diskstation/projects/dex-net/segmentation/results_test/pcl_test
 save_conf_name: config.yaml
 
 detector:
-  type: region_growing              # Type of PCL detector (either euclidean or region_growing)
+  type: euclidean              # Type of PCL detector (either euclidean or region_growing)
   min_cluster_size: 500             # Minimum size of a cluster (default 500)
   max_cluster_size: 1000000         # Maximum size of a cluster (default 1000000)
   tolerance: 0.002                  # Max distance between closest points in same cluster (Euclidean only) (default 0.002)

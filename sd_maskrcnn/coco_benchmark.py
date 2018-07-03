@@ -17,7 +17,6 @@ import sys
 import json
 import fnmatch
 from tqdm import tqdm
-# from pipeline_utils import *
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
@@ -179,7 +178,6 @@ def compute_coco_metrics(gt_dir, pred_dir):
     cocoEval.accumulate()
 
     np.save(os.path.join(pred_dir, 'coco_eval.npy'), cocoEval.eval)
-    # import pdb; pdb.set_trace()
     np.save(os.path.join(pred_dir, 'coco_evalImgs.npy'), cocoEval.evalImgs)
 
     # recalls = []
@@ -208,6 +206,7 @@ def compute_coco_metrics(gt_dir, pred_dir):
     print(precStr)
     print(recStr)
 
+    
     with open(os.path.join(pred_dir, 'coco_summary.txt'), 'w') as coco_file:
         coco_file.write(precStr)
         coco_file.write(recStr)

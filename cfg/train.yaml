@@ -6,19 +6,20 @@ model:
     name: new
     mean_pixel: [119,119,119]
     image_shape: [512,512,3]
-    backbone: resnet50
+    backbone: resnet35
     num_classes: 2
     gpu_count: 1
     images_per_gpu: 4
     learning_rate: 0.01
 
 dataset:
-  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/wisdom/wisdom-sim
+  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset
   train_indices: train_indices.npy
   val_indices: test_indices.npy
-  img_type: depth_ims
+  images: depth_ims_numpy_scaled
+  masks: modal_segmasks_scaled
 
 # name of the config file to save (within the dataset folder)
 # note that this will be overwritten between multiple runs so
 # you should name this uniquely for each run.
-save_conf_name: config_1e-2_e150_res50_resume.yaml
+save_conf_name: config_1e-2_e150_res35.yaml

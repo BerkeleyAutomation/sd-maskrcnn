@@ -50,7 +50,7 @@ def benchmark(config):
     inference_config.IMAGES_PER_GPU = 1
     
     model_dir, _ = os.path.split(config['model']['path'])
-    model = modellib.MaskRCNN(mode='inference', config=inference_config,
+    model = modellib.MaskRCNN(mode=config['model']['mode'], config=inference_config,
                               model_dir=model_dir)
 
     # Load trained weights
