@@ -16,10 +16,11 @@ model:
     images_per_gpu: 1
 
 test:
-  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/wisdom/wisdom-sim
-  # img_type: color_ims
-  img_type: depth_ims
-  indices: sample_test_indices.npy
+  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/wisdom/wisdom-real/high-res
+  # images: color_ims
+  images: depth_ims
+  masks: modal_segmasks
+  indices: test_indices.npy
 
 mask:                                                                                                                                                              
   remove_bin_pixels: 1              # Set to True if we want to discard predictions based on if they have bin pixels
