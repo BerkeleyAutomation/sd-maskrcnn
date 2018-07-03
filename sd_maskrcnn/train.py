@@ -22,12 +22,12 @@ COCO_WEIGHTS_PATH = '/nfs/diskstation/projects/dex-net/segmentation/models/mask_
 def train(config):
 
     # Training dataset
-    dataset_train = ImageDataset(config['dataset']['path'], config['dataset']['img_type'])
+    dataset_train = ImageDataset(config['dataset']['path'], config['dataset']['images'], config['dataset']['masks'])
     dataset_train.load(config['dataset']['train_indices'], augment=True)
     dataset_train.prepare()
 
     # Validation dataset
-    dataset_val = ImageDataset(config['dataset']['path'], config['dataset']['img_type'])
+    dataset_val = ImageDataset(config['dataset']['path'], config['dataset']['images'], config['dataset']['masks'])
     dataset_val.load(config['dataset']['val_indices'])
     dataset_val.prepare()
 

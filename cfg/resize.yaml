@@ -1,5 +1,17 @@
-dataset_path: ./only_noise_dataset  # base path of the directory of the dataset
-img_dir: depth_ims_1e-4 # name of the image directory within the dataset folder
-mask_dir: modal_segmasks_unscaled # name of the mask directory within the dataset folder
-img_out_dir: depth_ims # name of the output directory for images (within the dataset folder)
-mask_out_dir: modal_segmasks # name of the output directory for masks (within the dataset folder)
+dataset:
+  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset  # base path of the directory of the dataset
+  img_dir: depth_ims_numpy # name of the image directory within the dataset folder
+  img_out_dir: depth_ims_numpy_scaled
+  mask_dir: modal_segmasks # name of the mask directory within the dataset folder
+  mask_out_dir: modal_segmasks_scaled # name of the output directory for masks (within the dataset folder)
+
+images:
+  extension: .npy
+  resize: 0
+  max_dim: 512
+  normalize: 0
+
+masks:
+  extension: .png
+  resize: 1
+  max_dim: 512

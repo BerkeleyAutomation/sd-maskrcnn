@@ -40,11 +40,12 @@ $base_path/
 """
 
 class ImageDataset(utils.Dataset):
-    def __init__(self, base_path, img_type):
+    def __init__(self, base_path, images, masks):
         assert base_path != "", "You must provide the path to a dataset!"
 
         self.base_path = base_path
-        self.img_type = img_type
+        self.images = images
+        self.masks = masks
         super().__init__()
 
     def load(self, imset, augment=False):
@@ -56,8 +57,12 @@ class ImageDataset(utils.Dataset):
 
         flips = [1, 2, 3]
         for i in self.image_id:
-            p = os.path.join(self.base_path, self.img_type,
-                             'image_{:06d}.png'.format(i))
+            if 'numpy' in self.images:
+                p = os.path.join(self.base_path, self.images,
+                                'image_{:06d}.npy'.format(i))
+            else:
+                p = os.path.join(self.base_path, self.images,
+                                'image_{:06d}.png'.format(i))
             self.add_image('clutter', image_id=i, path=p, width=512, height=384)
 
             if augment:
@@ -77,12 +82,16 @@ class ImageDataset(utils.Dataset):
 
     def load_image(self, image_id):
         # loads image from path
-
-        info = self.image_info[image_id]
-        image = cv2.imread(info['path'])
-        assert(image is not None)
-        if 'depth' in self.img_type:
-            if image.ndim == 2: image = np.tile(image[:,:,np.newaxis], [1,1,3])
+        if 'numpy' in self.images:
+            image = np.load(self.image_info[image_id]['path'])
+        else:
+            image = skimage.io.imread(self.image_info[image_id]['path'])
+        # If grayscale. Convert to RGB for consistency.
+        if image.ndim != 3:
+            image = skimage.color.gray2rgb(image)
+        # If has an alpha channel, remove it for consistency
+        if image.shape[-1] == 4:
+            image = image[..., :3]
         return image
 
     def image_reference(self, image_id):
@@ -98,7 +107,7 @@ class ImageDataset(utils.Dataset):
         info = self.image_info[image_id]
         _image_id = info['id']
         Is = []
-        file_name = os.path.join(self.base_path, 'modal_segmasks',
+        file_name = os.path.join(self.base_path, self.masks,
           'image_{:06d}.png'.format(_image_id))
 
         all_masks = cv2.imread(file_name, cv2.IMREAD_UNCHANGED)
