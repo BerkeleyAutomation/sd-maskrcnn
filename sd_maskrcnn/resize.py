@@ -20,15 +20,19 @@ def resize_images(config):
         new_im_path = os.path.join(base_dir, image_out_dir)
         for im_path in tqdm(os.listdir(old_im_path)):
             im_old_path = os.path.join(old_im_path, im_path)
-            if config['images']['extension'] == '.npy':
+            if '.npy' in im_old_path:
                 im = np.load(im_old_path)                
             else:
                 im = cv2.imread(im_old_path, cv2.IMREAD_UNCHANGED)
             im = scale_to_square(im, dim=config['images']['max_dim'])
             new_im_file = os.path.join(new_im_path, im_path)
-            if config['images']['extension'] == '.npy':
+            if '.npy' in im_old_path:
+                if config['images']['normalize']:
+                    im = cv2.normalize(im, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
                 np.save(new_im_file, im)
             else:
+                if config['images']['normalize']:
+                    im = cv2.normalize(im, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
                 cv2.imwrite(new_im_file, im, [cv2.IMWRITE_PNG_COMPRESSION, 0]) # 0 compression
 
     if config['masks']['resize']:
@@ -39,7 +43,7 @@ def resize_images(config):
         new_mask_path = os.path.join(base_dir, mask_out_dir)
         for mask_path in tqdm(os.listdir(old_mask_path)):
             mask_old_path = os.path.join(old_mask_path, mask_path)
-            if config['masks']['extension'] == '.npy':
+            if '.npy' in mask_old_path:
                 mask = np.load(mask_old_path)                
             else:
                 mask = cv2.imread(mask_old_path, cv2.IMREAD_UNCHANGED)
@@ -48,7 +52,7 @@ def resize_images(config):
                 continue
             mask = scale_to_square(mask, dim=config['masks']['max_dim'])
             new_mask_file = os.path.join(new_mask_path, mask_path)
-            if config['masks']['extension'] == '.npy':
+            if '.npy' in mask_old_path:
                 np.save(new_mask_file, mask)
             else:
                 cv2.imwrite(new_mask_file, mask, [cv2.IMWRITE_PNG_COMPRESSION, 0]) # 0 compression

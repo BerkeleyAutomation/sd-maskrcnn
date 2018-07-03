@@ -58,7 +58,7 @@ def benchmark(config):
     model.load_weights(config['model']['path'], by_name=True)
 
     # Create dataset
-    test_dataset = ImageDataset(config['test']['path'], config['test']['img_type'])
+    test_dataset = ImageDataset(config['test']['path'], config['test']['images'], config['test']['masks'])
     test_dataset.load(config['test']['indices'])
     test_dataset.prepare()
 
