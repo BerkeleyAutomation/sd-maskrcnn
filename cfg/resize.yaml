@@ -1,6 +1,6 @@
 dataset:
-  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/phoxi/images  # base path of the directory of the dataset
-  img_dir: depth_ims # name of the image directory within the dataset folder
+  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset  # base path of the directory of the dataset
+  img_dir: depth_ims_numpy # name of the image directory within the dataset folder
   img_out_dir: depth_ims_normalized
   mask_dir: modal_segmasks # name of the mask directory within the dataset folder
   mask_out_dir: modal_segmasks_scaled # name of the output directory for masks (within the dataset folder)
@@ -9,7 +9,8 @@ images:
   resize: 1
   max_dim: 512
   normalize: 1
+  out_ext: png
 
 masks:
-  resize: 1
+  resize: 0
   max_dim: 512

@@ -25,12 +25,14 @@ def resize_images(config):
             else:
                 im = cv2.imread(im_old_path, cv2.IMREAD_UNCHANGED)
             im = scale_to_square(im, dim=config['images']['max_dim'])
-            new_im_file = os.path.join(new_im_path, im_path)
-            if '.npy' in im_old_path:
+            im_name = im_path.split('.')[0]
+            im_ext = config['images']['out_ext']
+            new_im_file = os.path.join(new_im_path, im_name+'.'+im_ext)
+            if im_ext == 'npy':
                 if config['images']['normalize']:
                     im = cv2.normalize(im, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
                 np.save(new_im_file, im)
-            else:
+            elif im_ext == 'png':
                 if config['images']['normalize']:
                     im = cv2.normalize(im, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
                 cv2.imwrite(new_im_file, im, [cv2.IMWRITE_PNG_COMPRESSION, 0]) # 0 compression
