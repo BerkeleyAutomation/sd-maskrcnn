@@ -62,6 +62,10 @@ def benchmark(config):
     test_dataset.load(config['test']['indices'])
     test_dataset.prepare()
 
+    vis_dataset = ImageDataset(config['test']['path'], 'depth_ims', 'modal_segmasks')
+    vis_dataset.load(config['test']['indices'])
+    vis_dataset.prepare()
+
     ######## BENCHMARK JUST CREATES THE RUN DIRECTORY ########
     # code that actually produces outputs should be plug-and-play
     # depending on what kind of benchmark function we run.
@@ -79,16 +83,17 @@ def benchmark(config):
     pred_mask_dir, pred_info_dir, gt_mask_dir = \
         detect(config['output_dir'], inference_config, model, test_dataset, bin_mask_dir, overlap_thresh)
 
-    coco_benchmark(pred_mask_dir, pred_info_dir, gt_mask_dir)
+    ap, ar = coco_benchmark(pred_mask_dir, pred_info_dir, gt_mask_dir)
     if config['vis']['predictions']:
-        visualize_predictions(config['output_dir'], test_dataset, inference_config, pred_mask_dir, pred_info_dir, 
+        visualize_predictions(config['output_dir'], vis_dataset, inference_config, pred_mask_dir, pred_info_dir, 
                               show_bbox=config['vis']['show_bbox_pred'], show_scores=config['vis']['show_scores_pred'], show_class=config['vis']['show_class_pred'])
     if config['vis']['ground_truth']:
-        visualize_gts(config['output_dir'], test_dataset, inference_config, show_scores=False, show_bbox=config['vis']['show_bbox_gt'], show_class=config['vis']['show_class_gt'])
+        visualize_gts(config['output_dir'], vis_dataset, inference_config, show_scores=False, show_bbox=config['vis']['show_bbox_gt'], show_class=config['vis']['show_class_gt'])
     if config['vis']['s_bench']:
-        s_benchmark(config['output_dir'], test_dataset, inference_config, pred_mask_dir, pred_info_dir)
+        s_benchmark(config['output_dir'], vis_dataset, inference_config, pred_mask_dir, pred_info_dir)
 
     print("Saved benchmarking output to {}.\n".format(config['output_dir']))
+    return ap, ar
 
 def detect(run_dir, inference_config, model, dataset, bin_mask_dir=False, overlap_thresh=0.5):
     """
@@ -161,10 +166,12 @@ def detect(run_dir, inference_config, model, dataset, bin_mask_dir=False, overla
                 if frac_overlap <= overlap_thresh:
                     deleted_masks.append(k)
 
-            r['masks'] = np.stack([r['masks'][:,:,k] for k in range(num_detects)
-                                   if k not in deleted_masks], axis=2)
-            r['rois'] = np.stack([r['rois'][k,:] for k in range(num_detects)
-                                  if k not in deleted_masks], axis=0)
+            final_masks = [r['masks'][:,:,k] for k in range(num_detects)
+                            if k not in deleted_masks]
+            r['masks'] = np.stack(final_masks, axis=2) if final_masks else []
+            final_rois = [r['rois'][k,:] for k in range(num_detects)
+                            if k not in deleted_masks]
+            r['rois'] = np.stack(final_rois, axis=0) if final_rois else []
             r['class_ids'] = np.array([r['class_ids'][k] for k in range(num_detects)
                                        if k not in deleted_masks])
             r['scores'] = np.array([r['scores'][k] for k in range(num_detects)
@@ -173,9 +180,6 @@ def detect(run_dir, inference_config, model, dataset, bin_mask_dir=False, overla
         # Save copy of transformed GT segmasks to disk in preparation for annotations
         mask_name = 'image_{:06d}'.format(image_id)
         mask_path = os.path.join(resized_segmask_dir, mask_name)
-
-        molded_images = modellib.mold_image(image, inference_config)
-        molded_images = np.expand_dims(molded_images, 0)
 
         # save the transpose so it's (n, h, w) instead of (h, w, n)
         np.save(mask_path, gt_mask.transpose(2, 0, 1))
@@ -262,3 +266,24 @@ if __name__ == "__main__":
     config = YamlConfig(conf_args.conf_file)
     utils.set_tf_config()
     benchmark(config)
+    # max_ar = 0
+    # max_ap = 0
+    # for i in np.arange(10,135,5):
+    #     path = config['model']['path'].split('/')
+    #     name = path[-1].split('_')
+    #     x = '_{:04d}.h5'.format(i)
+    #     new_name = '_'.join(name[:-1]) + x
+    #     new_path = os.path.join('/', *path[:-1], new_name)
+    #     config['model']['path'] = new_path
+
+    #     try:
+    #         ap, ar = benchmark(config)
+    #     except Exception:
+    #         continue
+    #     if ap > max_ap:
+    #         max_ap = ap
+    #         max_ap_ind = i
+    #     if ar > max_ar:
+    #         max_ar = ar
+    #         max_ar_ind = i
+    # print('Max AP: {}, Max AR: {}, Max AP Ind: {}, Max AR Ind: {}'.format(max_ap, max_ar, max_ap_ind, max_ar_ind))

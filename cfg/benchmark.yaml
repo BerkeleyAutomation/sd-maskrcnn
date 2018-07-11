@@ -2,13 +2,20 @@ output_dir: /nfs/diskstation/projects/dex-net/segmentation/results_test/sd_mask_
 save_conf_name: config.yaml
 
 model:
-  # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset/model_weights/res50_update20180620T1706/mask_rcnn_res50_update_0150.h5
-  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset/model_weights/no_noise_lr1e-2_e80_clutter_mod/mask_rcnn_clutter_0060.h5
-  # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/phoxi/images/model_weights/phoxi_tune_slow20180609T1438/mask_rcnn_phoxi_tune_slow_0040.h5
-  # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/phoxi/images/model_weights/coco_tune20180609T1944/mask_rcnn_coco_tune_0040.h5
+  # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset/model_weights/res50_update20180620T1706/mask_rcnn_res50_update_0100.h5
+  # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset/model_weights/no_noise_lr1e-2_e80_clutter_mod/mask_rcnn_clutter_0060.h5
+  # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/phoxi/images/model_weights/sd_mask_tune/mask_rcnn_phoxi_tune_slow_0040.h5
+  # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/primesense_overhead/images/model_weights/primesense_tune20180609T1435/mask_rcnn_primesense_tune_0010.h5
+  # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/phoxi/images/model_weights/coco_tune_color/mask_rcnn_coco_tune_0040.h5
+  # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/phoxi/images/model_weights/coco_tune_depth/mask_rcnn_coco_tune_0030.h5
+  # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/primesense_overhead/images/model_weights/coco_color_ft20180613T2117/mask_rcnn_coco_color_ft_0070.h5
+  # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/primesense_overhead/images/model_weights/coco_depth_ft20180613T2129/mask_rcnn_coco_depth_ft_0072.h5
+  # path: /nfs/diskstation/projects/dex-net/segmentation/models/depth_normalized20180703T1652/mask_rcnn_depth_normalized_0090.h5
+  path: /nfs/diskstation/projects/dex-net/segmentation/models/depth_float20180709T1643/mask_rcnn_depth_float_0060.h5
   mode: inference
   settings:
-    mean_pixel: [119,119,119]
+    # mean_pixel: [119,119,119]
+    mean_pixel: [0.719, 0.719, 0.719]
     # mean_pixel: [128,128,128]
     backbone: resnet35
     num_classes: 2
@@ -16,9 +23,9 @@ model:
     images_per_gpu: 1
 
 test:
-  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/wisdom/wisdom-real/high-res
+  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/phoxi/images
   # images: color_ims
-  images: depth_ims
+  images: depth_ims_numpy
   masks: modal_segmasks
   indices: test_indices.npy
 
@@ -37,9 +44,9 @@ vis:
 
   # GT vis settings
   ground_truth: 0
-  show_bbox_gt: 1
-  show_scores_gt: 1
-  show_class_gt: 1
+  show_bbox_gt: 0
+  show_scores_gt: 0
+  show_class_gt: 0
 
   # Saurabh vis settings
   s_bench: 0
