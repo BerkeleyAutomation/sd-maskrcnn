@@ -33,8 +33,8 @@ def train(config):
 
     # Load config
     train_config = MaskConfig(config['model']['settings'])
-    # train_config.STEPS_PER_EPOCH = dataset_train.indices.size/(train_config.IMAGES_PER_GPU*train_config.GPU_COUNT)
-    train_config.STEPS_PER_EPOCH = 5
+    train_config.STEPS_PER_EPOCH = dataset_train.indices.size/(train_config.IMAGES_PER_GPU*train_config.GPU_COUNT)
+    # train_config.STEPS_PER_EPOCH = 5
     train_config.display()
 
     # Create the model.

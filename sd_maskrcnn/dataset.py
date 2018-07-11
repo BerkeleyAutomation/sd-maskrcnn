@@ -83,7 +83,7 @@ class ImageDataset(utils.Dataset):
     def load_image(self, image_id):
         # loads image from path
         if 'numpy' in self.images:
-            image = np.load(self.image_info[image_id]['path'])
+            image = np.load(self.image_info[image_id]['path']).squeeze()
         else:
             image = skimage.io.imread(self.image_info[image_id]['path'])
         # If grayscale. Convert to RGB for consistency.
@@ -112,7 +112,7 @@ class ImageDataset(utils.Dataset):
 
         all_masks = cv2.imread(file_name, cv2.IMREAD_UNCHANGED)
         for i in np.arange(1,np.max(all_masks)+1):
-            I = all_masks == i+1 # We ignore the background, so the first instance is 0-indexed.
+            I = all_masks == i # We ignore the background, so the first instance is 0-indexed.
             if np.any(I):
                 I = I[:,:,np.newaxis]
                 Is.append(I)
