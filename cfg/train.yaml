@@ -17,10 +17,10 @@ dataset:
   path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset
   train_indices: train_indices.npy
   val_indices: test_indices.npy
-  images: depth_ims_normalized
-  masks: modal_segmasks
+  images: depth_ims_numpy_scaled
+  masks: modal_segmasks_scaled
 
 # name of the config file to save (within the dataset folder)
 # note that this will be overwritten between multiple runs so
 # you should name this uniquely for each run.
-save_conf_name: config_1e-2_e150_normalized.yaml
+save_conf_name: config_1e-2_e150_res35.yaml
