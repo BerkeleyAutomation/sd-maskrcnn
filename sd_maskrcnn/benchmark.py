@@ -135,7 +135,7 @@ def detect(run_dir, inference_config, model, dataset, bin_mask_dir=False, overla
         image, _, _, _, gt_mask =\
           modellib.load_image_gt(dataset, inference_config, image_id,
             use_mini_mask=False)
-
+    
         # Run object detection
         results = model.detect([image], verbose=0)
         r = results[0]

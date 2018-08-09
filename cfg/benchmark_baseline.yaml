@@ -29,8 +29,10 @@ detector:
 test:
   path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset/
   # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/phoxi/images/
+  images: depth_ims_numpy_scaled 
+  masks: modal_segmasks
   bin_masks: segmasks_filled        # Directory containing bin masks
-  indices: test_indices.npy
+  indices: test_sample_0_indices.npy
 
 # Visualization settings
 vis:

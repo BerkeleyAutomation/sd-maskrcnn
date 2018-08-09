@@ -13,7 +13,7 @@ from autolab_core import PointCloud, YamlConfig
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from sd_maskrcnn.utils import mkdir_if_missing
 
-def detect(detector_type, config, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
+def detect(detector_type, config, run_dir, test_config):
     """Run PCL-based detection on a depth-image-based dataset.
 
     Parameters
@@ -23,14 +23,8 @@ def detect(detector_type, config, run_dir, dataset_dir, indices_arr, bin_mask_di
     run_dir : str
         Directory to save outputs in. Output will be saved in pred_masks, pred_info,
         and modal_segmasks_processed subdirectories.
-    dataset_dir : str
-        Path to dataset. Should include depth_ims_numpy (.npy files)
-        and modal_segmasks (.png files) as subdirectories.
-    indices_arr : sequence of int
-        Indices of images to perform detection on.
-    bin_mask_dir : str
-        Subdirectory of dataset_dir that contains binary masks for the bin.
-        Should not be a full path, just the subdirectory name.
+    test_config : dict
+        config containing dataset information
     """
 
     ##################################################################
@@ -53,15 +47,18 @@ def detect(detector_type, config, run_dir, dataset_dir, indices_arr, bin_mask_di
     # Set up input directories
     ##################################################################
 
+    dataset_dir = test_config['path']
+    indices_arr = np.load(os.path.join(dataset_dir, test_config['indices']))
+
     # Input depth image data (numpy files, not .pngs)
-    depth_dir = os.path.join(dataset_dir, 'depth_ims_numpy')
+    depth_dir = os.path.join(dataset_dir, test_config['images'])
 
     # Input GT binary masks dir
-    gt_mask_dir = os.path.join(dataset_dir, 'modal_segmasks')
+    gt_mask_dir = os.path.join(dataset_dir, test_config['masks'])
 
     # Input binary mask data
-    if bin_mask_dir:
-        bin_mask_dir = os.path.join(dataset_dir, bin_mask_dir)
+    if 'bin_masks' in test_config.keys():
+        bin_mask_dir = os.path.join(dataset_dir, test_config['bin_masks'])
 
     # Input camera intrinsics
     camera_intrinsics_fn = os.path.join(dataset_dir, 'camera_intrinsics.intr')
@@ -147,7 +144,9 @@ def detect(detector_type, config, run_dir, dataset_dir, indices_arr, bin_mask_di
         gt_mask = cv2.resize(gt_mask, (depth_im.shape[1], depth_im.shape[0])).astype(np.uint8)[:,:,0]
         num_gt_masks = np.max(gt_mask)
         for i in range(1, num_gt_masks+1):
-            indiv_gt_masks.append(gt_mask == i)
+            indiv_gt_mask = (gt_mask == i)
+            if np.any(indiv_gt_mask):
+                indiv_gt_masks.append(gt_mask == i)
         gt_mask_output = np.stack(indiv_gt_masks)
 
         np.save(os.path.join(resized_segmask_dir, output_name + '.npy'), gt_mask_output)
@@ -163,13 +162,12 @@ def detect(detector_type, config, run_dir, dataset_dir, indices_arr, bin_mask_di
 
 if __name__ == '__main__':
     dataset_dir = '/nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/phoxi/images'
-    indices_arr = np.arange(0, 10)
-    bin_mask_dir = 'segmasks_filled'
     run_dir = './run'
 
     # For euclidean
     config = {'min_cluster_size': 800, 'max_cluster_size': 1000000, 'tolerance': 0.002}
+    test_config = {'path': dataset_dir, 'images': 'depth_ims_numpy', 'masks': 'modal_segmasks', 'indices': 'sample_test.npy', 'bin_masks': 'segmasks_filled'}
     # For region_growing
     # config = {'min_cluster_size': 800, 'max_cluster_size': 1000000, 'n_neighbors': 5, 'curvature': 0.095, 'smoothness': 0.200}
 
-    detect('euclidean', config, run_dir, dataset_dir, indices_arr, bin_mask_dir=bin_mask_dir)
+    detect('euclidean', config, run_dir, test_config)
