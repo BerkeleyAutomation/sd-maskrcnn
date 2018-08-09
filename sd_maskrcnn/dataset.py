@@ -19,9 +19,7 @@ from maskrcnn.mrcnn import model as modellib, visualize, utils
 ImageDataset creates a Matterport dataset for a directory of
 images in order to ensure compatibility with benchmarking tools 
 and image resizing for networks.
-
 Directory structure must be as follows:
-
 $base_path/
     test_indices.npy
     train_indices.npy

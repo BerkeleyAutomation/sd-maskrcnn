@@ -4,8 +4,9 @@ import skimage
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import autolab_core
 import cv2
+
+import autolab_core
 from perception import DepthImage
 
 base_path = "images/"
