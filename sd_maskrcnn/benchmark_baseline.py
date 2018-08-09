@@ -44,10 +44,6 @@ def benchmark(config):
     config.save(os.path.join(output_dir, config['save_conf_name']))
 
     # directory of test images and segmasks
-    test_dir = config['test']['path']
-    indices_arr = np.load(os.path.join(test_dir, config['test']['indices']))
-    bin_mask_dir = os.path.join(test_dir, config['test']['bin_masks'])
-
     detector_type = config['detector']['type']
     if detector_type == 'euclidean' or detector_type == 'region_growing':
         from sd_maskrcnn.pcl.pydetect import detect
@@ -60,25 +56,26 @@ def benchmark(config):
 
     # Create predictions and record where everything gets stored.
     pred_mask_dir, pred_info_dir, gt_mask_dir = \
-        detect(detector_type, config['detector'][detector_type], output_dir, test_dir, indices_arr, bin_mask_dir)
+        detect(detector_type, config['detector'][detector_type], output_dir, config['test'])
 
     ap, ar = coco_benchmark(pred_mask_dir, pred_info_dir, gt_mask_dir)
     if config['vis']['predictions']:
-        visualize_predictions(output_dir, test_dir, indices_arr, pred_mask_dir, pred_info_dir, show_bbox=config['vis']['show_bbox_pred'], show_class=config['vis']['show_class_pred'])
+        visualize_predictions(output_dir, config['test'], pred_mask_dir, pred_info_dir, show_bbox=config['vis']['show_bbox_pred'], show_class=config['vis']['show_class_pred'])
     if config['vis']['s_bench']:
-        s_benchmark(output_dir, test_dir, indices_arr, pred_mask_dir, pred_info_dir, gt_mask_dir)
+        s_benchmark(output_dir, config['test'], pred_mask_dir, pred_info_dir, gt_mask_dir)
 
     print("Saved benchmarking output to {}.\n".format(output_dir))
     return ap, ar
 
-def visualize_predictions(run_dir, dataset_dir, indices_arr, pred_mask_dir, pred_info_dir, show_bbox=True, show_class=True):
+def visualize_predictions(run_dir, test_config, pred_mask_dir, pred_info_dir, show_bbox=True, show_class=True):
     """Visualizes predictions."""
     # Create subdirectory for prediction visualizations
     vis_dir = os.path.join(run_dir, 'vis')
-    depth_dir = os.path.join(dataset_dir, 'depth_ims_numpy')
+    depth_dir = os.path.join(test_config['path'], test_config['images'])
     if not os.path.exists(vis_dir):
         os.makedirs(vis_dir)
 
+    indices_arr = np.load(os.path.join(test_config['path'], test_config['indices']))
     image_ids = np.arange(indices_arr.size)
     ##################################################################
     # Process each image

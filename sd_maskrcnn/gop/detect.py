@@ -13,7 +13,7 @@ from .src.util import setupLearned
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from sd_maskrcnn.utils import mkdir_if_missing
 
-def detect(detector_type, config, run_dir, dataset_dir, indices_arr, bin_mask_dir=None):
+def detect(detector_type, config, run_dir, test_config):
 
     """Run RGB Object Proposal-based detection on a color-image-based dataset.
 
@@ -26,14 +26,8 @@ def detect(detector_type, config, run_dir, dataset_dir, indices_arr, bin_mask_di
     run_dir : str
         Directory to save outputs in. Output will be saved in pred_masks, pr$
         and modal_segmasks_processed subdirectories.
-    dataset_dir : str
-        Path to dataset. Should include color_ims (.png files)
-        and modal_segmasks (.png files) as subdirectories.
-    indices_arr : sequence of int
-        Indices of images to perform detection on.
-    bin_mask_dir : str
-        Subdirectory of dataset_dir that contains binary masks for the bin.
-        Should not be a full path, just the subdirectory name.
+    test_config : dict
+        config containing dataset information
     """
 
     ##################################################################
@@ -56,15 +50,18 @@ def detect(detector_type, config, run_dir, dataset_dir, indices_arr, bin_mask_di
     # Set up input directories
     ##################################################################
 
+    dataset_dir = test_config['path']
+    indices_arr = np.load(os.path.join(dataset_dir, test_config['indices']))
+
     # Input depth image data (numpy files, not .pngs)
-    rgb_dir = os.path.join(dataset_dir, 'color_ims')
+    rgb_dir = os.path.join(dataset_dir, test_config['images'])
 
     # Input GT binary masks dir
-    gt_mask_dir = os.path.join(dataset_dir, 'modal_segmasks')
+    gt_mask_dir = os.path.join(dataset_dir, test_config['masks'])
 
     # Input binary mask data
-    if bin_mask_dir:
-        bin_mask_dir = os.path.join(dataset_dir, bin_mask_dir)
+    if 'bin_mask' in test_config.keys():
+        bin_mask_dir = os.path.join(dataset_dir, test_config['bin_masks'])
 
     image_ids = np.arange(indices_arr.size)
 

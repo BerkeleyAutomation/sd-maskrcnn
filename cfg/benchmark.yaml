@@ -3,13 +3,14 @@ save_conf_name: config.yaml
 
 model:
   # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset/model_weights/res50_update20180620T1706/mask_rcnn_res50_update_0100.h5
-  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset/model_weights/no_noise_lr1e-2_e80_clutter_mod/mask_rcnn_clutter_0060.h5
+  # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset/model_weights/no_noise_lr1e-2_e80_clutter_mod/mask_rcnn_clutter_0060.h5
   # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/phoxi/images/model_weights/sd_mask_tune/mask_rcnn_phoxi_tune_slow_0040.h5
   # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/primesense_overhead/images/model_weights/primesense_tune20180609T1435/mask_rcnn_primesense_tune_0010.h5
-  # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/phoxi/images/model_weights/coco_tune_color/mask_rcnn_coco_tune_0040.h5
+  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/phoxi/images/model_weights/coco_tune_color/mask_rcnn_coco_tune_0040.h5
   # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/phoxi/images/model_weights/coco_tune_depth/mask_rcnn_coco_tune_0010.h5 
   # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/primesense_overhead/images/model_weights/coco_color_ft20180613T2117/mask_rcnn_coco_color_ft_0070.h5
   # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/primesense_overhead/images/model_weights/coco_depth_ft20180613T2129/mask_rcnn_coco_depth_ft_0072.h5
+  # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset/model_weights/coco_depth_ft20180613T2305/mask_rcnn_coco_depth_ft_0040.h5
   # path: /nfs/diskstation/projects/dex-net/segmentation/models/depth_normalized20180703T1652/mask_rcnn_depth_normalized_0100.h5
   # path: /nfs/diskstation/projects/dex-net/segmentation/models/depth_float20180705T1159/mask_rcnn_depth_float_0100.h5
   # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset/model_weights/no_noise_lr1e-2_e80_clutter_mod/mask_rcnn_clutter_0040.h5
@@ -19,18 +20,21 @@ model:
     # mean_pixel: [0.719, 0.719, 0.719]
     # mean_pixel: [119,119,119]
     mean_pixel: [128,128,128]
-    backbone: resnet35
+    backbone: resnet101
     num_classes: 2
     gpu_count: 1
     images_per_gpu: 1
+    post_nms_rois_inference: 1000    # default: 1000, best: 2000. This might not have any effect
+    rpn_nms_threshold: 0.7           # default: 0.7, best: 1.0
+    detection_nms_threshold: 0.3     # default 0.3, best: 0.4
 
 test:
-  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset/
-  # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/phoxi/images/
-  # images: color_ims
-  images: depth_ims
+  # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset/
+  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/phoxi/images/
+  images: color_ims
+  # images: depth_ims
   masks: modal_segmasks
-  indices: test_sample_0_indices.npy
+  indices: test_indices.npy
 
 mask:                                                                                                                                                              
   remove_bin_pixels: 1              # Set to True if we want to discard predictions based on if they have bin pixels
@@ -40,7 +44,7 @@ mask:
 # Visualization settings
 vis:
   # Prediction vis settings
-  predictions: 1
+  predictions: 0
   show_bbox_pred: 0
   show_scores_pred: 0
   show_class_pred: 0
