@@ -1,6 +1,4 @@
 import os 
-import argparse
-from autolab_core import YamlConfig
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
 

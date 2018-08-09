@@ -92,5 +92,5 @@ if __name__ == "__main__":
 
     # read in config file information from proper section
     config = YamlConfig(conf_args.conf_file)
-    utils.set_tf_config()
+    # utils.set_tf_config()
     train(config)
