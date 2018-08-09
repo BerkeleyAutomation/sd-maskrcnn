@@ -1,0 +1,2 @@
+/usr/bin/ar qc libproposals.a  CMakeFiles/proposals.dir/saliency.cpp.o CMakeFiles/proposals.dir/objectives.cpp.o CMakeFiles/proposals.dir/unaryfeature.cpp.o CMakeFiles/proposals.dir/unary.cpp.o CMakeFiles/proposals.dir/edgefeature.cpp.o CMakeFiles/proposals.dir/proposal.cpp.o CMakeFiles/proposals.dir/geodesics.cpp.o CMakeFiles/proposals.dir/seedfeature.cpp.o CMakeFiles/proposals.dir/seed.cpp.o CMakeFiles/proposals.dir/edgeweight.cpp.o
+/usr/bin/ranlib libproposals.a

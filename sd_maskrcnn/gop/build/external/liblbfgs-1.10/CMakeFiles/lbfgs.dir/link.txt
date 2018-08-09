@@ -1,0 +1,2 @@
+/usr/bin/ar qc liblbfgs.a  CMakeFiles/lbfgs.dir/lib/lbfgs.c.o
+/usr/bin/ranlib liblbfgs.a
