@@ -1,15 +1,5 @@
 .vscode/
 .cache
-outputs
 **/__pycache__
 *.png
-vis
-env
 *~
-only_noise_dataset/
-noisy_sim_dataset/
-only_inpainting_dataset/
-image-labelling-tool/images/
-image-labelling-tool/.*
-gop/build
-*.npy
