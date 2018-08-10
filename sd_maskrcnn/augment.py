@@ -6,8 +6,10 @@ import numpy as np
 import argparse
 from tqdm import tqdm
 import skimage, skimage.color, skimage.io
+
 from perception import DepthImage
 from autolab_core import YamlConfig
+
 import utils
 
 def inject_noise(img, noise_level=0.0005):

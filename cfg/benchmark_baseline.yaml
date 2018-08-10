@@ -1,0 +1,46 @@
+output_dir: /nfs/diskstation/projects/dex-net/segmentation/results_test/baseline_test
+save_conf_name: config.yaml
+
+detector:
+  type: euclidean            # Type of baseline detector (euclidean, region_growing, mcg, or gop)
+
+  # Options for Euclidean Clustering
+  euclidean:
+    min_cluster_size: 800         # Minimum size of a cluster (450 for psense, 800 for phoxi)
+    max_cluster_size: 1000000     # Maximum size of a cluster (default 1000000)
+    tolerance: 0.002              # Max distance between closest points in same cluster (0.002 for phoxi, 0.004 for psense)
+  
+  # Options for Region Growing
+  region_growing:
+    min_cluster_size: 800         # Minimum size of a cluster (450 for psense, 800 for phoxi)
+    max_cluster_size: 1000000     # Maximum size of a cluster (default 1000000)  
+    n_neighbors: 5                # Number of neighbors to use for kNN (default 5)
+    smoothness: 0.2             # Max allowed angle in radians between nearby points in same cluster (0.39 for psense, 0.2 for phoxi)
+    curvature: 0.095              # Max allowed curvature (0.09 for psense, 0.095 for phoxi)          
+
+  # Options for GOP
+  gop:
+
+  # Options for MCG
+  mcg:
+    mode: accurate                # Mode for mcg (accurate or fast)
+    nms_thresh: 0.5               # Non-max suppression threshold (0.0 to 1.0)
+
+test:
+  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset/
+  # path: /nfs/diskstation/projects/dex-net/segmentation/datasets/real_test_cases_06_07_18/phoxi/images/
+  images: depth_ims_numpy_scaled 
+  masks: modal_segmasks
+  bin_masks: segmasks_filled        # Directory containing bin masks
+  indices: test_sample_0_indices.npy
+
+# Visualization settings
+vis:
+
+  # Prediction vis settings
+  predictions: 1
+  show_bbox_pred: 0
+  show_class_pred: 0
+
+  # Saurabh vis settings
+  s_bench: 0
