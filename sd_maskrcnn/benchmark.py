@@ -135,7 +135,7 @@ def detect(run_dir, inference_config, model, dataset, bin_mask_dir=False, overla
         image, _, _, _, gt_mask =\
           modellib.load_image_gt(dataset, inference_config, image_id,
             use_mini_mask=False)
-
+    
         # Run object detection
         results = model.detect([image], verbose=0)
         r = results[0]
@@ -166,12 +166,10 @@ def detect(run_dir, inference_config, model, dataset, bin_mask_dir=False, overla
                 if frac_overlap <= overlap_thresh:
                     deleted_masks.append(k)
 
-            final_masks = [r['masks'][:,:,k] for k in range(num_detects)
-                            if k not in deleted_masks]
-            r['masks'] = np.stack(final_masks, axis=2) if final_masks else []
-            final_rois = [r['rois'][k,:] for k in range(num_detects)
-                            if k not in deleted_masks]
-            r['rois'] = np.stack(final_rois, axis=0) if final_rois else []
+            r['masks'] = [r['masks'][:,:,k] for k in range(num_detects) if k not in deleted_masks]
+            r['masks'] = np.stack(r['masks'], axis=2) if r['masks'] else np.array([])
+            r['rois'] = [r['rois'][k,:] for k in range(num_detects) if k not in deleted_masks]
+            r['rois'] = np.stack(r['rois'], axis=0) if r['rois'] else np.array([])
             r['class_ids'] = np.array([r['class_ids'][k] for k in range(num_detects)
                                        if k not in deleted_masks])
             r['scores'] = np.array([r['scores'][k] for k in range(num_detects)
@@ -185,7 +183,7 @@ def detect(run_dir, inference_config, model, dataset, bin_mask_dir=False, overla
         np.save(mask_path, gt_mask.transpose(2, 0, 1))
 
         # Save masks
-        save_masks = np.stack([r['masks'][:,:,i] for i in range(r['masks'].shape[2])])
+        save_masks = np.stack([r['masks'][:,:,i] for i in range(r['masks'].shape[2])]) if np.any(r['masks']) else np.array([])
         save_masks_path = os.path.join(pred_dir, 'image_{:06d}.npy'.format(image_id))
         np.save(save_masks_path, save_masks)
 
@@ -264,26 +262,5 @@ if __name__ == "__main__":
 
     # read in config file information from proper section
     config = YamlConfig(conf_args.conf_file)
-    utils.set_tf_config()
+    # utils.set_tf_config()
     benchmark(config)
-    # max_ar = 0
-    # max_ap = 0
-    # for i in np.arange(10,135,5):
-    #     path = config['model']['path'].split('/')
-    #     name = path[-1].split('_')
-    #     x = '_{:04d}.h5'.format(i)
-    #     new_name = '_'.join(name[:-1]) + x
-    #     new_path = os.path.join('/', *path[:-1], new_name)
-    #     config['model']['path'] = new_path
-
-    #     try:
-    #         ap, ar = benchmark(config)
-    #     except Exception:
-    #         continue
-    #     if ap > max_ap:
-    #         max_ap = ap
-    #         max_ap_ind = i
-    #     if ar > max_ar:
-    #         max_ar = ar
-    #         max_ar_ind = i
-    # print('Max AP: {}, Max AR: {}, Max AP Ind: {}, Max AR Ind: {}'.format(max_ap, max_ar, max_ap_ind, max_ar_ind))

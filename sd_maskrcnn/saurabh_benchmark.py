@@ -9,13 +9,14 @@ import cv2
 import skimage.io
 import numpy as np
 
+from utils import mkdir_if_missing
+
 # Root directory of the project
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 # Import Mask R-CNN repo
 sys.path.append(ROOT_DIR) # To find local version of the library
 from maskrcnn.mrcnn import model as modellib, visualize, utils as utilslib
-from sd_maskrcnn.utils import mkdir_if_missing
 
 def s_benchmark(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir, \
                 vis_missed=False):

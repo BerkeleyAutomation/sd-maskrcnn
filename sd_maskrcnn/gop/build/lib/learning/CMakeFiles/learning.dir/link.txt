@@ -1,0 +1,2 @@
+/usr/bin/ar qc liblearning.a  CMakeFiles/learning.dir/splitcriterion.cpp.o CMakeFiles/learning.dir/treedata.cpp.o CMakeFiles/learning.dir/tree.cpp.o CMakeFiles/learning.dir/forest.cpp.o CMakeFiles/learning.dir/features.cpp.o
+/usr/bin/ranlib liblearning.a

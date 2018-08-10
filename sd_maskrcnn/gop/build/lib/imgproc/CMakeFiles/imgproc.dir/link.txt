@@ -1,0 +1,2 @@
+/usr/bin/ar qc libimgproc.a  CMakeFiles/imgproc.dir/color.cpp.o CMakeFiles/imgproc.dir/filter.cpp.o CMakeFiles/imgproc.dir/gradient.cpp.o CMakeFiles/imgproc.dir/morph.cpp.o CMakeFiles/imgproc.dir/nms.cpp.o CMakeFiles/imgproc.dir/resample.cpp.o CMakeFiles/imgproc.dir/image.cpp.o
+/usr/bin/ranlib libimgproc.a
