@@ -1,0 +1,2 @@
+/usr/bin/ar qc libboost_numpy.a  CMakeFiles/boost_numpy.dir/dtype.cpp.o CMakeFiles/boost_numpy.dir/scalars.cpp.o CMakeFiles/boost_numpy.dir/ndarray.cpp.o CMakeFiles/boost_numpy.dir/matrix.cpp.o CMakeFiles/boost_numpy.dir/ufunc.cpp.o CMakeFiles/boost_numpy.dir/numpy.cpp.o
+/usr/bin/ranlib libboost_numpy.a

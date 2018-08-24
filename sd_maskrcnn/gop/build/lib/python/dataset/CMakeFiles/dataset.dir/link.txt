@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdataset.a  CMakeFiles/dataset.dir/nyu.cpp.o CMakeFiles/dataset.dir/voc.cpp.o CMakeFiles/dataset.dir/apng.cpp.o CMakeFiles/dataset.dir/berkeley.cpp.o CMakeFiles/dataset.dir/evaluation.cpp.o CMakeFiles/dataset.dir/covering.cpp.o CMakeFiles/dataset.dir/weizmann.cpp.o CMakeFiles/dataset.dir/coco.cpp.o
+/usr/bin/ranlib libdataset.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcontour.a  CMakeFiles/contour.dir/directedsobel.cpp.o CMakeFiles/contour.dir/boundarydetector.cpp.o CMakeFiles/contour.dir/sketchtokens.cpp.o CMakeFiles/contour.dir/structuredforest.cpp.o
+/usr/bin/ranlib libcontour.a
