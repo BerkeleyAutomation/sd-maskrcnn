@@ -75,7 +75,7 @@ def encode_gt(mask_dir):
         for val in range(I.shape[0]):
             # get binary mask
             bin_mask = I[val,:,:].astype(np.uint8)
-            instance_id = i * 100 + (val + 1) # create id for instance, incrmeent val
+            instance_id = i * 100 + (val + 1) # create id for instance, increment val
             # find bounding box
             def bbox2(img):
                 rows = np.any(img, axis=1)
@@ -113,7 +113,7 @@ def encode_gt(mask_dir):
     print("successfully wrote GT annotations to", anno_path)
 
 
-def encode_predictions(mask_dir):
+def encode_predictions(mask_dir, info_dir):
     """Given a path to a directory of predicted image segmentation masks,
     encodes them into the COCO annotations format using the COCO API.
     Predictions are 3D Numpy arrays of shape (n, h, w) for n predicted
@@ -133,18 +133,22 @@ def encode_predictions(mask_dir):
         # load .npy
         im_name = 'image_{:06d}.npy'.format(i)
         I = np.load(os.path.join(mask_dir, im_name))
+        info = np.load(os.path.join(info_dir, im_name)).item()
 
-        for bin_mask in I:
+        for j,bin_mask in enumerate(I):
             # encode mask
             encode_mask = mask.encode(np.asfortranarray(bin_mask.astype(np.uint8)))
             encode_mask['counts'] = encode_mask['counts'].decode('ascii')
+
+            # info_score = float(info['scores'][j])
+            info_score = 1.0
 
             # assume one category (object)
             pred_anno = {
                 'image_id': i,
                 'category_id': 1,
                 'segmentation': encode_mask,
-                'score': 1.0
+                'score': info_score
             }
             annos.append(pred_anno)
 
@@ -168,11 +172,11 @@ def compute_coco_metrics(gt_dir, pred_dir):
     cocoEval = COCOeval(cocoGt, cocoDt, 'segm')
 
     cocoEval.params.imgIds = cocoGt.getImgIds()
-    cocoEval.params.useCats = 0
+    cocoEval.params.useCats = False
     cocoEval.params.areaRng = [[0 ** 2, 1e5 ** 2]]
     cocoEval.params.areaRngLbl = ['all']
     cocoEval.params.maxDets = np.arange(1,101)
-    cocoEval.params.iouThrs = np.linspace(0.0,1.0,101)
+    cocoEval.params.iouThrs = np.linspace(0.0, 1.0, 101)
 
     cocoEval.evaluate()
     cocoEval.accumulate()
@@ -180,20 +184,7 @@ def compute_coco_metrics(gt_dir, pred_dir):
     np.save(os.path.join(pred_dir, 'coco_eval.npy'), cocoEval.eval)
     np.save(os.path.join(pred_dir, 'coco_evalImgs.npy'), cocoEval.evalImgs)
 
-    # recalls = []
-    # precisions = []
-    # for iou in np.arange(50,100,5):
-    #     for im in cocoEval.evalImgs: 
-    #         gtMatches = im['gtMatches'][iou]
-    #         dtMatches = im['dtMatches'][iou]
-    #         if np.any(gtMatches):
-    #             recalls.append(np.sum(gtMatches > 0)/gtMatches.size)
-    #         else:
-    #             recalls.append(0)
-    #         if np.any(dtMatches):
-    #             precisions.append(np.sum(dtMatches > 0)/dtMatches.size)
-    #         else:
-    #             precisions.append(0)
+    # cocoEval.summarize()
 
     precisions = cocoEval.eval['precision'].squeeze()[50:100:5,:,-1]
     recalls = cocoEval.eval['recall'].squeeze()[50:100:5,-1]
@@ -221,5 +212,5 @@ def coco_benchmark(pred_mask_dir, pred_info_dir, gt_mask_dir):
     """
     # Generate prediction annotations
     encode_gt(gt_mask_dir)
-    encode_predictions(pred_mask_dir)
+    encode_predictions(pred_mask_dir, pred_info_dir)
     return compute_coco_metrics(gt_mask_dir, pred_mask_dir)
