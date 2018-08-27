@@ -38,12 +38,13 @@ $base_path/
 """
 
 class ImageDataset(utils.Dataset):
-    def __init__(self, base_path, images, masks):
+    def __init__(self, base_path, images, masks, occlusions):
         assert base_path != "", "You must provide the path to a dataset!"
 
         self.base_path = base_path
         self.images = images
         self.masks = masks
+        self.occlusions = occlusions
         super().__init__()
 
     def load(self, imset, augment=False):
@@ -120,7 +121,8 @@ class ImageDataset(utils.Dataset):
             mask = np.zeros([info['height'], info['width'], 0], dtype=np.bool)
 
         class_ids = np.array([1 for _ in range(mask.shape[2])])
-        return mask, class_ids.astype(np.int32)
+        occlusions = np.load(os.path.join(self.base_path, self.occlusions, 'image_{:06d}.npy'.format(_image_id))).astype(np.int32)
+        return mask, class_ids.astype(np.int32), occlusions
 
     @property
     def indices(self):
