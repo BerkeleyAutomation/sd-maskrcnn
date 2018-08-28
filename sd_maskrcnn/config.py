@@ -1,6 +1,6 @@
 import numpy as np
 import os, sys
-from mrcnn.config import Config
+from maskrcnn.mrcnn.config import Config
 
 class MaskConfig(Config):
   """Configuration for training on the toy shapes dataset.

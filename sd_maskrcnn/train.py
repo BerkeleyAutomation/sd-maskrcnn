@@ -41,7 +41,6 @@ def train(config):
     model = modellib.MaskRCNN(mode='training', config=train_config,
                               model_dir=config['model']['log_path'])
 
-
     # Select weights file to load
     if config['model']['weights'].lower() == "coco":
         weights_path = COCO_WEIGHTS_PATH

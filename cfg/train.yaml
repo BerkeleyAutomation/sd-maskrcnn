@@ -14,7 +14,8 @@ model:
     learning_rate: 0.01
 
 dataset:
-  path: /home/mmatl/Documents/code/mech_search/src/mech-search/tmp #/nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset
+  path: /nfs/diskstation/projects/mech_search/occlusion_maskrcnn_training/sim_dataset_v1/
+  #/home/mmatl/Documents/code/mech_search/src/mech-search/tmp #/nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset
   train_indices: train_indices.npy
   val_indices: test_indices.npy
   images: depth_ims_numpy
