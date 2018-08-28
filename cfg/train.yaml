@@ -1,5 +1,5 @@
 model:
-  log_path: ./tmp #/nfs/diskstation/projects/dex-net/segmentation/models/
+  log_path: ./model_results #/nfs/diskstation/projects/dex-net/segmentation/models/
   weights: new # new, last, coco, imagenet or custom path
   epochs: 150      # number of epochs to train for
   settings:
