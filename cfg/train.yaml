@@ -3,24 +3,24 @@ model:
   weights: new # new, last, coco, imagenet or custom path
   epochs: 150      # number of epochs to train for
   settings:
-    name: depth_normalized
+    name: depth_50k
     # mean_pixel: [0.719,0.719,0.719]
     mean_pixel: [128, 128, 128]
     image_shape: [512,512,3]
     backbone: resnet35
     num_classes: 2
     gpu_count: 1
-    images_per_gpu: 4
+    images_per_gpu: 5
     learning_rate: 0.01
 
 dataset:
-  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset
+  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/sd_mask_rcnn_replication_09_11_18_images/
   train_indices: train_indices.npy
   val_indices: test_indices.npy
-  images: depth_ims_numpy_scaled
-  masks: modal_segmasks_scaled
+  images: depth_ims
+  masks: semantic_segmasks
 
 # name of the config file to save (within the dataset folder)
 # note that this will be overwritten between multiple runs so
 # you should name this uniquely for each run.
-save_conf_name: config_1e-2_e150_res35.yaml
+save_conf_name: config_1e-2_e150_res35_50k.yaml
