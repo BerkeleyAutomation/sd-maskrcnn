@@ -23,7 +23,7 @@ ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__
 
 # Import Mask R-CNN repo
 sys.path.append(ROOT_DIR) # To find local version of the library
-from maskrcnn.mrcnn import model as modellib, visualize, utils
+from mrcnn import model as modellib, visualize, utils
 
 def encode_gt(mask_dir):
     """Given a path to a directory of ground-truth image segmentation masks,

@@ -23,7 +23,7 @@ from autolab_core import YamlConfig
 from perception import DepthImage
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from maskrcnn.mrcnn import visualize, utils as utilslib
+from mrcnn import visualize, utils as utilslib
 
 from utils import mkdir_if_missing
 from coco_benchmark import coco_benchmark
