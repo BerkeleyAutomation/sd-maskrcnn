@@ -11,7 +11,7 @@ This operation takes folders of images and corresponding segmasks, and resizes t
 #### Train
 This operation runs the training for Mask-RCNN on a dataset specified in the yaml file. Note that CUDA_VISIBLE_DEVICES can be set if training using a GPU (recommended). `python sd_maskrcnn/train.py`
 #### Benchmark
-This operation, given model weights, runs COCO benchmarks and other benchmarking code on the indices and dataset specified in the yaml file. Note that CUDA_VISIBLE_DEVICES can be set if benchmarking using a GPU. `python benchmark.py`
+This operation, given model weights, runs COCO benchmarks and other benchmarking code on the indices and dataset specified in the yaml file. Note that CUDA_VISIBLE_DEVICES can be set if benchmarking using a GPU. `python sd_maskrcnn/benchmark.py`
 ## Requirements
 ```
 - numpy
