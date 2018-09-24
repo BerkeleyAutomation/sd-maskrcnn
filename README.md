@@ -1,4 +1,8 @@
-# Mask-RCNN Data Pipeline
+# Segmenting Unknown 3D Objects from Real<br/> Depth Images using Mask R-CNN Trained<br/> on Synthetic Point Clouds
+Michael Danielczuk, Matthew Matl, Saurabh Gupta, Andrew Lee, Andrew Li, Jeffrey Mahler, and Ken Goldberg. Under review at ICRA 2019. [Project Page](https://sites.google.com/view/wisdom-dataset/home)
+
+![TeaserImage](https://github.com/BerkeleyAutomation/sd-maskrcnn/resources/seg_example.eps)
+
 ## Overview
 This is a pipeline written to handle the data and run Mask-RCNN on depth-image datasets. It can turn raw images and segmasks to properly sized and transformed images (and corresponding masks), then train Mask-RCNN upon the result. Following that, the pipeline can benchmark the final model weights on a given test dataset, perhaps of real depth images. Typically, one sets the yaml file associated with the task to perform (e.g., train, benchmark) and then runs the associated script. Benchmarking code for PCL and GOP baselines is also included.
 
@@ -37,7 +41,7 @@ Then, navigate to `cocoapi/PythonAPI/` and run `make install`.
 ## Datasets
 Datasets for training and evaluation can be found at https://sites.google.com/view/wisdom-dataset/home. The latest version of the WISDOM dataset will be uploaded soon, along with pre-trained models. To create one's own dataset we use the image labelling tool from https://github.com/yuyu2172/image-labelling-tool.
 
-## Standard Dataset Format
+### Standard Dataset Format
 All datasets, both real and sim, are assumed to be in the following format:
 ```
 <dataset root directory>/
@@ -58,7 +62,7 @@ All datasets, both real and sim, are assumed to be in the following format:
 All segmasks inside `modal_segmasks/` must be single-layer .pngs with 0 corresponding to the background and 1, 2, ... corresponding to a particular instance. Additionally, depth images and ground truth segmasks must be the same size; use `resize.py` in the pipeline to accomplish this. If using bin-vs-no bin segmasks to toss out spurious predictions, `segmasks_filled/` must contain those segmasks.
 These should be binary (0 if bin, 255 if object).
 
-## Benchmark Output Format
+### Benchmark Output Format
 Running `benchmark.py` will output a folder containing results, which is structured as follows:
 
 ```
@@ -75,3 +79,14 @@ Running `benchmark.py` will output a folder containing results, which is structu
 COCO performance scores are located in `pred_masks/coco_summary.txt`.
 Images of the network's predictions for each test case can be found in `vis/` if the vis flag is set.
 More benchmarking outputs (plots, missed images) can be found in `results_saurabh` if the flag is set.
+
+## Citation
+If you use this code for your research, please consider citing:
+```
+@article{danielczuk2018segmenting,
+  title={Segmenting Unknown 3D Objects from Real Depth Images using Mask R-CNN Trained on Synthetic Point Clouds},
+  author={Danielczuk, Michael and Matl, Matthew and Gupta, Saurabh and Li, Andrew and Lee, Andrew and Mahler, Jeffrey and Goldberg, Ken},
+  journal={arXiv preprint arXiv:1809.05825},
+  year={2018}
+}
+```
