@@ -1,7 +1,7 @@
 # Segmenting Unknown 3D Objects from Real<br/> Depth Images using Mask R-CNN Trained<br/> on Synthetic Point Clouds
 Michael Danielczuk, Matthew Matl, Saurabh Gupta, Andrew Lee, Andrew Li, Jeffrey Mahler, and Ken Goldberg. Under review at ICRA 2019. [Project Page](https://sites.google.com/view/wisdom-dataset/home)
 
-![TeaserImage](https://github.com/BerkeleyAutomation/sd-maskrcnn/resources/seg_example.eps)
+![TeaserImage](https://github.com/BerkeleyAutomation/sd-maskrcnn/resources/seg_example.png)
 
 ## Overview
 This is a pipeline written to handle the data and run Mask-RCNN on depth-image datasets. It can turn raw images and segmasks to properly sized and transformed images (and corresponding masks), then train Mask-RCNN upon the result. Following that, the pipeline can benchmark the final model weights on a given test dataset, perhaps of real depth images. Typically, one sets the yaml file associated with the task to perform (e.g., train, benchmark) and then runs the associated script. Benchmarking code for PCL and GOP baselines is also included.
