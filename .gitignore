@@ -1,7 +1,6 @@
 .vscode/
 .cache
 **/__pycache__
-*.png
 *~
 *.pyc
 *.egg-info
