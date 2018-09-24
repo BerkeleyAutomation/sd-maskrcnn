@@ -1,10 +1,6 @@
 numpy
 scikit-image
-tensorflow-gpu==1.7
-jupyter
+tensorflow-gpu
 opencv-python
-pytest
 keras
 tqdm
-matplotlib
-cython
