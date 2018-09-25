@@ -6,7 +6,7 @@ Michael Danielczuk, Matthew Matl, Saurabh Gupta, Andrew Lee, Andrew Li, Jeffrey 
 </p>
 
 ## Install SD Mask R-CNN
-To begin using the SD Mask R-CNN repository, run `sh install.sh`. This script will install the repo, and download the available pre-trained model to the `models` directory.
+To begin using the SD Mask R-CNN repository, clone the repository using `git clone https://github.com/BerkeleyAutomation/sd-maskrcnn.git` and then run `sh install.sh` from inside the root directory of the repository. This script will install the repo, and download the available pre-trained model to the `models` directory.
 
 Note that these instructions assume a Python 3 environment.
 
