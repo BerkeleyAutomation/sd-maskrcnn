@@ -4,6 +4,9 @@ requirements = [
     'mask-rcnn',
 ]
 
+with open('requirements.txt') as f:
+    requirements += f.read().splitlines()
+
 setup(name='sd_maskrcnn',
       version='0.1.0',
       description='SD Mask RCNN project code',
