@@ -4,3 +4,6 @@ tensorflow-gpu
 opencv-python
 keras
 tqdm
+pycocotools
+autolab_core
+ipython
