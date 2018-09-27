@@ -65,7 +65,6 @@ lib/imgproc/CMakeFiles/imgproc.dir/color.cpp.o
  /usr/include/eigen3/Eigen/src/Core/Solve.h
  /usr/include/eigen3/Eigen/src/Core/SolveTriangular.h
  /usr/include/eigen3/Eigen/src/Core/SolverBase.h
- /usr/include/eigen3/Eigen/src/Core/SpecialFunctions.h
  /usr/include/eigen3/Eigen/src/Core/StableNorm.h
  /usr/include/eigen3/Eigen/src/Core/Stride.h
  /usr/include/eigen3/Eigen/src/Core/Swap.h
@@ -100,23 +99,15 @@ lib/imgproc/CMakeFiles/imgproc.dir/color.cpp.o
  /usr/include/eigen3/Eigen/src/Core/products/GeneralBlockPanelKernel.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrixTriangular.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrixTriangular_MKL.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/Parallelizer.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointProduct.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointRank2Update.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverVector.h
  /usr/include/eigen3/Eigen/src/Core/util/BlasUtil.h
  /usr/include/eigen3/Eigen/src/Core/util/Constants.h
@@ -230,7 +221,6 @@ lib/imgproc/CMakeFiles/imgproc.dir/filter.cpp.o
  /usr/include/eigen3/Eigen/src/Core/Solve.h
  /usr/include/eigen3/Eigen/src/Core/SolveTriangular.h
  /usr/include/eigen3/Eigen/src/Core/SolverBase.h
- /usr/include/eigen3/Eigen/src/Core/SpecialFunctions.h
  /usr/include/eigen3/Eigen/src/Core/StableNorm.h
  /usr/include/eigen3/Eigen/src/Core/Stride.h
  /usr/include/eigen3/Eigen/src/Core/Swap.h
@@ -265,23 +255,15 @@ lib/imgproc/CMakeFiles/imgproc.dir/filter.cpp.o
  /usr/include/eigen3/Eigen/src/Core/products/GeneralBlockPanelKernel.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrixTriangular.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrixTriangular_MKL.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/Parallelizer.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointProduct.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointRank2Update.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverVector.h
  /usr/include/eigen3/Eigen/src/Core/util/BlasUtil.h
  /usr/include/eigen3/Eigen/src/Core/util/Constants.h
@@ -393,7 +375,6 @@ lib/imgproc/CMakeFiles/imgproc.dir/gradient.cpp.o
  /usr/include/eigen3/Eigen/src/Core/Solve.h
  /usr/include/eigen3/Eigen/src/Core/SolveTriangular.h
  /usr/include/eigen3/Eigen/src/Core/SolverBase.h
- /usr/include/eigen3/Eigen/src/Core/SpecialFunctions.h
  /usr/include/eigen3/Eigen/src/Core/StableNorm.h
  /usr/include/eigen3/Eigen/src/Core/Stride.h
  /usr/include/eigen3/Eigen/src/Core/Swap.h
@@ -428,23 +409,15 @@ lib/imgproc/CMakeFiles/imgproc.dir/gradient.cpp.o
  /usr/include/eigen3/Eigen/src/Core/products/GeneralBlockPanelKernel.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrixTriangular.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrixTriangular_MKL.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/Parallelizer.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointProduct.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointRank2Update.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverVector.h
  /usr/include/eigen3/Eigen/src/Core/util/BlasUtil.h
  /usr/include/eigen3/Eigen/src/Core/util/Constants.h
@@ -555,7 +528,6 @@ lib/imgproc/CMakeFiles/imgproc.dir/image.cpp.o
  /usr/include/eigen3/Eigen/src/Core/Solve.h
  /usr/include/eigen3/Eigen/src/Core/SolveTriangular.h
  /usr/include/eigen3/Eigen/src/Core/SolverBase.h
- /usr/include/eigen3/Eigen/src/Core/SpecialFunctions.h
  /usr/include/eigen3/Eigen/src/Core/StableNorm.h
  /usr/include/eigen3/Eigen/src/Core/Stride.h
  /usr/include/eigen3/Eigen/src/Core/Swap.h
@@ -590,23 +562,15 @@ lib/imgproc/CMakeFiles/imgproc.dir/image.cpp.o
  /usr/include/eigen3/Eigen/src/Core/products/GeneralBlockPanelKernel.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrixTriangular.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrixTriangular_MKL.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/Parallelizer.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointProduct.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointRank2Update.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverVector.h
  /usr/include/eigen3/Eigen/src/Core/util/BlasUtil.h
  /usr/include/eigen3/Eigen/src/Core/util/Constants.h
@@ -717,7 +681,6 @@ lib/imgproc/CMakeFiles/imgproc.dir/morph.cpp.o
  /usr/include/eigen3/Eigen/src/Core/Solve.h
  /usr/include/eigen3/Eigen/src/Core/SolveTriangular.h
  /usr/include/eigen3/Eigen/src/Core/SolverBase.h
- /usr/include/eigen3/Eigen/src/Core/SpecialFunctions.h
  /usr/include/eigen3/Eigen/src/Core/StableNorm.h
  /usr/include/eigen3/Eigen/src/Core/Stride.h
  /usr/include/eigen3/Eigen/src/Core/Swap.h
@@ -752,23 +715,15 @@ lib/imgproc/CMakeFiles/imgproc.dir/morph.cpp.o
  /usr/include/eigen3/Eigen/src/Core/products/GeneralBlockPanelKernel.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrixTriangular.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrixTriangular_MKL.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/Parallelizer.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointProduct.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointRank2Update.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverVector.h
  /usr/include/eigen3/Eigen/src/Core/util/BlasUtil.h
  /usr/include/eigen3/Eigen/src/Core/util/Constants.h
@@ -879,7 +834,6 @@ lib/imgproc/CMakeFiles/imgproc.dir/nms.cpp.o
  /usr/include/eigen3/Eigen/src/Core/Solve.h
  /usr/include/eigen3/Eigen/src/Core/SolveTriangular.h
  /usr/include/eigen3/Eigen/src/Core/SolverBase.h
- /usr/include/eigen3/Eigen/src/Core/SpecialFunctions.h
  /usr/include/eigen3/Eigen/src/Core/StableNorm.h
  /usr/include/eigen3/Eigen/src/Core/Stride.h
  /usr/include/eigen3/Eigen/src/Core/Swap.h
@@ -914,23 +868,15 @@ lib/imgproc/CMakeFiles/imgproc.dir/nms.cpp.o
  /usr/include/eigen3/Eigen/src/Core/products/GeneralBlockPanelKernel.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrixTriangular.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrixTriangular_MKL.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/Parallelizer.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointProduct.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointRank2Update.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverVector.h
  /usr/include/eigen3/Eigen/src/Core/util/BlasUtil.h
  /usr/include/eigen3/Eigen/src/Core/util/Constants.h
@@ -1041,7 +987,6 @@ lib/imgproc/CMakeFiles/imgproc.dir/resample.cpp.o
  /usr/include/eigen3/Eigen/src/Core/Solve.h
  /usr/include/eigen3/Eigen/src/Core/SolveTriangular.h
  /usr/include/eigen3/Eigen/src/Core/SolverBase.h
- /usr/include/eigen3/Eigen/src/Core/SpecialFunctions.h
  /usr/include/eigen3/Eigen/src/Core/StableNorm.h
  /usr/include/eigen3/Eigen/src/Core/Stride.h
  /usr/include/eigen3/Eigen/src/Core/Swap.h
@@ -1076,23 +1021,15 @@ lib/imgproc/CMakeFiles/imgproc.dir/resample.cpp.o
  /usr/include/eigen3/Eigen/src/Core/products/GeneralBlockPanelKernel.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrixTriangular.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrixTriangular_MKL.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/Parallelizer.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointProduct.h
  /usr/include/eigen3/Eigen/src/Core/products/SelfadjointRank2Update.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixVector.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixVector_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverMatrix.h
- /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverMatrix_MKL.h
  /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverVector.h
  /usr/include/eigen3/Eigen/src/Core/util/BlasUtil.h
  /usr/include/eigen3/Eigen/src/Core/util/Constants.h
