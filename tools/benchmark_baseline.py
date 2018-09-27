@@ -6,8 +6,8 @@ Please edit "cfg/benchmark_baseline.yaml" to specify the necessary parameters fo
 Run this file with the tag --config [config file name] (in this case,
 cfg/benchmark_baseline.yaml).
 
-Here is an example run command (GPU selection included):
-python3 baselines/benchmark.py --config cfg/benchmark_baseline.yaml
+Here is an example run command:
+python tools/benchmark_baseline.py
 """
 
 import os
@@ -22,16 +22,15 @@ import matplotlib.pyplot as plt
 from autolab_core import YamlConfig
 from perception import DepthImage
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from mrcnn import visualize, utils as utilslib
 
-from utils import mkdir_if_missing
-from coco_benchmark import coco_benchmark
-from saurabh_benchmark import compute_gt_stats, plot_stats, subplot, voc_ap_fast, calc_pr, inst_bench, inst_bench_image
+from sd_maskrcnn.utils import mkdir_if_missing
+from sd_maskrcnn.coco_benchmark import coco_benchmark
+from sd_maskrcnn.supplement_benchmark import compute_gt_stats, plot_stats, subplot, voc_ap_fast, calc_pr, inst_bench, inst_bench_image
 
 def benchmark(config):
     """Computes and stores predictions and then
-    evaluates them on COCO metrics and Saurabh's old benchmarking script."""
+    evaluates them on COCO metrics and supplementary benchmarking script."""
 
     print("Benchmarking Baseline method {}.".format(config['detector']['type']))
 
@@ -47,7 +46,6 @@ def benchmark(config):
     detector_type = config['detector']['type']
     if detector_type == 'euclidean' or detector_type == 'region_growing':
         from sd_maskrcnn.pcl.pydetect import detect
-        # from sd_maskrcnn.pcl.cppdetect import detect
     elif detector_type == 'gop' or detector_type == 'mcg':
         from sd_maskrcnn.gop.detect import detect
     else:
@@ -105,11 +103,11 @@ def visualize_predictions(run_dir, test_config, pred_mask_dir, pred_info_dir, sh
         plt.close()
 
 def s_benchmark(run_dir, dataset_dir, indices_arr, pred_mask_dir, pred_info_dir, gt_mask_dir, vis_missed=False):
-    """Runs Saurabh's old benchmarking code."""
+    """Runs supplementary benchmarking code."""
 
-    print("Computing Saurabh's bounding box metrics")
+    print("Computing bounding box metrics")
 
-    results_dir = os.path.join(run_dir, 'results_saurabh')
+    results_dir = os.path.join(run_dir, 'results_supplement')
     if not os.path.exists(os.path.join(results_dir, 'vis_fn')):
         os.makedirs(os.path.join(results_dir, 'vis_fn'))
 

@@ -6,18 +6,11 @@ import numpy as np
 
 from autolab_core import YamlConfig
 
-import utils
-from config import MaskConfig
-from dataset import ImageDataset
+from sd_maskrcnn import utils
+from sd_maskrcnn.config import MaskConfig
+from sd_maskrcnn.dataset import ImageDataset
 
-# Root directory of the project
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-
-# Import Mask R-CNN repo
-sys.path.append(ROOT_DIR) # To find local version of the library
 from mrcnn import model as modellib, utils as utilslib
-
-COCO_WEIGHTS_PATH = '/nfs/diskstation/projects/dex-net/segmentation/models/mask_rcnn_coco.h5'
 
 def train(config):
 
@@ -39,12 +32,12 @@ def train(config):
 
     # Create the model.
     model = modellib.MaskRCNN(mode='training', config=train_config,
-                              model_dir=config['model']['log_path'])
+                              model_dir=config['model']['path'])
 
 
     # Select weights file to load
     if config['model']['weights'].lower() == "coco":
-        weights_path = COCO_WEIGHTS_PATH
+        weights_path = os.path.join(config['model']['path'], 'mask_rcnn_coco.h5')
         # Download weights file
         if not os.path.exists(weights_path):
             utilslib.download_trained_weights(weights_path)
@@ -71,7 +64,7 @@ def train(config):
         model.load_weights(weights_path, by_name=True)
 
     # save config in run folder
-    config.save(os.path.join(config['model']['log_path'], config['save_conf_name']))
+    config.save(os.path.join(config['model']['path'], config['save_conf_name']))
 
     # train and save weights to model_path
     model.train(dataset_train, dataset_val, learning_rate=train_config.LEARNING_RATE,
@@ -79,7 +72,7 @@ def train(config):
 
     # save in the models folder
     current_datetime = time.strftime("%Y%m%d-%H%M%S")
-    model_path = os.path.join(config['model']['log_path'], "mask_rcnn_{}_{}.h5".format(train_config.NAME, current_datetime))
+    model_path = os.path.join(config['model']['path'], "mask_rcnn_{}_{}.h5".format(train_config.NAME, current_datetime))
     model.keras_model.save_weights(model_path)
 
 if __name__ == "__main__":

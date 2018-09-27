@@ -10,7 +10,7 @@ import skimage, skimage.color, skimage.io
 from perception import DepthImage
 from autolab_core import YamlConfig
 
-import utils
+from sd_maskrcnn import utils
 
 def inject_noise(img, noise_level=0.0005):
     """
