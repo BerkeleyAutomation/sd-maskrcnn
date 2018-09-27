@@ -18,11 +18,6 @@ import json
 import fnmatch
 from tqdm import tqdm
 
-# Root directory of the project
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-
-# Import Mask R-CNN repo
-sys.path.append(ROOT_DIR) # To find local version of the library
 from mrcnn import model as modellib, visualize, utils
 
 def encode_gt(mask_dir):

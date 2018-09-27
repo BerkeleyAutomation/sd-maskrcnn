@@ -10,7 +10,6 @@ from perception import BinaryImage
 from .src.gop import segmentation, proposals, contour, imgproc
 from .src.util import setupLearned
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from sd_maskrcnn.utils import mkdir_if_missing
 
 def detect(detector_type, config, run_dir, test_config):
@@ -60,7 +59,7 @@ def detect(detector_type, config, run_dir, test_config):
     gt_mask_dir = os.path.join(dataset_dir, test_config['masks'])
 
     # Input binary mask data
-    if 'bin_mask' in test_config.keys():
+    if 'bin_masks' in test_config.keys():
         bin_mask_dir = os.path.join(dataset_dir, test_config['bin_masks'])
 
     image_ids = np.arange(indices_arr.size)

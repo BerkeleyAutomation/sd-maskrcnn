@@ -4,13 +4,19 @@ import cv2
 import numpy as np
 import os
 import sys
-import pcl
 from tqdm import tqdm
+import logging
+
+try:
+    import pcl
+except ImportError:
+    logging.warning('Failed to import python-pcl! Point cloud filtering will not be available.')
+    logging.info('python-pcl can be installed from https://github.com/strawlab/python-pcl')
+    sys.exit()
 
 from perception import DepthImage, BinaryImage, CameraIntrinsics
 from autolab_core import PointCloud, YamlConfig
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from sd_maskrcnn.utils import mkdir_if_missing
 
 def detect(detector_type, config, run_dir, test_config):
