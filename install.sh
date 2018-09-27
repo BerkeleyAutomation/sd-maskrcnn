@@ -1,7 +1,25 @@
+# Fetch Mask R-CNN submodule and install it
 git submodule update --init
 cd maskrcnn && python setup.py install
-cd .. && python setup.py install
-pip install -r requirements.txt
 
-mkdir models
-wget --load-cookies cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1USddPiSrD9DWIGzlTZ4xGkhZ11GAgrvR' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1USddPiSrD9DWIGzlTZ4xGkhZ11GAgrvR" -O models/sd_maskrcnn.h5 && rm cookies.txt
+# Install module
+cd .. 
+pip install -r requirements.txt
+python setup.py install
+
+shopt -s nocasematch
+unset response
+while [[ ! $response =~ (y|yes|n|no) ]]; do
+    echo -n "Download Pre-trained Model to models (150 MB)? (y/n) > "
+    read response
+done
+
+case "$response" in
+    [yY][eE][sS]|[yY]) 
+        mkdir -p models
+        wget -v -O models/sd_maskrcnn.h5 https://berkeley.box.com/shared/static/obj0b2o589gc1odr2jwkx4qjbep11t0o.h5
+        ;;
+    *)
+        ;;
+esac
+echo "Done"
