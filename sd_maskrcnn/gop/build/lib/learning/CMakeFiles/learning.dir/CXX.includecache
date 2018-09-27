@@ -746,12 +746,6 @@ src/Core/util/ReenableStupidWarnings.h
 
 /usr/include/eigen3/Eigen/src/Cholesky/LLT.h
 
-/usr/include/eigen3/Eigen/src/Cholesky/LLT_MKL.h
-Eigen/src/Core/util/MKL_support.h
-/usr/include/eigen3/Eigen/src/Cholesky/Eigen/src/Core/util/MKL_support.h
-iostream
--
-
 /usr/include/eigen3/Eigen/src/Core/Array.h
 
 /usr/include/eigen3/Eigen/src/Core/ArrayBase.h
@@ -882,8 +876,6 @@ iostream
 
 /usr/include/eigen3/Eigen/src/Core/SolverBase.h
 
-/usr/include/eigen3/Eigen/src/Core/SpecialFunctions.h
-
 /usr/include/eigen3/Eigen/src/Core/StableNorm.h
 
 /usr/include/eigen3/Eigen/src/Core/Stride.h
@@ -952,23 +944,13 @@ iostream
 
 /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrixTriangular.h
 
-/usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrixTriangular_MKL.h
-
-/usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixMatrix_MKL.h
-
 /usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixVector.h
-
-/usr/include/eigen3/Eigen/src/Core/products/GeneralMatrixVector_MKL.h
 
 /usr/include/eigen3/Eigen/src/Core/products/Parallelizer.h
 
 /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixMatrix.h
 
-/usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixMatrix_MKL.h
-
 /usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixVector.h
-
-/usr/include/eigen3/Eigen/src/Core/products/SelfadjointMatrixVector_MKL.h
 
 /usr/include/eigen3/Eigen/src/Core/products/SelfadjointProduct.h
 
@@ -976,15 +958,9 @@ iostream
 
 /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixMatrix.h
 
-/usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixMatrix_MKL.h
-
 /usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixVector.h
 
-/usr/include/eigen3/Eigen/src/Core/products/TriangularMatrixVector_MKL.h
-
 /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverMatrix.h
-
-/usr/include/eigen3/Eigen/src/Core/products/TriangularSolverMatrix_MKL.h
 
 /usr/include/eigen3/Eigen/src/Core/products/TriangularSolverVector.h
 
@@ -1046,10 +1022,6 @@ math_constants.h
 ./HessenbergDecomposition.h
 /usr/include/eigen3/Eigen/src/Eigenvalues/./HessenbergDecomposition.h
 
-/usr/include/eigen3/Eigen/src/Eigenvalues/ComplexSchur_MKL.h
-Eigen/src/Core/util/MKL_support.h
-/usr/include/eigen3/Eigen/src/Eigenvalues/Eigen/src/Core/util/MKL_support.h
-
 /usr/include/eigen3/Eigen/src/Eigenvalues/EigenSolver.h
 ./RealSchur.h
 /usr/include/eigen3/Eigen/src/Eigenvalues/./RealSchur.h
@@ -1072,17 +1044,9 @@ Eigen/src/Core/util/MKL_support.h
 ./HessenbergDecomposition.h
 /usr/include/eigen3/Eigen/src/Eigenvalues/./HessenbergDecomposition.h
 
-/usr/include/eigen3/Eigen/src/Eigenvalues/RealSchur_MKL.h
-Eigen/src/Core/util/MKL_support.h
-/usr/include/eigen3/Eigen/src/Eigenvalues/Eigen/src/Core/util/MKL_support.h
-
 /usr/include/eigen3/Eigen/src/Eigenvalues/SelfAdjointEigenSolver.h
 ./Tridiagonalization.h
 /usr/include/eigen3/Eigen/src/Eigenvalues/./Tridiagonalization.h
-
-/usr/include/eigen3/Eigen/src/Eigenvalues/SelfAdjointEigenSolver_MKL.h
-Eigen/src/Core/util/MKL_support.h
-/usr/include/eigen3/Eigen/src/Eigenvalues/Eigen/src/Core/util/MKL_support.h
 
 /usr/include/eigen3/Eigen/src/Eigenvalues/Tridiagonalization.h
 
@@ -1132,33 +1096,17 @@ Eigen/src/Core/util/MKL_support.h
 
 /usr/include/eigen3/Eigen/src/LU/PartialPivLU.h
 
-/usr/include/eigen3/Eigen/src/LU/PartialPivLU_MKL.h
-Eigen/src/Core/util/MKL_support.h
-/usr/include/eigen3/Eigen/src/LU/Eigen/src/Core/util/MKL_support.h
-
 /usr/include/eigen3/Eigen/src/LU/arch/Inverse_SSE.h
 
 /usr/include/eigen3/Eigen/src/QR/ColPivHouseholderQR.h
-
-/usr/include/eigen3/Eigen/src/QR/ColPivHouseholderQR_MKL.h
-Eigen/src/Core/util/MKL_support.h
-/usr/include/eigen3/Eigen/src/QR/Eigen/src/Core/util/MKL_support.h
 
 /usr/include/eigen3/Eigen/src/QR/FullPivHouseholderQR.h
 
 /usr/include/eigen3/Eigen/src/QR/HouseholderQR.h
 
-/usr/include/eigen3/Eigen/src/QR/HouseholderQR_MKL.h
-../Core/util/MKL_support.h
-/usr/include/eigen3/Eigen/src/Core/util/MKL_support.h
-
 /usr/include/eigen3/Eigen/src/SVD/BDCSVD.h
 
 /usr/include/eigen3/Eigen/src/SVD/JacobiSVD.h
-
-/usr/include/eigen3/Eigen/src/SVD/JacobiSVD_MKL.h
-Eigen/src/Core/util/MKL_support.h
-/usr/include/eigen3/Eigen/src/SVD/Eigen/src/Core/util/MKL_support.h
 
 /usr/include/eigen3/Eigen/src/SVD/SVDBase.h
 

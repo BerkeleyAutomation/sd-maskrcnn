@@ -4,7 +4,8 @@ import numpy as np
 import cv2
 import argparse
 from autolab_core import YamlConfig
-import utils
+
+from sd_maskrcnn import utils
 
 def resize_images(config):
     

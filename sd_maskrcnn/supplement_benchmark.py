@@ -1,30 +1,22 @@
 import os
 import sys
 from tqdm import tqdm
-# import matplotlib
-# matplotlib.use('agg')
 from matplotlib import pyplot as plt
 
 import cv2
 import skimage.io
 import numpy as np
 
-from utils import mkdir_if_missing
-
-# Root directory of the project
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-
-# Import Mask R-CNN repo
-sys.path.append(ROOT_DIR) # To find local version of the library
+from .utils import mkdir_if_missing
 from mrcnn import model as modellib, visualize, utils as utilslib
 
 def s_benchmark(run_dir, dataset_real, inference_config, pred_mask_dir, pred_info_dir, \
                 vis_missed=False):
-    """Runs Saurabh's old benchmarking code."""
+    """Runs supplementary benchmarking code."""
 
-    print("Computing Saurabh's bounding box metrics")
+    print("Computing Supplementary's bounding box metrics")
 
-    results_dir = os.path.join(run_dir, 'results_saurabh')
+    results_dir = os.path.join(run_dir, 'results_supplement')
     mkdir_if_missing(results_dir)
 
     image_ids = dataset_real.image_ids

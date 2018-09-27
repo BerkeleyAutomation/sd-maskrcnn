@@ -3,11 +3,10 @@ Benchmark Usage Notes:
 
 Please edit "cfg/benchmark.yaml" to specify the necessary parameters for that task.
 
-Run this file with the tag --config [config file name] (in this case,
-cfg/benchmark.yaml).
+Run this file with the tag --config [config file name] if different config from the default location (cfg/benchmark.yaml).
 
 Here is an example run command (GPU selection included):
-CUDA_VISIBLE_DEVICES='0' python3 sd_maskrcnn/benchmark.py --config cfg/benchmark.yaml
+CUDA_VISIBLE_DEVICES=0 python tools/benchmark.py --config cfg/benchmark.yaml
 """
 
 import os
@@ -20,22 +19,17 @@ import matplotlib.pyplot as plt
 
 from autolab_core import YamlConfig
 
-import utils
-from config import MaskConfig
-from dataset import ImageDataset
-from coco_benchmark import coco_benchmark
-from saurabh_benchmark import s_benchmark
+from sd_maskrcnn import utils
+from sd_maskrcnn.config import MaskConfig
+from sd_maskrcnn.dataset import ImageDataset
+from sd_maskrcnn.coco_benchmark import coco_benchmark
+from sd_maskrcnn.supplement_benchmark import s_benchmark
 
-# Root directory of the project
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-
-# Import Mask R-CNN repo
-sys.path.append(ROOT_DIR) # To find local version of the library
 from mrcnn import model as modellib, utils as utilslib, visualize
 
 def benchmark(config):
     """Benchmarks a model, computes and stores model predictions and then
-    evaluates them on COCO metrics and Saurabh's old benchmarking script."""
+    evaluates them on COCO metrics and supplementary benchmarking script."""
 
     print("Benchmarking model.")
 

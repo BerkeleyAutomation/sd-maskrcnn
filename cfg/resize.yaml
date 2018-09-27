@@ -1,5 +1,5 @@
 dataset:
-  path: /nfs/diskstation/projects/dex-net/segmentation/datasets/no_noise_sim_dataset  # base path of the directory of the dataset
+  path: datasets/wisdom/wisdom-sim  # base path of the directory of the dataset
   img_dir: depth_ims_numpy # name of the image directory within the dataset folder
   img_out_dir: depth_ims_normalized
   mask_dir: modal_segmasks # name of the mask directory within the dataset folder
