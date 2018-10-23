@@ -2,7 +2,7 @@ output_dir: benchmark_results
 save_conf_name: config.yaml
 
 model:
-  path: models/sd_maskrcnn.h5
+  path: /nfs/diskstation/projects/dex-net/segmentation/models/mask_rcnn_coco_ft_wisdom_color_primesense_20180915-004228.h5
   mode: inference
   settings:
     image_shape: [512, 512]
@@ -19,9 +19,9 @@ dataset:
   masks: modal_segmasks
   indices: test_indices.npy
 
-mask:                                                                                                                                                              
+mask:
   remove_bin_pixels: 1              # Set to True if we want to discard predictions based on if they have bin pixels
-  bin_masks: segmasks_filled        # Directory containing bin masks                                                                                                                                                                                                                         
+  bin_masks: segmasks_filled        # Directory containing bin masks
   overlap_thresh: 0.5               # Overlap threshold
 
 # Visualization settings

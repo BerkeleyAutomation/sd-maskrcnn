@@ -27,9 +27,69 @@ import numpy as np
 
 from mrcnn.utils import Dataset
 
+
+"""
+TargetDataset creates a Matterport dataset for a directory of
+target images, used for target detection branch training.
+Directory structure must be as follows:
+$base_path/
+    target_indices.npy
+    depth_ims/ (Depth images here)
+        image_000000.png
+        image_000001.png
+        ...
+    color_ims/ (Color images here)
+        image_000000.png
+        image_000001.png
+        ...
+"""
+
+class TargetDataset(utils.TargetDataset):
+    def __init__(self, base_path, images, masks):
+        assert base_path != "", "You must provide the path to a dataset!"
+
+        self.base_path = base_path
+        self.images = images
+        self.masks = masks
+        super().__init__()
+
+    def load(self, imset):
+        # Load the indices for imset.
+        split_file = os.path.join(self.base_path, '{:s}'.format(imset))
+        self.image_id = np.load(split_file)
+
+        flips = [1, 2, 3]
+        for i in self.image_id:
+            if 'numpy' in self.images:
+                p = os.path.join(self.base_path, self.images,
+                                'image_{:06d}.npy'.format(i))
+            else:
+                p = os.path.join(self.base_path, self.images,
+                                'image_{:06d}.png'.format(i))
+            self.add_image('target', image_id=i, path=p)
+
+    def load_target(self, target_id):
+        # loads image from path
+        if 'numpy' in self.images:
+            image = np.load(self.image_info[image_id]['path']).squeeze()
+        else:
+            image = skimage.io.imread(self.image_info[image_id]['path'])
+        # If grayscale. Convert to RGB for consistency.
+        if image.ndim != 3:
+            image = skimage.color.gray2rgb(image)
+        # If has an alpha channel, remove it for consistency
+        if image.shape[-1] == 4:
+            image = image[..., :3]
+        return image
+
+    def load_bb(self, target_id):
+        """These are cropped, so we'll use utils.resize_image instead."""
+        return None
+
+
 """
 ImageDataset creates a Matterport dataset for a directory of
-images in order to ensure compatibility with benchmarking tools 
+images in order to ensure compatibility with benchmarking tools
 and image resizing for networks.
 Directory structure must be as follows:
 $base_path/
@@ -58,7 +118,6 @@ class ImageDataset(Dataset):
         super().__init__()
 
     def load(self, indices_file, augment=False):
-
         # Load the indices for imset.
         split_file = os.path.join(self.base_path, '{:s}'.format(indices_file))
         self.image_id = np.load(split_file)
