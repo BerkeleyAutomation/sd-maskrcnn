@@ -33,58 +33,97 @@ TargetDataset creates a Matterport dataset for a directory of
 target images, used for target detection branch training.
 Directory structure must be as follows:
 $base_path/
-    target_indices.npy
-    depth_ims/ (Depth images here)
-        image_000000.png
-        image_000001.png
+    target.json
+    images/ (target images here)
         ...
-    color_ims/ (Color images here)
-        image_000000.png
-        image_000001.png
+    piles/ (color pile images here)
         ...
+    masks/ (masks corresponding to piles)
+
+target.json must contain a list of tuples with the following format:
+(target_path, pile_path, target_index)
+
+In this class, image_id does not map one-to-one to different piles, rather
+to different pile/target pairs.
 """
 
-class TargetDataset(utils.TargetDataset):
-    def __init__(self, base_path, images, masks):
+class TargetDataset(utils.Dataset):
+    def __init__(self, base_path):
         assert base_path != "", "You must provide the path to a dataset!"
-
+        self.targets = 'images'
+        self.images = 'piles'
+        self.masks = 'masks'
         self.base_path = base_path
-        self.images = images
-        self.masks = masks
+        self.data_tuples = None
         super().__init__()
 
-    def load(self, imset):
-        # Load the indices for imset.
-        split_file = os.path.join(self.base_path, '{:s}'.format(imset))
-        self.image_id = np.load(split_file)
+    def load(self):
+        self.add_class('clutter', 1, 'fg')
+        import json
+        self.data_tuples = json.load(open(os.path.join(self.base_path, 'target.json')))
+        # self.image_id = list(range(len(self.data_tuples)))
+        for i, tup in enumerate(self.data_tuples):
+            pile_path = os.path.join(self.base_path, self.images,
+                                     self.data_tuples[i][1])
+            target_path = os.path.join(self.base_path, self.images,
+                                       self.data_tuples[i][1])
+            self.add_image('clutter', image_id=i, path=pile_path,
+                           target_path=target_path)
 
-        flips = [1, 2, 3]
-        for i in self.image_id:
-            if 'numpy' in self.images:
-                p = os.path.join(self.base_path, self.images,
-                                'image_{:06d}.npy'.format(i))
-            else:
-                p = os.path.join(self.base_path, self.images,
-                                'image_{:06d}.png'.format(i))
-            self.add_image('target', image_id=i, path=p)
+    # def load(self, imset, augment=False):
 
-    def load_target(self, target_id):
-        # loads image from path
-        if 'numpy' in self.images:
-            image = np.load(self.image_info[image_id]['path']).squeeze()
-        else:
-            image = skimage.io.imread(self.image_info[image_id]['path'])
-        # If grayscale. Convert to RGB for consistency.
-        if image.ndim != 3:
-            image = skimage.color.gray2rgb(image)
-        # If has an alpha channel, remove it for consistency
-        if image.shape[-1] == 4:
-            image = image[..., :3]
+    #     # Load the indices for imset.
+    #     split_file = os.path.join(self.base_path, '{:s}'.format(imset))
+    #     self.image_id = np.load(split_file)
+    #     self.add_class('clutter', 1, 'fg')
+
+    #     flips = [1, 2, 3]
+    #     for i in self.image_id:
+    #         if 'numpy' in self.images:
+    #             p = os.path.join(self.base_path, self.images,
+    #                             'image_{:06d}.npy'.format(i))
+    #         else:
+    #             p = os.path.join(self.base_path, self.images,
+    #                             'image_{:06d}.png'.format(i))
+    #         self.add_image('clutter', image_id=i, path=p, width=512, height=384)
+
+    #         if augment:
+    #             for flip in flips:
+    #                 self.add_image('clutter', image_id=i, path=p, width=512, height=384, flip=flip)
+
+    def load_image(self, image_id):
+        image = skimage.io.imread(os.path.join(self.base_path, self.images,
+                                               self.data_tuples[image_id][1]))
         return image
 
-    def load_bb(self, target_id):
-        """These are cropped, so we'll use utils.resize_image instead."""
-        return None
+
+    def load_target(self, image_id):
+        """Returns target image"""
+        target = skimage.io.imread(os.path.join(self.base_path, self.targets,
+                                                self.data_tuples[image_id][0]))
+
+        return target
+
+    def load_target_index(self, image_id):
+        """Returns index of target mask"""
+        target_index = int(self.data_tuples[image_id][2]) - 1 # because we no longer consider the background
+        return target_index
+
+    def load_mask(self, image_id):
+        """Returns masks corresponding to pile, class IDs"""
+        Is = []
+        all_masks = skimage.io.imread(os.path.join(self.base_path, self.masks,
+                                                   self.data_tuples[image_id][1]))
+        for i in np.arange(1,np.max(all_masks)+1):
+            I = all_masks == i # We ignore the background, so the first instance is 0-indexed.
+            if np.any(I):
+                I = I[:,:,np.newaxis]
+                Is.append(I)
+        if len(Is) > 0:
+            mask = np.concatenate(Is, 2)
+
+        class_ids = np.array([1 for _ in range(mask.shape[2])])
+        return mask, class_ids.astype(np.int32)
 
 
 """
