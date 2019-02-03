@@ -70,26 +70,6 @@ class TargetDataset(utils.Dataset):
             self.add_image('clutter', image_id=i, path=pile_path,
                            target_path=target_path)
 
-    # def load(self, imset, augment=False):
-
-    #     # Load the indices for imset.
-    #     split_file = os.path.join(self.base_path, '{:s}'.format(imset))
-    #     self.image_id = np.load(split_file)
-    #     self.add_class('clutter', 1, 'fg')
-
-    #     flips = [1, 2, 3]
-    #     for i in self.image_id:
-    #         if 'numpy' in self.images:
-    #             p = os.path.join(self.base_path, self.images,
-    #                             'image_{:06d}.npy'.format(i))
-    #         else:
-    #             p = os.path.join(self.base_path, self.images,
-    #                             'image_{:06d}.png'.format(i))
-    #         self.add_image('clutter', image_id=i, path=p, width=512, height=384)
-
-    #         if augment:
-    #             for flip in flips:
-    #                 self.add_image('clutter', image_id=i, path=p, width=512, height=384, flip=flip)
 
     def load_image(self, image_id):
         image = skimage.io.imread(os.path.join(self.base_path, self.images,
@@ -124,6 +104,11 @@ class TargetDataset(utils.Dataset):
 
         class_ids = np.array([1 for _ in range(mask.shape[2])])
         return mask, class_ids.astype(np.int32)
+
+    @property
+    def indices(self):
+        return self._image_ids
+
 
 
 """

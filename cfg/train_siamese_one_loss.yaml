@@ -3,7 +3,7 @@ model:
   weights: /nfs/diskstation/projects/dex-net/segmentation/models/mask_rcnn_coco_ft_wisdom_20180914-191150.h5     # new, last, coco, imagenet or custom path
   weight_type: old # if custom path, old = sd_maskrcnn master, new = siamese branch
   layers: siamese  # layers to train: all, siamese
-  epochs: 20       # number of epochs to train for
+  epochs: 40       # number of epochs to train for
   settings:
     name: siamese_pretrained_one_loss
     mean_pixel: [128, 128, 128]
@@ -12,7 +12,8 @@ model:
     num_classes: 2
     gpu_count: 1
     images_per_gpu: 1
-    learning_rate: 0.0002
+    learning_rate: 0.0005
+    weight_decay: 0.0002
 
 dataset:
   path: /home/andrew_lee/sd-maskrcnn/data/
@@ -24,4 +25,4 @@ dataset:
 # name of the config file to save (within the dataset folder)
 # note that this will be overwritten between multiple runs so
 # you should name this uniquely for each run.
-save_conf_name: config_siamese_one_loss_2e-4_e20_res101.yaml
+save_conf_name: config_siamese_one_loss_5e-4_e40_res101.yaml
