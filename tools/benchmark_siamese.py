@@ -44,8 +44,13 @@ def benchmark(config):
     model.load_weights_siamese(config['model']['path'],  config['model']['backbone_path'])
 
     # Create dataset
-    test_dataset = TargetDataset(config['test']['path'])
-    test_dataset.load()
+    test_dataset = TargetDataset(config['test']['path'], images=config['test']['images'],
+                                 masks=config['test']['masks'], targets=config['test']['targets'])
+
+    if config['test']['indices']:
+        test_dataset.load(imset=os.path.join(config['test']['path'], config['test']['indices']))
+    else:
+        test_dataset.load()
     test_dataset.prepare()
 
     pred_mask_dir, pred_info_dir = detect(config['output_dir'], inference_config, model, test_dataset)
@@ -120,6 +125,10 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
     image_ids = dataset.image_ids
 
     ious = np.zeros_like(dataset.image_ids, dtype=np.float)
+    max_probs = np.zeros_like(dataset.image_ids, dtype=np.float)
+
+    max_top_n_ious = np.zeros_like(dataset.image_ids, dtype=np.float)
+    max_top_n_indices = np.zeros_like(dataset.image_ids, dtype=np.int)
 
     for image_id in tqdm(image_ids):
         (pile_img, _, _, bbox, masks), (_, _, _, target_vector) \
@@ -131,15 +140,33 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
         r = np.load(os.path.join(pred_info_dir, 'example_{:06}.npy'.format(image_id))).item()
         r_masks = np.load(os.path.join(pred_mask_dir, 'example_{:06}.npy'.format(image_id)))
 
-        pred_index = np.argmax(r['target_probs'][:,1])
+        target_probs = r['target_probs'][:,1]
+
+        pred_index = np.argmax(target_probs)
         pred_mask = r_masks[pred_index,:,:] # Predicted masks are always saved in [N, H, W] instead of [H, W, N]
 
-        print(target_mask.shape, pred_mask.shape, iou(target_mask, pred_mask))
-
         ious[image_id] = iou(target_mask, pred_mask)
+        max_probs[image_id] = np.max(target_probs)
+
+        ### Top-n IoU
+        n = 3
+        top_n_indices = target_probs.argsort()[-n:]
+        top_n_ious = [iou(target_mask, r_masks[i,:,:]) for i in top_n_indices]
+
+        max_top_n_ious[image_id] = max(top_n_ious)
+        max_top_n_indices[image_id] = np.argmax(top_n_ious)
+
 
     ious_path = os.path.join(pred_info_dir, 'ious.npy')
+    max_probs_path = os.path.join(pred_info_dir, 'max_probs.npy')
+
+    max_top_n_ious_path = os.path.join(pred_info_dir, 'max_top_n_ious.npy')
+    max_top_n_indices_path = os.path.join(pred_info_dir, 'max_top_n_indices.npy')
+
     np.save(ious_path, ious)
+    np.save(max_probs_path, max_probs)
+    np.save(max_top_n_ious, max_top_n_ious_path)
+    np.save(max_top_n_indices, max_top_n_indices_path)
 
     mean_iou = np.mean(ious)
 
@@ -147,8 +174,17 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
     plt.hist(ious)
     plt.title('IoU, mean IoU: {}'.format(mean_iou))
 
-    file_name = os.path.join(pred_info_dir, 'hist_iou.png')
-    plt.savefig(file_name)
+    hist_path = os.path.join(pred_info_dir, 'hist_iou.png')
+    plt.savefig(hist_path)
+    plt.close()
+
+    # Plotting IoU vs. Prediction Probability
+    plt.scatter(ious, max_probs)
+    plt.title('IoU vs. Predicted Prob')
+
+    plot_path = os.path.join(pred_info_dir, 'plot_max_prob.png')
+    plt.savefig(plot_path)
+    plt.close()
 
     print('Mean IoU {}'.format(mean_iou))
     print('Saved statistics to:\t {}'.format(pred_info_dir))

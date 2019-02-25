@@ -48,21 +48,28 @@ to different pile/target pairs.
 """
 
 class TargetDataset(utils.Dataset):
-    def __init__(self, base_path):
+    def __init__(self, base_path, images='piles', masks='masks', targets='images'):
+        # omg fix this above before u get confused!!!
         assert base_path != "", "You must provide the path to a dataset!"
-        self.targets = 'images'
-        self.images = 'piles'
-        self.masks = 'masks'
+        self.targets = targets
+        self.images = images
+        self.masks = masks
         self.base_path = base_path
         self.data_tuples = None
         super().__init__()
 
-    def load(self):
+    def load(self, imset=None):
         self.add_class('clutter', 1, 'fg')
         import json
         self.data_tuples = json.load(open(os.path.join(self.base_path, 'target.json')))
-        # self.image_id = list(range(len(self.data_tuples)))
-        for i, tup in enumerate(self.data_tuples):
+
+        # Provide optional index file. NOTE: Tihs operates on the JSON files!
+        if imset:
+            self.image_id = np.load(imset)
+        else:
+            self.image_id = list(range(len(self.data_tuples)))
+
+        for i in self.image_id:
             pile_path = os.path.join(self.base_path, self.images,
                                      self.data_tuples[i][1])
             target_path = os.path.join(self.base_path, self.images,
