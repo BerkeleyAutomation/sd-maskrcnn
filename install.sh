@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Fetch Mask R-CNN submodule and install it
 git submodule update --init
 cd maskrcnn && python setup.py install

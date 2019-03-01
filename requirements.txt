@@ -1,10 +1,9 @@
-numpy
-scikit-image==0.13.1
-tensorflow-gpu
+pycocotools>=2.0
+tensorflow-gpu>=1.10
+numpy>=1.14.5
+scikit-image>=0.14.2
 opencv-python
-keras
+keras>=2.2
 tqdm
-autolab_core
-autolab-perception
-pycocotools
-ipython
+autolab_core>=0.0.8
+autolab-perception>=0.0.5
