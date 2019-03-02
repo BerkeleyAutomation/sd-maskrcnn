@@ -6,4 +6,4 @@ opencv-python
 keras>=2.2
 tqdm
 autolab_core>=0.0.8
-autolab-perception>=0.0.5
+autolab-perception>=0.0.4
