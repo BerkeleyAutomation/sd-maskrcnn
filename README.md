@@ -1,4 +1,4 @@
-# Segmenting Unknown 3D Objects from Real<br/> Depth Images using Mask R-CNN Trained<br/> on Synthetic Point Clouds
+# Segmenting Unknown 3D Objects from Real<br/> Depth Images using Mask R-CNN Trained<br/> on Synthetic Data
 Michael Danielczuk, Matthew Matl, Saurabh Gupta, Andrew Lee, Andrew Li, Jeffrey Mahler, and Ken Goldberg. https://arxiv.org/abs/1809.05825. [Project Page](https://sites.google.com/view/wisdom-dataset/home)
 
 <p align="center">
@@ -80,7 +80,7 @@ More benchmarking outputs (plots, missed images) can be found in `results_supple
 If you use this code for your research, please consider citing:
 ```
 @article{danielczuk2018segmenting,
-  title={Segmenting Unknown 3D Objects from Real Depth Images using Mask R-CNN Trained on Synthetic Point Clouds},
+  title={Segmenting Unknown 3D Objects from Real Depth Images using Mask R-CNN Trained on Synthetic Data},
   author={Danielczuk, Michael and Matl, Matthew and Gupta, Saurabh and Li, Andrew and Lee, Andrew and Mahler, Jeffrey and Goldberg, Ken},
   journal={arXiv preprint arXiv:1809.05825},
   year={2018}
