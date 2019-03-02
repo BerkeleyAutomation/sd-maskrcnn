@@ -217,10 +217,13 @@ def visualize_predictions(run_dir, dataset, inference_config, pred_mask_dir, pre
         r['masks'] = np.transpose(r_masks, (1, 2, 0))      
         # Visualize
         scores = r['scores'] if show_scores else None
-        visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
-                                    ['bg', 'obj'], scores=scores, show_bbox=show_bbox, show_class=show_class)
+        fig = plt.figure(figsize=(1.7067, 1.7067), dpi=300, frameon=False)
+        ax = plt.Axes(fig, [0.,0.,1.,1.])
+        fig.add_axes(ax)
+        visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], ['bg', 'obj'], 
+                                    ax=ax, scores=scores, show_bbox=show_bbox, show_class=show_class)
         file_name = os.path.join(vis_dir, 'vis_{:06d}'.format(image_id))
-        plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
+        fig.savefig(file_name, transparent=True, dpi=300)
         plt.close()
 
 def visualize_gts(run_dir, dataset, inference_config, show_bbox=True, show_scores=False, show_class=True):
@@ -240,10 +243,14 @@ def visualize_gts(run_dir, dataset, inference_config, show_bbox=True, show_score
 
         # Visualize
         scores = np.ones(gt_class_id.size) if show_scores else None
-        visualize.display_instances(image, gt_bbox, gt_mask, gt_class_id,
-                                    ['bg', 'obj'], scores, show_bbox=show_bbox, show_class=show_class)
+        fig = plt.figure(figsize=(1.7067, 1.7067), dpi=300, frameon=False)
+        ax = plt.Axes(fig, [0.,0.,1.,1.])
+        fig.add_axes(ax)
+        visualize.display_instances(image, gt_bbox, gt_mask, gt_class_id, ['bg', 'obj'], 
+                                    scores, ax=ax, show_bbox=show_bbox, show_class=show_class)
         file_name = os.path.join(vis_dir, 'gt_vis_{:06d}'.format(image_id))
-        plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
+        height, width = image.shape[:2]
+        fig.savefig(file_name, transparent=True, dpi=300)
         plt.close()
 
 if __name__ == "__main__":
