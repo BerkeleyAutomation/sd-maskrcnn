@@ -96,10 +96,13 @@ def visualize_predictions(run_dir, test_config, pred_mask_dir, pred_info_dir, sh
         else:
             r['masks'] = r_masks     
         # Visualize
-        visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
-                                    ['bg', 'obj'], show_bbox=show_bbox, show_class=show_class)
+        fig = plt.figure(figsize=(1.7067, 1.7067), dpi=300, frameon=False)
+        ax = plt.Axes(fig, [0.,0.,1.,1.])
+        fig.add_axes(ax)
+        visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], ['bg', 'obj'], 
+                                    ax=ax, show_bbox=show_bbox, show_class=show_class)
         file_name = os.path.join(vis_dir, 'vis_{:06d}'.format(image_id))
-        plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
+        fig.savefig(file_name, transparent=True, dpi=300)
         plt.close()
 
 def s_benchmark(run_dir, dataset_dir, indices_arr, pred_mask_dir, pred_info_dir, gt_mask_dir, vis_missed=False):
