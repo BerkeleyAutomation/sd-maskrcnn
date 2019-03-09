@@ -20,8 +20,8 @@ def train(config):
                                   images=config['dataset']['images'],
                                   masks=config['dataset']['masks'],
                                   targets=config['dataset']['targets'])
-    #TODO: bring back augment, train and val splits
-    dataset_train.load()
+    #TODO: bring back augment
+    dataset_train.load(config['indices'])
     dataset_train.prepare()
 
     # Validation dataset
