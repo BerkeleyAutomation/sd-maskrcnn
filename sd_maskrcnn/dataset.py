@@ -63,7 +63,7 @@ class TargetDataset(utils.Dataset):
         import json
         self.data_tuples = json.load(open(os.path.join(self.base_path, 'target.json')))
 
-        # Provide optional index file. NOTE: Tihs operates on the JSON files!
+        # Provide optional index file. NOTE: This operates on the JSON files!
         if imset:
             self.image_id = np.load(imset)
         else:

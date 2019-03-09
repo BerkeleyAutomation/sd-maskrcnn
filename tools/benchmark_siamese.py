@@ -5,6 +5,8 @@ from tqdm import tqdm
 import numpy as np
 import skimage.io as io
 from sklearn.metrics import average_precision_score, precision_recall_curve
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 from autolab_core import YamlConfig
@@ -12,7 +14,6 @@ from autolab_core import YamlConfig
 from sd_maskrcnn import utils
 from sd_maskrcnn.config import MaskConfig
 from sd_maskrcnn.dataset import TargetDataset
-from sd_maskrcnn.coco_benchmark import coco_benchmark
 from sd_maskrcnn.supplement_benchmark import s_benchmark
 
 from mrcnn import model as modellib, utils as utilslib, visualize
@@ -130,6 +131,9 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
     max_top_n_ious = np.zeros_like(dataset.image_ids, dtype=np.float)
     max_top_n_indices = np.zeros_like(dataset.image_ids, dtype=np.int)
 
+    ### Top-n IoU
+    n = 3
+
     for image_id in tqdm(image_ids):
         (pile_img, _, _, bbox, masks), (_, _, _, target_vector) \
             = modellib.load_inputs_gt(dataset, inference_config, image_id)
@@ -148,8 +152,6 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
         ious[image_id] = iou(target_mask, pred_mask)
         max_probs[image_id] = np.max(target_probs)
 
-        ### Top-n IoU
-        n = 3
         top_n_indices = target_probs.argsort()[-n:]
         top_n_ious = [iou(target_mask, r_masks[i,:,:]) for i in top_n_indices]
 
@@ -165,10 +167,13 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
 
     np.save(ious_path, ious)
     np.save(max_probs_path, max_probs)
-    np.save(max_top_n_ious, max_top_n_ious_path)
-    np.save(max_top_n_indices, max_top_n_indices_path)
+    np.save(max_top_n_ious_path, max_top_n_ious)
+    np.save(max_top_n_indices_path, max_top_n_indices)
 
     mean_iou = np.mean(ious)
+    mean_top_n_iou = np.mean(max_top_n_ious)
+
+    print('Mean IoU', mean_iou, 'Mean top-{} ious'.format(n), mean_top_n_iou)
 
     # Histogram of IoU values
     plt.hist(ious)
@@ -190,17 +195,22 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
     print('Saved statistics to:\t {}'.format(pred_info_dir))
 
 
-def plot_predictions(file_name, pile_img, target_mask, target_pile_bb, pred_mask, pred_bb, figsize=(6,6)):
+def plot_predictions(file_name, pile_img, gt_masks, gt_bbs, target_vector, pred_masks, pred_bbs,
+                     pred_target_probs, figsize=(6,6)):
     from matplotlib import patches
 
+    target_pile_bb = gt_bbs[np.argmax(target_vector)]
+    pred_index = np.argmax(pred_target_probs[:,1])
+    pred_bb = pred_bbs[pred_index]
+
     _, ax = plt.subplots(1, figsize=figsize)
-    ax.imshow(pile_img)
 
-    pred_mask_masked_array = np.ma.masked_where(np.logical_not(pred_mask), pred_mask)
-    target_mask_masked_array = np.ma.masked_where(np.logical_not(target_mask), target_mask)
-
-    ax.imshow(target_mask_masked_array, cmap='autumn', alpha=0.5)
-    ax.imshow(pred_mask_masked_array, cmap='cool', alpha=0.5)
+    pred_masks_t = np.transpose(pred_masks, axes=[1, 2, 0])
+    visualize.display_instances(pile_img, pred_bbs, pred_masks_t,
+                                np.array([1] * len(pred_target_probs[:,1])),
+                                ['', ''], pred_target_probs[:,1], figsize=figsize, ax=ax,
+                                show_bbox=False, show_class=False)
+    # ax.imshow(pile_img)
 
     pred_bb_patch = patches.Rectangle((pred_bb[1], pred_bb[0]), pred_bb[3] - pred_bb[1],
                                       pred_bb[2] - pred_bb[0], linewidth=2,
@@ -241,11 +251,14 @@ def visualize_targets(run_dir, dataset, inference_config, pred_mask_dir, pred_in
 
         pred_index = np.argmax(r['target_probs'][:,1])
         pred_mask = r_masks[pred_index,:,:] # Predicted masks are always saved in [N, H, W] instead of [H, W, N]
+
         pred_bb = r['rois'][pred_index]
 
         file_name = os.path.join(vis_dir, 'vis_{:06d}'.format(image_id))
 
-        plot_predictions(file_name, pile_img, target_mask, target_pile_bb, pred_mask, pred_bb)
+        # plot_predictions(file_name, pile_img, target_mask, target_pile_bb, pred_mask, pred_bb)
+        plot_predictions(file_name, pile_img, masks, bbox, target_vector,
+                         r_masks, r['rois'], r['target_probs'])
 
     print('Saved prediction visualizations to:\t {}'.format(vis_dir))
 
