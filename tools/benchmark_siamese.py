@@ -195,20 +195,22 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
     print('Saved statistics to:\t {}'.format(pred_info_dir))
 
 
-def plot_predictions(file_name, pile_img, gt_masks, gt_bbs, target_vector, pred_masks, pred_bbs,
-                     pred_target_probs, figsize=(6,6)):
+def plot_predictions(file_name, pile_img, target_img, gt_masks, gt_bbs, target_vector, pred_masks, pred_bbs,
+                     pred_target_probs, figsize=(14,6)):
     from matplotlib import patches
 
     target_pile_bb = gt_bbs[np.argmax(target_vector)]
     pred_index = np.argmax(pred_target_probs[:,1])
     pred_bb = pred_bbs[pred_index]
 
-    _, ax = plt.subplots(1, figsize=figsize)
+    _, axes = plt.subplots(1, 2, figsize=figsize)
+
+    axes[0].imshow(target_img)
 
     pred_masks_t = np.transpose(pred_masks, axes=[1, 2, 0])
     visualize.display_instances(pile_img, pred_bbs, pred_masks_t,
                                 np.array([1] * len(pred_target_probs[:,1])),
-                                ['', ''], pred_target_probs[:,1], figsize=figsize, ax=ax,
+                                ['', ''], pred_target_probs[:,1], figsize=figsize, ax=axes[1],
                                 show_bbox=False, show_class=False)
     # ax.imshow(pile_img)
 
@@ -223,8 +225,9 @@ def plot_predictions(file_name, pile_img, gt_masks, gt_bbs, target_vector, pred_
                                       alpha=0.8,
                                       edgecolor='red', facecolor='none')
 
-    ax.add_patch(pred_bb_patch)
-    ax.add_patch(target_bb_patch)
+    axes[1].add_patch(pred_bb_patch)
+    axes[1].add_patch(target_bb_patch)
+    plt.title('Max prob: {:06f}'.format(max(pred_target_probs[:,1])))
     plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
     plt.close()
 
@@ -239,7 +242,7 @@ def visualize_targets(run_dir, dataset, inference_config, pred_mask_dir, pred_in
     image_ids = dataset.image_ids
 
     for image_id in tqdm(image_ids):
-        (pile_img, _, _, bbox, masks), (_, _, _, target_vector) \
+        (pile_img, _, _, bbox, masks), (target_img, _, _, target_vector) \
             = modellib.load_inputs_gt(dataset, inference_config, image_id)
 
         target_mask = masks[:,:,np.argmax(target_vector)]
@@ -256,8 +259,7 @@ def visualize_targets(run_dir, dataset, inference_config, pred_mask_dir, pred_in
 
         file_name = os.path.join(vis_dir, 'vis_{:06d}'.format(image_id))
 
-        # plot_predictions(file_name, pile_img, target_mask, target_pile_bb, pred_mask, pred_bb)
-        plot_predictions(file_name, pile_img, masks, bbox, target_vector,
+        plot_predictions(file_name, pile_img, target_img, masks, bbox, target_vector,
                          r_masks, r['rois'], r['target_probs'])
 
     print('Saved prediction visualizations to:\t {}'.format(vis_dir))
