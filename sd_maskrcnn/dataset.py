@@ -80,27 +80,27 @@ class TargetDataset(utils.Dataset):
 
     def load_image(self, image_id):
         image = skimage.io.imread(os.path.join(self.base_path, self.images,
-                                               self.image_id[image_id][1]))
+                                               self.data_tuples[self.image_id[image_id]][1]))
         return image
 
 
     def load_target(self, image_id):
         """Returns target image"""
         target = skimage.io.imread(os.path.join(self.base_path, self.targets,
-                                                self.image_id[image_id][0]))
+                                                self.data_tuples[self.image_id[image_id]][0]))
 
         return target
 
     def load_target_index(self, image_id):
         """Returns index of target mask"""
-        target_index = int(self.image_id[image_id][2]) - 1 # because we no longer consider the background
+        target_index = int(self.data_tuples[self.image_id[image_id]][2]) - 1 # because we no longer consider the background
         return target_index
 
     def load_mask(self, image_id):
         """Returns masks corresponding to pile, class IDs"""
         Is = []
         all_masks = skimage.io.imread(os.path.join(self.base_path, self.masks,
-                                                   self.image_id[image_id][1]))
+                                                   self.data_tuples[self.image_id[image_id]][1]))
         for i in np.arange(1,np.max(all_masks)+1):
             I = all_masks == i # We ignore the background, so the first instance is 0-indexed.
             if np.any(I):
