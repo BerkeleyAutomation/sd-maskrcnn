@@ -49,7 +49,7 @@ def benchmark(config):
                                  masks=config['test']['masks'], targets=config['test']['targets'])
 
     if config['test']['indices']:
-        test_dataset.load(imset=os.path.join(config['test']['path'], config['test']['indices']))
+        test_dataset.load(imset=config['test']['indices'])
     else:
         test_dataset.load()
     test_dataset.prepare()
