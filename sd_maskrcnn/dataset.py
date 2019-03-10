@@ -65,6 +65,7 @@ class TargetDataset(utils.Dataset):
 
         # Provide optional index file. NOTE: This operates on the JSON files!
         if imset:
+            imset = os.path.join(self.base_path, imset)
             self.image_id = np.load(imset)
         else:
             self.image_id = list(range(len(self.data_tuples)))
