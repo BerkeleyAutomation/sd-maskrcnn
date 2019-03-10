@@ -21,7 +21,7 @@ def train(config):
                                   masks=config['dataset']['masks'],
                                   targets=config['dataset']['targets'])
     #TODO: bring back augment
-    dataset_train.load(config['train_indices'])
+    dataset_train.load(config['dataset']['train_indices'])
     dataset_train.prepare()
 
     # Validation dataset
