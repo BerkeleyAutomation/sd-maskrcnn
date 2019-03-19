@@ -21,7 +21,7 @@ detector:
   # Options for GOP
   gop:
 
-test:
+dataset:
   path: datasets/wisdom/wisdom-real/high-res
   images: depth_ims_numpy           # PCL methods require depth_ims_numpy, GOP requires color_ims
   masks: modal_segmasks

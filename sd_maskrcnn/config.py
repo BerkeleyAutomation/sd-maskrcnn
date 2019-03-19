@@ -1,41 +1,41 @@
-import numpy as np
-import os, sys
+"""
+Copyright ©2017. The Regents of the University of California (Regents). All Rights Reserved.
+Permission to use, copy, modify, and distribute this software and its documentation for educational,
+research, and not-for-profit purposes, without fee and without a signed licensing agreement, is
+hereby granted, provided that the above copyright notice, this paragraph and the following two
+paragraphs appear in all copies, modifications, and distributions. Contact The Office of Technology
+Licensing, UC Berkeley, 2150 Shattuck Avenue, Suite 510, Berkeley, CA 94720-1620, (510) 643-
+7201, otl@berkeley.edu, http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
+
+IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
+INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
+THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE. THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED
+HEREUNDER IS PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE
+MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+
+Author: Mike Danielczuk
+"""
+
 from mrcnn.config import Config
 
 class MaskConfig(Config):
-  """Configuration for training on the toy shapes dataset.
+  """Configuration for training SD Mask RCNN.
   Derives from the base Config class and overrides values specific
-  to the toy shapes dataset.
+  to SD Mask RCNN.
   """
-  # Give the configuration a recognizable name
-  NAME = "my_model"
-
-  # Train on 1 GPU and 8 images per GPU. We can put multiple images on each
-  # GPU because the images are small. Batch size is 8 (GPUs * images/GPU).
-  # GPU_COUNT = 1
-  # IMAGES_PER_GPU = 4
+  NAME = 'my_sdmaskrcnn'
 
   # Number of classes (including background)
   NUM_CLASSES = 1 + 1  # background + object
-
-  # Use small images for faster training. Set the limits of the small side
-  # the large side, and that determines the image shape.
-  IMAGE_MIN_DIM = 512
-  IMAGE_MAX_DIM = 512
-
-  # BACKBONE="resnet50"
-
   USE_MINI_MASK = False
 
   # Use smaller anchors because our image and objects are small
   # RPN_ANCHOR_SCALES = (8, 16, 32, 64, 128)  # anchor side in pixels
-
-  # Reduce training ROIs per image because the images are small and have
-  # few objects. Aim to allow ROI sampling to pick 33% positive ROIs.
-  # TRAIN_ROIS_PER_IMAGE = 32
-
-  # use small validation steps since the epoch is small
-  #VALIDATION_STEPS = 50
 
   def __init__(self, config):
     # Overriding things here.
