@@ -16,6 +16,8 @@ To benchmark a pre-trained model, first download the [pre-trained model](https:/
 ## Train a New Model
 To train a new model, first download the [WISDOM-Sim](https://berkeley.box.com/shared/static/laboype774tjgu7dzma3tmcexhdd8l5a.rar) dataset. Edit `cfg/train.yaml` so that the test path points to the dataset to train on (typically, `/path/to/dataset/wisdom/wisdom-sim/`) and adjust training parameters for your GPU (e.g., number of images per GPU, GPU count). Then, run `python tools/train.py`, again setting CUDA_VISIBLE_DEVICES if necessary.
 
+Note: If you wish to train using single channel images (such as those in WISDOM-Sim), you can change the image_channel_count and mean_pixel parameters to 1 and the single channel mean pixel value, respectively. This option also works when loading pre-trained weights (such as COCO or Imagenet).
+
 ## Other Available Tools
 Typically, one sets the yaml file associated with the task to perform (e.g., train, benchmark, augment) and then runs the associated script. Benchmarking code for PCL and GOP baselines is also included. 
 

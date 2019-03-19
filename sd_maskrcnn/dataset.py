@@ -54,6 +54,7 @@ class ImageDataset(Dataset):
         self.images = config['dataset']['images']
         self.masks = config['dataset']['masks']
 
+        self._channels = config['model']['settings']['image_channel_count']
         super().__init__()
 
     def load(self, indices_file, augment=False):
@@ -94,12 +95,16 @@ class ImageDataset(Dataset):
             image = np.load(self.image_info[image_id]['path']).squeeze()
         else:
             image = skimage.io.imread(self.image_info[image_id]['path'])
-        # If grayscale. Convert to RGB for consistency.
-        if image.ndim != 3:
+        
+        if self._channels < 4 and image.shape[-1] == 4 and image.ndim == 3:
+            image = image[...,:3]
+        if self._channels == 1 and image.ndim == 2:
+            image = image[:,:,np.newaxis]
+        elif self._channels == 1 and image.ndim == 3:
+            image = image[:,:,0,np.newaxis]
+        elif self._channels == 3 and image.ndim == 3 and image.shape[-1] == 1:
             image = skimage.color.gray2rgb(image)
-        # If has an alpha channel, remove it for consistency
-        if image.shape[-1] == 4:
-            image = image[..., :3]
+            
         return image
 
     def image_reference(self, image_id):
