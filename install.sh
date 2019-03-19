@@ -1,13 +1,19 @@
 #!/bin/bash
 
-# Fetch Mask R-CNN submodule and install it
-git submodule update --init
-cd maskrcnn && python setup.py install
+# # Fetch Mask R-CNN submodule and install it
+# git submodule update --init
+# cd maskrcnn && python setup.py install
 
-# Install module
-cd .. 
-pip install -r requirements.txt
-python setup.py install
+# # Install module
+# cd ..
+
+if [ "$#" == "1" ] && [ "$1" == "generation" ]
+then
+    echo -n "Installing generation requirements"
+    pip install .[generation]
+else
+    pip install .
+fi
 
 shopt -s nocasematch
 unset response

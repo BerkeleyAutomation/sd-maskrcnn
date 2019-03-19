@@ -2,8 +2,8 @@ pycocotools>=2.0
 tensorflow-gpu>=1.10
 numpy>=1.14.5
 scikit-image>=0.14.2
-opencv-python
 keras>=2.2
 tqdm
-autolab_core>=0.0.8
+matplotlib>=2.2
+autolab_core>=0.0.9
 autolab-perception>=0.0.4
