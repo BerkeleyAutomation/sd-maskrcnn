@@ -1,4 +1,25 @@
 """
+Copyright ©2017. The Regents of the University of California (Regents). All Rights Reserved.
+Permission to use, copy, modify, and distribute this software and its documentation for educational,
+research, and not-for-profit purposes, without fee and without a signed licensing agreement, is
+hereby granted, provided that the above copyright notice, this paragraph and the following two
+paragraphs appear in all copies, modifications, and distributions. Contact The Office of Technology
+Licensing, UC Berkeley, 2150 Shattuck Avenue, Suite 510, Berkeley, CA 94720-1620, (510) 643-
+7201, otl@berkeley.edu, http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
+
+IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
+INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
+THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE. THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED
+HEREUNDER IS PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE
+MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+
+Author: Mike Danielczuk
+
 Benchmark Usage Notes:
 
 Please edit "cfg/benchmark.yaml" to specify the necessary parameters for that task.
@@ -10,12 +31,14 @@ CUDA_VISIBLE_DEVICES=0 python tools/benchmark.py --config cfg/benchmark.yaml
 """
 
 import os
-import sys
 import argparse
 from tqdm import tqdm
 import numpy as np
 import skimage.io as io
+from copy import copy
 import matplotlib.pyplot as plt
+import tensorflow as tf
+from keras.backend.tensorflow_backend import set_session
 
 from autolab_core import YamlConfig
 
@@ -39,9 +62,12 @@ def benchmark(config):
 
     # Save config in output directory
     config.save(os.path.join(output_dir, config['save_conf_name']))
+    image_shape = config['model']['settings']['image_shape']
+    config['model']['settings']['image_min_dim'] = min(image_shape)
+    config['model']['settings']['image_max_dim'] = max(image_shape)
+    config['model']['settings']['gpu_count'] = 1
+    config['model']['settings']['images_per_gpu'] = 1
     inference_config = MaskConfig(config['model']['settings'])
-    inference_config.GPU_COUNT = 1
-    inference_config.IMAGES_PER_GPU = 1
     
     model_dir, _ = os.path.split(config['model']['path'])
     model = modellib.MaskRCNN(mode=config['model']['mode'], config=inference_config,
@@ -52,12 +78,15 @@ def benchmark(config):
     model.load_weights(config['model']['path'], by_name=True)
 
     # Create dataset
-    test_dataset = ImageDataset(config['test']['path'], config['test']['images'], config['test']['masks'])
-    test_dataset.load(config['test']['indices'])
+    test_dataset = ImageDataset(config)
+    test_dataset.load(config['dataset']['indices'])
     test_dataset.prepare()
 
-    vis_dataset = ImageDataset(config['test']['path'], 'depth_ims', 'modal_segmasks')
-    vis_dataset.load(config['test']['indices'])
+    vis_config = copy(config)
+    vis_config['dataset']['images'] = 'depth_ims'
+    vis_config['dataset']['masks'] = 'modal_segmasks'
+    vis_dataset = ImageDataset(config)
+    vis_dataset.load(config['dataset']['indices'])
     vis_dataset.prepare()
 
     ######## BENCHMARK JUST CREATES THE RUN DIRECTORY ########
@@ -67,7 +96,7 @@ def benchmark(config):
     # If we want to remove bin pixels, pass in the directory with
     # those masks.
     if config['mask']['remove_bin_pixels']:
-        bin_mask_dir = os.path.join(config['test']['path'], config['mask']['bin_masks'])
+        bin_mask_dir = os.path.join(config['dataset']['path'], config['mask']['bin_masks'])
         overlap_thresh = config['mask']['overlap_thresh']
     else:
         bin_mask_dir = False
@@ -120,9 +149,10 @@ def detect(run_dir, inference_config, model, dataset, bin_mask_dir=False, overla
     resized_segmask_dir = os.path.join(run_dir, 'modal_segmasks_processed')
     utils.mkdir_if_missing(resized_segmask_dir)
 
-    # Feed images into model one by one. For each image, predict, save, visualize?
+    # Feed images into model one by one. For each image, predict and save.
     image_ids = dataset.image_ids
     indices = dataset.indices
+    times = []
     print('MAKING PREDICTIONS')
     for image_id in tqdm(image_ids):
         # Load image and ground truth data and resize for net
@@ -133,6 +163,7 @@ def detect(run_dir, inference_config, model, dataset, bin_mask_dir=False, overla
         # Run object detection
         results = model.detect([image], verbose=0)
         r = results[0]
+        times.append(r['time'])
 
         # If we choose to mask out bin pixels, load the bin masks and
         # transform them properly.
@@ -140,9 +171,7 @@ def detect(run_dir, inference_config, model, dataset, bin_mask_dir=False, overla
         # to each mask that is entirely bin pixels.
         if bin_mask_dir:
             name = 'image_{:06d}.png'.format(indices[image_id])
-            bin_mask = io.imread(os.path.join(bin_mask_dir, name))
-            # HACK: stack bin_mask 3x
-            bin_mask = np.stack((bin_mask, bin_mask, bin_mask), axis=2)
+            bin_mask = io.imread(os.path.join(bin_mask_dir, name))[:,:,np.newaxis]
             bin_mask, _, _, _, _ = utilslib.resize_image(
                 bin_mask,
                 max_dim=inference_config.IMAGE_MAX_DIM,
@@ -150,7 +179,7 @@ def detect(run_dir, inference_config, model, dataset, bin_mask_dir=False, overla
                 mode=inference_config.IMAGE_RESIZE_MODE
             )
 
-            bin_mask = bin_mask[:,:,0]
+            bin_mask = bin_mask.squeeze()
             deleted_masks = [] # which segmasks are gonna be tossed?
             num_detects = r['masks'].shape[2]
             for k in range(num_detects):
@@ -189,7 +218,7 @@ def detect(run_dir, inference_config, model, dataset, bin_mask_dir=False, overla
         }
         r_info_path = os.path.join(pred_info_dir, 'image_{:06d}.npy'.format(image_id))
         np.save(r_info_path, r_info)
-
+    print('Took {} s'.format(sum(times)))
     print('Saved prediction masks to:\t {}'.format(pred_dir))
     print('Saved prediction info (bboxes, scores, classes) to:\t {}'.format(pred_info_dir))
     print('Saved transformed GT segmasks to:\t {}'.format(resized_segmask_dir))
@@ -202,7 +231,7 @@ def visualize_predictions(run_dir, dataset, inference_config, pred_mask_dir, pre
     vis_dir = os.path.join(run_dir, 'vis')
     utils.mkdir_if_missing(vis_dir)
 
-    # Feed images into model one by one. For each image, predict, save, visualize?
+    # Feed images into model one by one. For each image visualize predictions
     image_ids = dataset.image_ids
 
     print('VISUALIZING PREDICTIONS')
@@ -227,12 +256,12 @@ def visualize_predictions(run_dir, dataset, inference_config, pred_mask_dir, pre
         plt.close()
 
 def visualize_gts(run_dir, dataset, inference_config, show_bbox=True, show_scores=False, show_class=True):
-    """Visualizes predictions."""
-    # Create subdirectory for prediction visualizations
+    """Visualizes gts."""
+    # Create subdirectory for gt visualizations
     vis_dir = os.path.join(run_dir, 'gt_vis')
     utils.mkdir_if_missing(vis_dir)
 
-    # Feed images into model one by one. For each image, predict, save, visualize?
+    # Feed images one by one
     image_ids = dataset.image_ids
 
     print('VISUALIZING GROUND TRUTHS')
@@ -263,5 +292,10 @@ if __name__ == "__main__":
 
     # read in config file information from proper section
     config = YamlConfig(conf_args.conf_file)
-    # utils.set_tf_config()
-    benchmark(config)
+    
+    # Set up tf session to use what GPU mem it needs and benchmark
+    tf_config = tf.ConfigProto()
+    tf_config.gpu_options.allow_growth = True
+    with tf.Session(config=tf_config) as sess:
+        set_session(sess)
+        benchmark(config)

@@ -1,14 +1,31 @@
+"""
+Copyright ©2017. The Regents of the University of California (Regents). All Rights Reserved.
+Permission to use, copy, modify, and distribute this software and its documentation for educational,
+research, and not-for-profit purposes, without fee and without a signed licensing agreement, is
+hereby granted, provided that the above copyright notice, this paragraph and the following two
+paragraphs appear in all copies, modifications, and distributions. Contact The Office of Technology
+Licensing, UC Berkeley, 2150 Shattuck Avenue, Suite 510, Berkeley, CA 94720-1620, (510) 643-
+7201, otl@berkeley.edu, http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
+
+IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
+INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
+THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE. THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED
+HEREUNDER IS PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE
+MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+
+Author: Mike Danielczuk
+"""
+
 import os
-import sys
-import logging
-from tqdm import tqdm
-
-import cv2
-import skimage.io
+import skimage
 import numpy as np
-import tensorflow as tf
 
-from mrcnn import model as modellib, visualize, utils
+from mrcnn.utils import Dataset
 
 """
 ImageDataset creates a Matterport dataset for a directory of
@@ -18,33 +35,31 @@ Directory structure must be as follows:
 $base_path/
     test_indices.npy
     train_indices.npy
-    depth_ims/ (Depth images here)
+    images/ (Train/Test Images here)
         image_000000.png
         image_000001.png
         ...
-    color_ims/ (Color images here)
-        image_000000.png
-        image_000001.png
-        ...
-    modal_segmasks/ (GT segmasks here, one channel)
+    segmasks/ (GT segmasks here, one channel)
         image_000000.png
         image_000001.png
         ...
 """
 
-class ImageDataset(utils.Dataset):
-    def __init__(self, base_path, images, masks):
-        assert base_path != "", "You must provide the path to a dataset!"
+class ImageDataset(Dataset):
+    def __init__(self, config):
+        assert config['dataset']['path'] != "", "You must provide the path to a dataset!"
 
-        self.base_path = base_path
-        self.images = images
-        self.masks = masks
+        self.dataset_config = config['dataset']
+        self.base_path = config['dataset']['path']
+        self.images = config['dataset']['images']
+        self.masks = config['dataset']['masks']
+
         super().__init__()
 
-    def load(self, imset, augment=False):
-        
+    def load(self, indices_file, augment=False):
+
         # Load the indices for imset.
-        split_file = os.path.join(self.base_path, '{:s}'.format(imset))
+        split_file = os.path.join(self.base_path, '{:s}'.format(indices_file))
         self.image_id = np.load(split_file)
         self.add_class('clutter', 1, 'fg')
 
@@ -56,11 +71,11 @@ class ImageDataset(utils.Dataset):
             else:
                 p = os.path.join(self.base_path, self.images,
                                 'image_{:06d}.png'.format(i))
-            self.add_image('clutter', image_id=i, path=p, width=512, height=384)
+            self.add_image('clutter', image_id=i, path=p)
 
             if augment:
                 for flip in flips:
-                    self.add_image('clutter', image_id=i, path=p, width=512, height=384, flip=flip)
+                    self.add_image('clutter', image_id=i, path=p, flip=flip)
 
     def flip(self, image, flip):
         # flips during training for augmentation
@@ -96,14 +111,13 @@ class ImageDataset(utils.Dataset):
 
     def load_mask(self, image_id):
         # loads mask from path
-
         info = self.image_info[image_id]
         _image_id = info['id']
         Is = []
         file_name = os.path.join(self.base_path, self.masks,
           'image_{:06d}.png'.format(_image_id))
 
-        all_masks = cv2.imread(file_name, cv2.IMREAD_UNCHANGED)
+        all_masks = skimage.io.imread(file_name)
         for i in np.arange(1,np.max(all_masks)+1):
             I = all_masks == i # We ignore the background, so the first instance is 0-indexed.
             if np.any(I):
