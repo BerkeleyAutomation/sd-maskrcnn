@@ -1,0 +1,43 @@
+# dataset params
+dataset:
+  states:
+    tensors:
+      datapoints_per_file: 100
+      fields:
+        obj_poses:
+          dtype: float32
+        obj_coms:
+          dtype: float32
+        obj_ids:
+          dtype: uint32
+        image_start_ind:
+          dtype: uint32
+        image_end_ind:
+          dtype: uint32
+        state_id:
+          dtype: uint32
+        split:
+          dtype: uint8
+  images:
+    tensors:
+      datapoints_per_file: 100
+      fields:
+        depth_im:
+          dtype: float32
+          channels: 1
+        modal_segmasks:
+          dtype: uint8
+        amodal_segmasks:
+          dtype: uint8
+        stacked_segmasks:
+          channels: 1
+          dtype: uint8
+        camera_pose:
+          dtype: float32
+        camera_intrs:
+          dtype: float32
+          height: 7
+        state_ind:
+          dtype: uint32
+        split:
+          dtype: uint8
