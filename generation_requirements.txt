@@ -1,0 +1,5 @@
+gym>=0.12
+pyrender>=0.1.16
+pybullet>=2.4
+trimesh>=2.37
+scipy>=1.1

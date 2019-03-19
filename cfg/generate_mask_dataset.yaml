@@ -1,5 +1,5 @@
-num_states: 2000
-num_images_per_state: 10
+num_states: 10000
+num_images_per_state: 5
 states_per_flush: 10
 states_per_garbage_collect: 10
 log_rate: 1

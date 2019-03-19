@@ -202,11 +202,11 @@ class HeapStateSpace(gym.Space):
 
             if not os.path.isabs(mesh_filename):
                 mesh_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                             '../..',
+                                             '..',
                                              mesh_filename)
             if not os.path.isabs(pose_filename):
                 pose_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                             '../..',
+                                             '..',
                                              pose_filename)
             
             # load mesh
