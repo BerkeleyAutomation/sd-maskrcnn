@@ -1,0 +1,103 @@
+state_space:
+  heap:
+    workspace:
+      min:
+        - -0.2
+        - -0.25
+        - 0.0
+
+      max:
+        - 0.2
+        - 0.25
+        - 0.3
+
+      objects:
+        bin:
+          mesh_filename: data/bin/visual/bin.obj
+          pose_filename: data/bin/pose.tf
+
+        plane:
+          mesh_filename: data/plane/plane.obj
+          pose_filename: data/plane/pose.tf
+
+    center:
+      min:
+        - -0.1
+        - -0.1
+      max:
+        - 0.1
+        - 0.1
+
+    mean_objs: 5
+    min_objs: 2
+    max_objs: 10
+    replace: 0
+
+    max_obj_diam: 0.3
+    drop_height: 0.2
+    max_settle_steps: 500
+    mag_v_thresh: 0.005
+    mag_w_thresh: 0.1
+
+    objects:
+      mesh_dir: /nfs/diskstation/objects/meshes/
+      num_objects: 50
+      train_pct: 0.8
+      object_keys:
+        thingiverse: all
+
+      planar_translation:
+        min:
+          - -0.025
+          - -0.025
+        max:
+          - 0.025
+          - 0.025
+
+      scale:
+        min:
+          - 1.0
+        max: 
+          - 1.0
+
+      center_of_mass:
+        sigma: 0.0
+
+      density: 4000
+
+  camera:
+    name: camera
+    mesh_filename: data/camera/camera.obj
+
+    im_width: 512
+    im_height: 384
+
+    # intrinsics
+    focal_length:
+      min: 535
+      max: 560
+    delta_optical_center:
+      min: -2.5
+      max: 2.5
+
+    # position
+    x:
+      min: -0.05
+      max: 0.05
+    y:
+      min: -0.05
+      max: 0.05
+
+    # angles in degrees
+    radius:
+      min: 0.7
+      max: 0.9
+    elevation:
+      min: 0.01
+      max: 10
+    azimuth:
+      min: 0
+      max: 360
+    roll:
+      min: -10
+      max: 10
