@@ -41,8 +41,6 @@ class CameraStateSpace(gym.Space):
 
         # read params
         self.frame = config['name']
-        mesh_filename = config['mesh_filename']
-        self.mesh = trimesh.load_mesh(mesh_filename)
 
         # random variable for pose of camera
         self.camera_rv = CameraRandomVariable(config)
@@ -50,7 +48,7 @@ class CameraStateSpace(gym.Space):
     def sample(self):
         """ Sample a camera state. """
         pose, intrinsics = self.camera_rv.sample(size=1)
-        return CameraState(self.frame, self.mesh, pose, intrinsics)
+        return CameraState(self.frame, pose, intrinsics)
 
 class HeapStateSpace(gym.Space):
     """ State space for object heaps. """

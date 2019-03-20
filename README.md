@@ -6,7 +6,7 @@ Michael Danielczuk, Matthew Matl, Saurabh Gupta, Andrew Lee, Andrew Li, Jeffrey 
 </p>
 
 ## Install SD Mask R-CNN
-To begin using the SD Mask R-CNN repository, clone the repository using `git clone https://github.com/BerkeleyAutomation/sd-maskrcnn.git` and then run `bash install.sh` from inside the root directory of the repository. This script will install the repo, and download the available pre-trained model to the `models` directory, if desired.
+To begin using the SD Mask R-CNN repository, clone the repository using `git clone https://github.com/BerkeleyAutomation/sd-maskrcnn.git` and then run `bash install.sh` from inside the root directory of the repository. This script will install the repo, and download the available pre-trained model to the `models` directory, if desired. If dataset generation capabilities are desired, run `bash install.sh generation`.
 
 Note that these instructions assume a Python 3 environment.
 
@@ -17,6 +17,9 @@ To benchmark a pre-trained model, first download the [pre-trained model](https:/
 To train a new model, first download the [WISDOM-Sim](https://berkeley.box.com/shared/static/laboype774tjgu7dzma3tmcexhdd8l5a.rar) dataset. Edit `cfg/train.yaml` so that the test path points to the dataset to train on (typically, `/path/to/dataset/wisdom/wisdom-sim/`) and adjust training parameters for your GPU (e.g., number of images per GPU, GPU count). Then, run `python tools/train.py`, again setting CUDA_VISIBLE_DEVICES if necessary.
 
 Note: If you wish to train using single channel images (such as those in WISDOM-Sim), you can change the image_channel_count and mean_pixel parameters to 1 and the single channel mean pixel value, respectively. This option also works when loading pre-trained weights (such as COCO or Imagenet).
+
+## Generate a New Dataset
+To generate a new dataset for training, use the `tools/generate_mask_dataset.py` script. Edit the corresponding config files (`cfg/generate_mask_dataset.yaml, cfg/partials/states.yaml, cfg/partials/mask_dataset.yaml`) to fit your needs (specifically, at minimum, you must configure `cfg/partials/states.yaml` to point at your directory of object meshes). The `--save_tensors` command line argument allows for saving the state of each heap generated, and the `--warm_start` option allows for resuming dataset generation if it is stopped.
 
 ## Other Available Tools
 Typically, one sets the yaml file associated with the task to perform (e.g., train, benchmark, augment) and then runs the associated script. Benchmarking code for PCL and GOP baselines is also included. 
