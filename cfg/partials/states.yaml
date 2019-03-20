@@ -67,7 +67,6 @@ state_space:
 
   camera:
     name: camera
-    mesh_filename: data/camera/camera.obj
 
     im_width: 512
     im_height: 384

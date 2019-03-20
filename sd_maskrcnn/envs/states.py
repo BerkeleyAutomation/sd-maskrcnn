@@ -125,11 +125,9 @@ class CameraState(State):
     """
     def __init__(self, 
                  frame, 
-                 mesh,
                  pose,
                  intrinsics):
         self.frame = frame
-        self.mesh = mesh
         self.pose = pose
         self.intrinsics = intrinsics
 
