@@ -1,12 +1,5 @@
 #!/bin/bash
 
-# # Fetch Mask R-CNN submodule and install it
-# git submodule update --init
-# cd maskrcnn && python setup.py install
-
-# # Install module
-# cd ..
-
 if [ "$#" == "1" ] && [ "$1" == "generation" ]
 then
     echo -n "Installing generation requirements"
