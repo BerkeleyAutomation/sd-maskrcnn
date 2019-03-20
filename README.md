@@ -19,7 +19,45 @@ To train a new model, first download the [WISDOM-Sim](https://berkeley.box.com/s
 Note: If you wish to train using single channel images (such as those in WISDOM-Sim), you can change the image_channel_count and mean_pixel parameters to 1 and the single channel mean pixel value, respectively. This option also works when loading pre-trained weights (such as COCO or Imagenet).
 
 ## Generate a New Dataset
-To generate a new dataset for training, use the `tools/generate_mask_dataset.py` script. Edit the corresponding config files (`cfg/generate_mask_dataset.yaml, cfg/partials/states.yaml, cfg/partials/mask_dataset.yaml`) to fit your needs (specifically, at minimum, you must configure `cfg/partials/states.yaml` to point at your directory of object meshes). The `--save_tensors` command line argument allows for saving the state of each heap generated, and the `--warm_start` option allows for resuming dataset generation if it is stopped.
+To generate a new dataset for training, use the `tools/generate_mask_dataset.py` script. Edit the corresponding config files (`cfg/generate_mask_dataset.yaml, cfg/partials/states.yaml, cfg/partials/mask_dataset.yaml`) to fit your needs (specifically, at minimum, you must configure `cfg/partials/states.yaml` to point at your directory of object meshes). The `--save_tensors` command line argument allows for saving the state of each heap generated, and the `--warm_start` option allows for resuming dataset generation if it is stopped. By default, the script outputs a dataset of images to the directory specified on the command line with the following structure:
+```
+<dataset root directory>/
+    images/
+        amodal_masks/
+            image_000000/
+                channel_000.png
+                channel_001.png
+                ...
+            image_000001/
+                channel_000.png
+                channel_001.png
+                ...
+            ...
+        depth_ims/
+            image_000000.png
+            image_000001.png
+            ...
+        modal_masks/
+            image_000000/
+                channel_000.png
+                channel_001.png
+                ...
+            image_000001/
+                channel_000.png
+                channel_001.png
+                ...
+            ...
+        semantic_masks/
+            image_000000.png
+            image_000001.png
+            ...
+        train_indices.npy
+        test_indices.npy
+    metadata.json
+    dataset_generation.log
+    dataset_generation_params.yaml
+```
+The modal and amodal masks directories give binary amodal and modal segmentation masks for each of the objects in the heap. Semantic masks are the single-channel stacked modal masks, and depth_ims contains depth images.
 
 ## Other Available Tools
 Typically, one sets the yaml file associated with the task to perform (e.g., train, benchmark, augment) and then runs the associated script. Benchmarking code for PCL and GOP baselines is also included. 
