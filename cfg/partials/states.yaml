@@ -13,12 +13,12 @@ state_space:
 
       objects:
         bin:
-          mesh_filename: data/bin/visual/bin.obj
-          pose_filename: data/bin/pose.tf
+          mesh_filename: data/bin.obj
+          pose_filename: data/bin_pose.tf
 
         plane:
-          mesh_filename: data/plane/plane.obj
-          pose_filename: data/plane/pose.tf
+          mesh_filename: data/plane.obj
+          pose_filename: data/plane_pose.tf
 
     center:
       min:
