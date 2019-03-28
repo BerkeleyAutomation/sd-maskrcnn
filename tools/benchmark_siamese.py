@@ -109,6 +109,10 @@ def detect(run_dir, inference_config, model, dataset):
             'scores': r['scores'],
             'class_ids': r['class_ids'],
             'target_probs': r['target_probs'],
+            'rois_prefilter': r['rois_prefilter'],
+            'scores_prefilter': r['scores_prefilter'],
+            'class_ids_prefilter': r['class_ids_prefilter'],
+            'target_probs_prefilter': r['target_probs_prefilter'],
         }
         r_info_path = os.path.join(pred_info_dir, 'example_{:06d}.npy'.format(image_id))
         np.save(r_info_path, r_info)
@@ -125,14 +129,29 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
     # Create subdirectory for prediction visualizations
     image_ids = dataset.image_ids
 
-    ious = np.zeros_like(dataset.image_ids, dtype=np.float)
     max_probs = np.zeros_like(dataset.image_ids, dtype=np.float)
 
-    max_top_n_ious = np.zeros_like(dataset.image_ids, dtype=np.float)
-    max_top_n_indices = np.zeros_like(dataset.image_ids, dtype=np.int)
+    ### Detection Confidence Threshhold
+    p_s = [0.75, 0.9, 0.95] #SET
+    num_preds_above_p = {p:0 for p in p_s}
 
     ### Top-n IoU
-    n = 3
+    n_s = [1, 2, 3] #SET
+
+    max_top_n_ious = {n: np.zeros_like(dataset.image_ids, dtype=np.float) for n in n_s}
+    max_top_n_indices = {n: np.zeros_like(dataset.image_ids, dtype=np.int) for n in n_s}
+
+
+    def top_n_iou(pred_masks, target_mask, target_probs, n):
+        """Given a set of prediction masks and a target mask, returns the
+        argmax and maximum prediction-target IoU over the top n predictions by predicted
+        probability.
+        """
+        target_probs = target_probs[:]
+        top_n_indices = np.argsort(target_probs)[-n:] # grab indices of top n elements
+        top_n_ious = [iou(target_mask, r_masks[i,:,:]) for i in top_n_indices]
+        return np.argmax(top_n_ious), np.max(top_n_ious)
+
 
     for image_id in tqdm(image_ids):
         (pile_img, _, _, bbox, masks), (_, _, _, target_vector) \
@@ -146,52 +165,61 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
 
         target_probs = r['target_probs'][:,1]
 
+        for n in n_s:
+            max_index, max_iou = top_n_iou(r_masks, target_mask,
+                                            target_probs, n)
+            max_top_n_ious[n][image_id] = max_iou
+            max_top_n_indices[n][image_id] = max_index
+
         pred_index = np.argmax(target_probs)
-        pred_mask = r_masks[pred_index,:,:] # Predicted masks are always saved in [N, H, W] instead of [H, W, N]
-
-        ious[image_id] = iou(target_mask, pred_mask)
-        max_probs[image_id] = np.max(target_probs)
-
-        top_n_indices = target_probs.argsort()[-n:]
-        top_n_ious = [iou(target_mask, r_masks[i,:,:]) for i in top_n_indices]
-
-        max_top_n_ious[image_id] = max(top_n_ious)
-        max_top_n_indices[image_id] = np.argmax(top_n_ious)
+        for p in p_s:
+            if target_probs[pred_index] >= p:
+                num_preds_above_p[p] += 1
 
 
-    ious_path = os.path.join(pred_info_dir, 'ious.npy')
+        # pred_mask = r_masks[pred_index,:,:] # Predicted masks are always saved in [N, H, W] instead of [H, W, N]
+
+        # ious[image_id] = iou(target_mask, pred_mask)
+        # max_probs[image_id] = np.max(target_probs)
+
+        # top_n_indices = target_probs.argsort()[-n:]
+        # top_n_ious = [iou(target_mask, r_masks[i,:,:]) for i in top_n_indices]
+
+        # max_top_n_ious[image_id] = max(top_n_ious)
+        # max_top_n_indices[image_id] = np.argmax(top_n_ious)
+
+
     max_probs_path = os.path.join(pred_info_dir, 'max_probs.npy')
-
-    max_top_n_ious_path = os.path.join(pred_info_dir, 'max_top_n_ious.npy')
-    max_top_n_indices_path = os.path.join(pred_info_dir, 'max_top_n_indices.npy')
-
-    np.save(ious_path, ious)
     np.save(max_probs_path, max_probs)
-    np.save(max_top_n_ious_path, max_top_n_ious)
-    np.save(max_top_n_indices_path, max_top_n_indices)
 
-    mean_iou = np.mean(ious)
-    mean_top_n_iou = np.mean(max_top_n_ious)
+    # Print threshold counts
+    for p in p_s:
+        print("Threshold p = {}: {} of {}".format(p, num_preds_above_p[p], len(image_ids)))
 
-    print('Mean IoU', mean_iou, 'Mean top-{} ious'.format(n), mean_top_n_iou)
+    # Save threshold counts
+    pred_thresh_path = os.path.join(pred_info_dir, 'pred_thresh.npy')
+    np.save(pred_thresh_path, num_preds_above_p)
+
+    # Print top-n ious
+    for n in n_s:
+        print('Mean top-{} iou:'.format(n), np.mean(max_top_n_ious[n]))
+
+    # Save
+    for n in n_s:
+        iou_path = os.path.join(pred_info_dir, 'max_top_{}_ious.npy'.format(n))
+        indices_path = os.path.join(pred_info_dir, 'max_top_{}_indices.npy'.format(n))
+        np.save(iou_path, max_top_n_ious[n])
+        np.save(indices_path, max_top_n_indices[n])
+
 
     # Histogram of IoU values
-    plt.hist(ious)
-    plt.title('IoU, mean IoU: {}'.format(mean_iou))
+    for n in n_s:
+        plt.hist(max_top_n_ious[n])
+        plt.title('Mean top-{} iou: {}'.format(n, np.mean(max_top_n_ious[n])))
+        hist_path = os.path.join(pred_info_dir, 'hist_top_{}_iou.png'.format(n))
+        plt.savefig(hist_path)
+        plt.close()
 
-    hist_path = os.path.join(pred_info_dir, 'hist_iou.png')
-    plt.savefig(hist_path)
-    plt.close()
-
-    # Plotting IoU vs. Prediction Probability
-    plt.scatter(ious, max_probs)
-    plt.title('IoU vs. Predicted Prob')
-
-    plot_path = os.path.join(pred_info_dir, 'plot_max_prob.png')
-    plt.savefig(plot_path)
-    plt.close()
-
-    print('Mean IoU {}'.format(mean_iou))
     print('Saved statistics to:\t {}'.format(pred_info_dir))
 
 

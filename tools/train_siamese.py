@@ -19,7 +19,8 @@ def train(config):
     dataset_train = TargetDataset(config['dataset']['path'],
                                   images=config['dataset']['images'],
                                   masks=config['dataset']['masks'],
-                                  targets=config['dataset']['targets'])
+                                  targets=config['dataset']['targets'],
+                                  augment_targets=config['dataset']['augment'])
     #TODO: bring back augment
     dataset_train.load(config['dataset']['train_indices'])
     dataset_train.prepare()

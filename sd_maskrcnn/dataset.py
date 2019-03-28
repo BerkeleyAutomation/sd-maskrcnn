@@ -27,6 +27,9 @@ import numpy as np
 
 from mrcnn.utils import Dataset
 
+from sd_maskrcnn.data_augmentation import *
+from mrcnn import model as modellib, visualize, utils
+
 
 """
 TargetDataset creates a Matterport dataset for a directory of
@@ -48,7 +51,8 @@ to different pile/target pairs.
 """
 
 class TargetDataset(utils.Dataset):
-    def __init__(self, base_path, images='piles', masks='masks', targets='images'):
+    def __init__(self, base_path, images='piles', masks='masks', targets='images',
+                 augment_targets=False):
         # omg fix this above before u get confused!!!
         assert base_path != "", "You must provide the path to a dataset!"
         self.targets = targets
@@ -56,6 +60,7 @@ class TargetDataset(utils.Dataset):
         self.masks = masks
         self.base_path = base_path
         self.data_tuples = None
+        self.augment_targets = augment_targets
         super().__init__()
 
     def load(self, imset=None):
@@ -89,6 +94,10 @@ class TargetDataset(utils.Dataset):
         """Returns target image"""
         target = skimage.io.imread(os.path.join(self.base_path, self.targets,
                                                 self.data_tuples[self.image_id[image_id]][0]))
+
+        if self.augment_targets:
+            angle = np.random.randint(10, 350)
+            target = rotate(target, angle)
 
         return target
 
