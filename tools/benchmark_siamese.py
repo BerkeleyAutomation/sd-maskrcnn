@@ -172,8 +172,10 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
             max_top_n_indices[n][image_id] = max_index
 
         pred_index = np.argmax(target_probs)
+        gt_index = np.argmax(target_vector)
+
         for p in p_s:
-            if target_probs[pred_index] >= p:
+            if target_probs[gt_index] >= p:
                 num_preds_above_p[p] += 1
 
 
@@ -194,7 +196,7 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
 
     # Print threshold counts
     for p in p_s:
-        print("Threshold p = {}: {} of {}".format(p, num_preds_above_p[p], len(image_ids)))
+        print("Threshold p for ground truth indices = {}: {} of {}".format(p, num_preds_above_p[p], len(image_ids)))
 
     # Save threshold counts
     pred_thresh_path = os.path.join(pred_info_dir, 'pred_thresh.npy')
