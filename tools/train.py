@@ -120,6 +120,9 @@ if __name__ == "__main__":
     # read in config file information from proper section
     config = YamlConfig(conf_args.conf_file)
 
+    # Use mixed precision for speedup
+    os.environ['TF_ENABLE_AUTO_MIXED_PRECISION'] = '1'
+
     # Set up tf session to use what GPU mem it needs and train
     tf_config = tf.ConfigProto()
     tf_config.gpu_options.allow_growth = True
