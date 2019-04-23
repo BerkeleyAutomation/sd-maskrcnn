@@ -1,41 +1,68 @@
 """
-The build/compilations setup
->> pip install -r requirements.txt
->> python setup.py install
+Setup of SD Mask RCNN codebase
+
+Author: Mike Danielczuk
 """
 
-import pip
-import logging
-import pkg_resources
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+import os
+from setuptools import setup
 
-def _parse_requirements(file_path):
-    pip_ver = pkg_resources.get_distribution('pip').version
-    pip_version = list(map(int, pip_ver.split('.')[:2]))
-    if pip_version >= [6, 0]:
-        raw = pip.req.parse_requirements(file_path,
-                                         session=pip.download.PipSession())
-    else:
-        raw = pip.req.parse_requirements(file_path)
-    return [str(i.req) for i in raw]
+# load __version__
+version_file = 'sd_maskrcnn/version.py'
+exec(open(version_file).read())
 
+# load README.md as long_description
+long_description = ''
+if os.path.exists('README.md'):
+    with open('README.md', 'r') as f:
+        long_description = f.read()
 
-# parse_requirements() returns generator of pip.req.InstallRequirement objects
-try:
-    install_reqs = _parse_requirements("requirements.txt")
-    install_reqs += ['mask-rcnn']
-except Exception:
-    logging.warning('Fail load requirements file, so using default ones.')
-    install_reqs = []
+setup_requirements = [
+    'Cython',                
+    'numpy'
+]
 
-setup(name='sd_maskrcnn',
-    version='0.1.0',
+requirements = [
+    'pycocotools>=2.0',         # For benchmarking
+    'scikit-image>=0.14.2',     # For image loading
+    'keras>=2.2',               # For training
+    'tqdm',                     # For pretty progress bars
+    'matplotlib',               # For visualization of results
+    'autolab_core>=0.0.9',      # For core utilities
+    'autolab-perception',       # For image wrapping
+    'tensorflow-gpu>=1.10'      # For training
+]
+
+generation_requirements = [
+    'gym',                   # For sampling heaps
+    'pyglet==1.4.0b1',       # For pyrender  
+    'pyrender>=0.1.16',      # For rendering images
+    'pybullet',              # For dynamic sim
+    'trimesh[easy]',         # For mesh loading/exporting
+    'scipy'                  # For random vars
+]
+
+setup(
+    name='sd_maskrcnn',
+    version=__version__,
     description='SD Mask RCNN project code',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     author='Michael Danielczuk',
     author_email='mdanielczuk@berkeley.edu',
-    packages=['sd_maskrcnn'],
-    install_requires=install_reqs,
+    license='MIT',
+    url='http://github.com/BerkeleyAutomation/sd-maskrcnn',
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        'Natural Language :: English',
+        'Topic :: Scientific/Engineering'
+    ],
+    packages=['sd_maskrcnn', 'sd_maskrcnn.envs'],
+    package_data={'sd_maskrcnn': ['data/*']},
+    setup_requires=setup_requirements,
+    install_requires=requirements,
+    extras_require={
+        'generation': generation_requirements
+    }
 )

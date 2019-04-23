@@ -5,16 +5,15 @@ model:
   path: models/sd_maskrcnn.h5
   mode: inference
   settings:
+    image_shape: [512, 512]
+    image_channel_count: 3
     mean_pixel: [128,128,128]
     backbone: resnet35
-    num_classes: 2
-    gpu_count: 1
-    images_per_gpu: 1
     post_nms_rois_inference: 2000
     rpn_nms_threshold: 1.0
     detection_nms_threshold: 0.35
 
-test:
+dataset:
   path: datasets/wisdom/wisdom-real/high-res/
   images: depth_ims
   masks: modal_segmasks

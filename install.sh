@@ -1,14 +1,21 @@
 #!/bin/bash
 
-# Fetch Mask R-CNN submodule and install it
+# Install maskrcnn submodule
 git submodule update --init
-cd maskrcnn && python setup.py install
+cd maskrcnn 
+python3 setup.py install
+cd ..
 
-# Install module
-cd .. 
-pip install -r requirements.txt
-python setup.py install
+# Install main module, with generation if requested
+if [ "$#" == "1" ] && [ "$1" == "generation" ]
+then
+    echo -n "Installing generation requirements"
+    pip install .[generation]
+else
+    pip install .
+fi
 
+# Download pretrained model if requested
 shopt -s nocasematch
 unset response
 while [[ ! $response =~ (y|yes|n|no) ]]; do

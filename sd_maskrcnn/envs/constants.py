@@ -21,12 +21,20 @@ MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 Author: Mike Danielczuk
 """
 
-import os 
+# Types
+POSE_DIM = 7
+POINT_DIM = 3
 
-def mkdir_if_missing(output_dir):
-    if not os.path.exists(output_dir):
-        try:
-            os.makedirs(output_dir)
-        except:
-            print("Something went wrong in mkdir_if_missing. "
-                  "Probably some other process created the directory already.")
+# Formatting
+JSON_INDENT = 2
+
+# Keys
+KEY_SEP_TOKEN = '~'
+ENVIRONMENT_KEY = 'environment'
+
+# IDs
+TRAIN_ID = 0
+TEST_ID = 1
+
+# Physical Constants
+GRAVITY_ACCEL = 9.81

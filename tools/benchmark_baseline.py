@@ -1,4 +1,25 @@
 """
+Copyright ©2017. The Regents of the University of California (Regents). All Rights Reserved.
+Permission to use, copy, modify, and distribute this software and its documentation for educational,
+research, and not-for-profit purposes, without fee and without a signed licensing agreement, is
+hereby granted, provided that the above copyright notice, this paragraph and the following two
+paragraphs appear in all copies, modifications, and distributions. Contact The Office of Technology
+Licensing, UC Berkeley, 2150 Shattuck Avenue, Suite 510, Berkeley, CA 94720-1620, (510) 643-
+7201, otl@berkeley.edu, http://ipira.berkeley.edu/industry-info for commercial licensing opportunities.
+
+IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL,
+INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF
+THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF REGENTS HAS BEEN
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE. THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF ANY, PROVIDED
+HEREUNDER IS PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE
+MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+
+Author: Mike Danielczuk
+
 Baseline Benchmark Usage Notes:
 
 Please edit "cfg/benchmark_baseline.yaml" to specify the necessary parameters for that task.
@@ -11,16 +32,14 @@ python tools/benchmark_baseline.py
 """
 
 import os
-import sys
 import argparse
 from tqdm import tqdm
 import numpy as np
-import skimage.io as io
-import cv2
+import skimage
 import matplotlib.pyplot as plt
 
 from autolab_core import YamlConfig
-from perception import DepthImage
+from perception import DepthImage, ColorImage
 
 from mrcnn import visualize, utils as utilslib
 
@@ -54,13 +73,13 @@ def benchmark(config):
 
     # Create predictions and record where everything gets stored.
     pred_mask_dir, pred_info_dir, gt_mask_dir = \
-        detect(detector_type, config['detector'][detector_type], output_dir, config['test'])
+        detect(detector_type, config['detector'][detector_type], output_dir, config['dataset'])
 
     ap, ar = coco_benchmark(pred_mask_dir, pred_info_dir, gt_mask_dir)
     if config['vis']['predictions']:
-        visualize_predictions(output_dir, config['test'], pred_mask_dir, pred_info_dir, show_bbox=config['vis']['show_bbox_pred'], show_class=config['vis']['show_class_pred'])
+        visualize_predictions(output_dir, config['dataset'], pred_mask_dir, pred_info_dir, show_bbox=config['vis']['show_bbox_pred'], show_class=config['vis']['show_class_pred'])
     if config['vis']['s_bench']:
-        s_benchmark(output_dir, config['test'], pred_mask_dir, pred_info_dir, gt_mask_dir)
+        s_benchmark(output_dir, config['dataset'], pred_mask_dir, pred_info_dir, gt_mask_dir)
 
     print("Saved benchmarking output to {}.\n".format(output_dir))
     return ap, ar
@@ -80,11 +99,12 @@ def visualize_predictions(run_dir, test_config, pred_mask_dir, pred_info_dir, sh
     ##################################################################
     print('VISUALIZING PREDICTIONS')
     for image_id in tqdm(image_ids):
-        base_name = 'image_{:06d}'.format(indices_arr[image_id])
-        depth_image_fn = base_name + '.npy'
+        depth_image_fn = 'image_{:06d}.npy'.format(indices_arr[image_id])
+        # depth_image_fn = 'image_{:06d}.png'.format(indices_arr[image_id])        
 
         # Load image and ground truth data and resize for net
         depth_data = np.load(os.path.join(depth_dir, depth_image_fn))
+        # image = ColorImage.open(os.path.join(depth_dir, '..', 'depth_ims', depth_image_fn)).data
         image = DepthImage(depth_data).to_color().data
 
         # load mask and info
@@ -126,7 +146,7 @@ def s_benchmark(run_dir, dataset_dir, indices_arr, pred_mask_dir, pred_info_dir,
     for image_id in tqdm(image_ids):
         
         # Load image and ground truth data
-        image = cv2.imread(os.path.join(dataset_dir, 'depth_ims', 'image_{:06}.png'.format(indices_arr[image_id])))
+        image = skimage.io.imread(os.path.join(dataset_dir, 'depth_ims', 'image_{:06}.png'.format(indices_arr[image_id])))
         image = np.transpose(image, (1, 0, 2))
         gt_mask = np.load(os.path.join(gt_mask_dir, 'image_{:06}.npy'.format(image_id))).transpose()
         gt_class_id = np.array([1 for _ in range(gt_mask.shape[2])]).astype(np.int32)
