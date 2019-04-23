@@ -1,7 +1,10 @@
 #!/bin/bash
 
 # Install maskrcnn submodule
-cd maskrcnn && python setup.py install && cd ..
+git submodule update --init
+cd maskrcnn 
+python3 setup.py install
+cd ..
 
 # Install main module, with generation if requested
 if [ "$#" == "1" ] && [ "$1" == "generation" ]
