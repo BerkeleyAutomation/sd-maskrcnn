@@ -40,7 +40,7 @@ state_space:
     mag_w_thresh: 0.1
 
     objects:
-      mesh_dir: /nfs/diskstation/objects/meshes/
+      mesh_dir: datasets/objects/meshes/
       num_objects: 50
       train_pct: 0.8
       object_keys:
