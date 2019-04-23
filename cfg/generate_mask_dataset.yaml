@@ -1,0 +1,17 @@
+num_states: 10000
+num_images_per_state: 5
+states_per_flush: 10
+states_per_garbage_collect: 10
+log_rate: 1
+debug: 0
+urdf_cache_dir: /nfs/diskstation/objects/urdf/cache/
+ 
+!include partials/states.yaml
+!include partials/mask_dataset.yaml
+
+vis:
+  state: 0
+  obs: 0
+  modal_seg: 0
+  amodal_seg: 0
+  stacked_seg: 0
