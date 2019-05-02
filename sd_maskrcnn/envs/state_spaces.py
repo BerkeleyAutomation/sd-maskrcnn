@@ -189,6 +189,9 @@ class HeapStateSpace(gym.Space):
             state of the object pile
         """
 
+        # Start physics engine
+        self._physics_engine.start()
+
         # setup workspace
         workspace_obj_states = []
         workspace_objs = self._config['workspace']['objects']
@@ -347,6 +350,9 @@ class HeapStateSpace(gym.Space):
 
             total_drops += 1
             self._logger.debug('Waiting for zero velocity took %.3f sec' %(time.time()-wait))
+        
+        # Stop physics engine
+        self._physics_engine.stop()
 
         # add metadata for heap state and return it
         metadata = {'split': TRAIN_ID}
