@@ -61,15 +61,12 @@ class PybulletPhysicsEngine(PhysicsEngine):
     def __init__(self, urdf_cache_dir, debug=False):
         PhysicsEngine.__init__(self)
         self._physics_client = None
-        self._key_to_id = {}
-        self._key_to_com = {}
         self._debug = debug
         self._urdf_cache_dir = urdf_cache_dir
         if not os.path.isabs(self._urdf_cache_dir):
             self._urdf_cache_dir = os.path.join(os.getcwd(), self._urdf_cache_dir)
         if not os.path.exists(self._urdf_cache_dir):
             os.makedirs(self._urdf_cache_dir)
-        self.start()
 
     def add(self, obj, static=False):
 
@@ -139,20 +136,15 @@ class PybulletPhysicsEngine(PhysicsEngine):
 
     def reset(self):
         if self._physics_client is not None:
-            pybullet.resetSimulation(physicsClientId=self._physics_client)
-            pybullet.setGravity(0, 0, -GRAVITY_ACCEL, physicsClientId=self._physics_client)
-            self._key_to_id = {}
-            self._key_to_com = {}
-            if self._debug:
-                self._viewer.close_external()
-                while self._viewer.is_active:
-                    pass
-                self._create_scene()
-                self._viewer = Viewer(self._scene, use_raymond_lighting=True, run_in_thread=True)
+            self.stop()
+        self.start()
 
     def start(self):
         if self._physics_client is None:
             self._physics_client = pybullet.connect(pybullet.DIRECT)
+            pybullet.setGravity(0, 0, -GRAVITY_ACCEL, physicsClientId=self._physics_client)
+            self._key_to_id = {}
+            self._key_to_com = {}
             if self._debug:
                 self._create_scene()
                 self._viewer = Viewer(self._scene, use_raymond_lighting=True, run_in_thread=True)
