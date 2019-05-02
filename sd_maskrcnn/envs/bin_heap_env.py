@@ -44,7 +44,6 @@ class BinHeapEnv(gym.Env):
         # initialize class variables
         self._state = None
         self._scene = None
-        self._renderer = OffscreenRenderer(1,1)
         self._physics_engine = PybulletPhysicsEngine(urdf_cache_dir=config['urdf_cache_dir'], debug=config['debug'])
         self._state_space = HeapAndCameraStateSpace(self._physics_engine, self._state_space_config)
 
@@ -85,8 +84,6 @@ class BinHeapEnv(gym.Env):
         state = self._state_space.sample()
         self._state = state.heap
         self._camera = state.camera
-        self._renderer.viewport_width = self.camera.width
-        self._renderer.viewport_height = self.camera.height
     
     def _update_scene(self):
         # update camera
@@ -152,14 +149,10 @@ class BinHeapEnv(gym.Env):
         Useful for generating image data for multiple camera views
         """
         self._camera = self.state_space.camera.sample()
-        self._renderer.viewport_width = self.camera.width
-        self._renderer.viewport_height = self.camera.height
         self._update_scene()     
 
     def reset(self):
         """ Reset the environment. """
-        # reset sim
-        self._physics_engine.reset()
 
         # reset state space
         self._reset_state_space()
@@ -177,7 +170,9 @@ class BinHeapEnv(gym.Env):
 
     def render_camera_image(self):
         """ Render the camera image for the current scene. """
-        image = self._renderer.render(self._scene, flags=RenderFlags.DEPTH_ONLY)
+        renderer = OffscreenRenderer(self.camera.width, self.camera.height)
+        image = renderer.render(self._scene, flags=RenderFlags.DEPTH_ONLY)
+        renderer.delete()
         return image
     
     def render_segmentation_images(self):
@@ -187,6 +182,7 @@ class BinHeapEnv(gym.Env):
         full_depth = self.observation        
         modal_data = np.zeros((full_depth.shape[0], full_depth.shape[1], len(self.obj_keys)), dtype=np.uint8)
         amodal_data = np.zeros((full_depth.shape[0], full_depth.shape[1], len(self.obj_keys)), dtype=np.uint8)
+        renderer = OffscreenRenderer(self.camera.width, self.camera.height)
         flags = RenderFlags.DEPTH_ONLY
 
         # Hide all meshes
@@ -197,7 +193,7 @@ class BinHeapEnv(gym.Env):
         for i, node in enumerate(obj_mesh_nodes):
             node.mesh.is_visible = True
 
-            depth = self._renderer.render(self._scene, flags=flags)
+            depth = renderer.render(self._scene, flags=flags)
             amodal_mask = depth > 0.0
             modal_mask = np.logical_and(
                 (np.abs(depth - full_depth) < 1e-6), full_depth > 0.0
@@ -206,6 +202,8 @@ class BinHeapEnv(gym.Env):
             modal_data[modal_mask,i] = np.iinfo(np.uint8).max
             node.mesh.is_visible = False
 
+        renderer.delete()
+        
         # Show all meshes
         for mn in self._scene.mesh_nodes:
             mn.mesh.is_visible = True

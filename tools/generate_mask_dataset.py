@@ -251,7 +251,6 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
         train_inds = []
         test_inds = []
     
-
     # generate states and images
     state_id = num_prev_states
     while state_id < num_states:
