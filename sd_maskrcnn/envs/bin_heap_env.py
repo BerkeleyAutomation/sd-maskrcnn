@@ -25,7 +25,7 @@ import numpy as np
 import gym
 
 from autolab_core import Logger
-from pyrender import (Scene, PerspectiveCamera, Mesh, 
+from pyrender import (Scene, IntrinsicsCamera, Mesh, 
                       Viewer, OffscreenRenderer, RenderFlags)
 
 from .physics_engine import PybulletPhysicsEngine
@@ -87,8 +87,8 @@ class BinHeapEnv(gym.Env):
     
     def _update_scene(self):
         # update camera
-        camera = PerspectiveCamera(self.camera.yfov, znear=0.05, zfar=3.0,
-                                   aspectRatio=self.camera.aspect_ratio)
+        camera = IntrinsicsCamera(self.camera.intrinsics.fx, self.camera.intrinsics.fy, 
+                                  self.camera.intrinsics.cx, self.camera.intrinsics.cy)
         cn = next(iter(self._scene.get_nodes(name=self.camera.frame)))
         cn.camera = camera
         pose_m = self.camera.pose.matrix.copy()
@@ -121,8 +121,8 @@ class BinHeapEnv(gym.Env):
         scene = Scene()
 
         # setup camera
-        camera = PerspectiveCamera(self.camera.yfov, znear=0.05, zfar=3.0,
-                                   aspectRatio=self.camera.aspect_ratio)
+        camera = IntrinsicsCamera(self.camera.intrinsics.fx, self.camera.intrinsics.fy, 
+                                  self.camera.intrinsics.cx, self.camera.intrinsics.cy)
         pose_m = self.camera.pose.matrix.copy()
         pose_m[:,1:3] *= -1.0
         scene.add(camera, pose=pose_m, name=self.camera.frame)
