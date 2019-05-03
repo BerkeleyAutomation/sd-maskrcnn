@@ -93,11 +93,6 @@ class HeapStateSpace(gym.Space):
         max_sph_coords = np.array([2*np.pi, np.pi])
         self.obj_orientation_space = gym.spaces.Box(min_sph_coords, max_sph_coords, dtype=np.float32)
 
-        # bounds of scale
-        min_obj_scale = np.array(obj_config['scale']['min'])
-        max_obj_scale = np.array(obj_config['scale']['max'])
-        self.obj_scale_space = gym.spaces.Box(min_obj_scale, max_obj_scale, dtype=np.float32)
-
         # bounds of center of mass
         delta_com_sigma = max(1e-6, obj_config['center_of_mass']['sigma'])
         self.delta_com_rv = sstats.multivariate_normal(np.zeros(3), delta_com_sigma**2)
@@ -244,7 +239,7 @@ class HeapStateSpace(gym.Space):
         t_heap_world = np.array([heap_center[0], heap_center[1], 0])
         self._logger.debug('Sampled pile location: %.3f %.3f' %(t_heap_world[0], t_heap_world[1]))
 
-        # sample object, scale, center of mass, pose
+        # sample object, center of mass, pose
         objs_in_heap = []
         total_drops = 0
         while total_drops < total_num_objs and len(objs_in_heap) < num_objs:
@@ -258,7 +253,7 @@ class HeapStateSpace(gym.Space):
                 total_drops += 1
                 continue
             
-            # sample center of mass, proportional to scale factor
+            # sample center of mass
             delta_com = self.delta_com_rv.rvs(size=1)
             center_of_mass = obj.mesh.center_mass + delta_com
             obj.mesh.center_mass = center_of_mass
