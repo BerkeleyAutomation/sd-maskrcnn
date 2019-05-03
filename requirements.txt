@@ -8,9 +8,9 @@ matplotlib
 autolab_core>=0.0.9
 autolab-perception
 tensorflow-gpu>=1.10
-gym
+gym>=0.11
 pyglet==1.4.0b1
-pyrender>=0.1.16
+pyrender>=0.1.23
 pybullet
 trimesh[easy]
 scipy
