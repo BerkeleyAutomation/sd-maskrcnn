@@ -1,15 +1,15 @@
-num_states: 100
-num_images_per_state: 5
-states_per_flush: 10
-states_per_garbage_collect: 10
-log_rate: 1
-debug: 0
-urdf_cache_dir: datasets/objects/urdf/cache/
+num_states: 100                                     # Total number of states in dataset
+num_images_per_state: 5                             # Number of images per state
+states_per_flush: 10                                # Number of states before writing tensors (if saving tensors)
+states_per_garbage_collect: 10                      # Number of states before garbage collection (due to pybullet memory issues)
+log_rate: 1                                         # Rate at which to log dataset generation information
+debug: 0                                            # Debug flag to see physics simulation, set random seed
+urdf_cache_dir: datasets/objects/urdf/cache/        # Directory to store URDF files for meshes
  
-!include partials/states.yaml
+!include partials/states.yaml        
 !include partials/mask_dataset.yaml
 
-vis:
+vis:                                                # Visualization flags for viewing each state and generated images
   state: 0
   obs: 0
   modal_seg: 0

@@ -1,17 +1,16 @@
 state_space:
   heap:
-    workspace:
-      min:
+    workspace:          # Workspace boundaries define what region the objects can be dropped in
+      min:              # x,y,z
         - -0.2
         - -0.25
         - 0.0
-
-      max:
+      max:              # x,y,z
         - 0.2
         - 0.25
         - 0.3
 
-      objects:
+      objects:          # static workspace objects
         bin:
           mesh_filename: data/bin/bin.obj
           pose_filename: data/bin/bin_pose.tf
@@ -20,83 +19,76 @@ state_space:
           mesh_filename: data/plane/plane.obj
           pose_filename: data/plane/plane_pose.tf
 
-    center:
-      min:
+    center:             # x,y coordinates for the center of the workspace (where the center dropping point can be)
+      min:              # This is a uniform random variable from "min" to "max"
         - -0.1
         - -0.1
       max:
         - 0.1
         - 0.1
 
-    mean_objs: 5
-    min_objs: 2
-    max_objs: 10
-    replace: 0
-
-    max_obj_diam: 0.3
+    mean_objs: 5        # Poisson dist mean for number of objects in each heap
+    min_objs: 2         # Min objs in each heap
+    max_objs: 10        # Max objs in each heap
+    replace: 0          # Sample objects with replacement?
+    max_obj_diam: 0.3   # Max diameter of object to be dropped (otherwise it will be skipped)
     drop_height: 0.2
+    
+    # Dynamic sim parameters
     max_settle_steps: 500
     mag_v_thresh: 0.005
     mag_w_thresh: 0.1
 
     objects:
-      mesh_dir: datasets/objects/meshes/
-      num_objects: 50
-      train_pct: 0.8
-      object_keys:
-        ycb: all
+      mesh_dir: datasets/objects/meshes/    # Directory containing meshes to be dropped
+      num_objects: 50                       # Number of objects in dataset (test and train)
+      train_pct: 0.8                        # Percentage of objects to be designated as train
+      object_keys:                          # Folders containing meshes
+        ycb: all                            # all -> all meshes in folder. Can also specify list of mesh names
 
-      planar_translation:
-        min:
+      planar_translation:                   # Amount of translation around the center point to drop each object
+        min:                                # Uniform random variable
           - -0.025
           - -0.025
         max:
           - 0.025
           - 0.025
 
-      scale:
-        min:
-          - 1.0
-        max: 
-          - 1.0
-
-      center_of_mass:
+      center_of_mass:                       # Std deviation for normal perturbation of object center of mass
         sigma: 0.0
 
-      density: 4000
+      density: 4000                         # Fixed density for each object
 
   camera:
     name: camera
 
+    # Image size
     im_width: 512
     im_height: 384
 
-    # intrinsics
-    focal_length:
-      min: 535
+    focal_length:                           # Camera intrinsics: fx and fy
+      min: 535                              # Sampled uniformly over the given range
       max: 560
-    delta_optical_center:
-      min: -2.5
+    delta_optical_center:                   # Camera intrinsics: cx and cy
+      min: -2.5                             # Sampled uniformly over the given range
       max: 2.5
 
-    # position
-    x:
-      min: -0.05
+    x:                                      # Variation in x position and y position
+      min: -0.05                            # Sampled uniformly over the given range
       max: 0.05
     y:
       min: -0.05
       max: 0.05
 
-    # angles in degrees
-    radius:
+    radius:                                 # Uniform random variable for camera distance
       min: 0.7
       max: 0.9
-    elevation:
+    elevation:                              # Uniform random variable for camera elevation
       min: 0.01
       max: 10
-    azimuth:
+    azimuth:                                # Uniform random variable for camera azimuth
       min: 0
       max: 360
-    roll:
+    roll:                                   # Uniform random variable for camera roll
       min: -10
       max: 10
