@@ -44,7 +44,7 @@ state_space:
       num_objects: 50
       train_pct: 0.8
       object_keys:
-        thingiverse: all
+        ycb: all
 
       planar_translation:
         min:

@@ -34,9 +34,9 @@ requirements = [
 ]
 
 generation_requirements = [
-    'gym',                   # For sampling heaps
+    'gym>=0.11',             # For sampling heaps
     'pyglet==1.4.0b1',       # For pyrender  
-    'pyrender>=0.1.16',      # For rendering images
+    'pyrender>=0.1.23',      # For rendering images
     'pybullet',              # For dynamic sim
     'trimesh[easy]',         # For mesh loading/exporting
     'scipy'                  # For random vars
