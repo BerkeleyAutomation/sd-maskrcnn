@@ -19,7 +19,7 @@ fi
 shopt -s nocasematch
 unset response
 while [[ ! $response =~ (y|yes|n|no) ]]; do
-    echo -n "Download Pre-trained Model to models (150 MB)? (y/n) > "
+    echo -n "Download Pre-trained Model to models/ (150 MB)? (y/n) > "
     read response
 done
 
@@ -31,4 +31,22 @@ case "$response" in
     *)
         ;;
 esac
+
+if [ "$#" == "1" ] && [ "$1" == "generation" ]
+then
+    shopt -s nocasematch
+    unset response
+    while [[ ! $response =~ (y|yes|n|no) ]]; do
+        echo -n "Download ycb object models to datasets/objects/meshes/ycb/ (45 MB)? (y/n) > "
+        read response
+    done
+
+    case "$response" in
+        [yY][eE][sS]|[yY]) 
+            python tools/download_ycb_dataset.py
+            ;;
+        *)
+            ;;
+    esac
+fi
 echo "Done"
