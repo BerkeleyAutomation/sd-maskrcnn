@@ -5,8 +5,8 @@ states_per_garbage_collect: 10                      # Number of states before ga
 log_rate: 1                                         # Rate at which to log dataset generation information
 debug: 0                                            # Debug flag to see physics simulation, set random seed
 urdf_cache_dir: datasets/objects/urdf/cache/        # Directory to store URDF files for meshes
- 
-!include partials/states.yaml        
+
+!include partials/states.yaml
 !include partials/mask_dataset.yaml
 
 vis:                                                # Visualization flags for viewing each state and generated images
