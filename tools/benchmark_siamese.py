@@ -62,6 +62,36 @@ def benchmark(config):
     print('Saved benchmarking output to \t{}.\n'.format(config['output_dir']))
 
 
+def benchmark_existing(config, pred_mask_dir, pred_info_dir):
+    """Use an existing mask and info directory to calculate statistics and visualize targets."""
+    print("Benchmarking model with existing infernece outputs.")
+
+    # Create new directory for outputs
+    output_dir = config['output_dir']
+    utils.mkdir_if_missing(output_dir)
+
+    # Save config in output directory
+    config.save(os.path.join(output_dir, config['save_conf_name']))
+    inference_config = MaskConfig(config['model']['settings'])
+    inference_config.GPU_COUNT = 1
+    inference_config.IMAGES_PER_GPU = 1
+
+    # Create dataset
+    test_dataset = TargetDataset(config['test']['path'], images=config['test']['images'],
+                                 masks=config['test']['masks'], targets=config['test']['targets'])
+
+    if config['test']['indices']:
+        test_dataset.load(imset=config['test']['indices'])
+    else:
+        test_dataset.load()
+    test_dataset.prepare()
+
+    calculate_statistics(output_dir, test_dataset, inference_config, pred_mask_dir, pred_info_dir)
+    visualize_targets(output_dir, test_dataset, inference_config, pred_mask_dir, pred_info_dir)
+    print('Saved benchmarking output to \t{}.\n'.format(config['output_dir']))
+
+
+
 def detect(run_dir, inference_config, model, dataset):
     """
     Given a run directory, a MaskRCNN config object, a MaskRCNN model object,
@@ -131,10 +161,6 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
 
     max_probs = np.zeros_like(dataset.image_ids, dtype=np.float)
 
-    ### Detection Confidence Threshhold
-    p_s = [0.75, 0.9, 0.95] #SET
-    num_preds_above_p = {p:0 for p in p_s}
-
     ### Top-n IoU
     n_s = [1, 2, 3] #SET
 
@@ -173,34 +199,6 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
 
         pred_index = np.argmax(target_probs)
         gt_index = np.argmax(target_vector)
-
-        for p in p_s:
-            if target_probs[gt_index] >= p:
-                num_preds_above_p[p] += 1
-
-
-        # pred_mask = r_masks[pred_index,:,:] # Predicted masks are always saved in [N, H, W] instead of [H, W, N]
-
-        # ious[image_id] = iou(target_mask, pred_mask)
-        # max_probs[image_id] = np.max(target_probs)
-
-        # top_n_indices = target_probs.argsort()[-n:]
-        # top_n_ious = [iou(target_mask, r_masks[i,:,:]) for i in top_n_indices]
-
-        # max_top_n_ious[image_id] = max(top_n_ious)
-        # max_top_n_indices[image_id] = np.argmax(top_n_ious)
-
-
-    max_probs_path = os.path.join(pred_info_dir, 'max_probs.npy')
-    np.save(max_probs_path, max_probs)
-
-    # Print threshold counts
-    for p in p_s:
-        print("Threshold p for ground truth indices = {}: {} of {}".format(p, num_preds_above_p[p], len(image_ids)))
-
-    # Save threshold counts
-    pred_thresh_path = os.path.join(pred_info_dir, 'pred_thresh.npy')
-    np.save(pred_thresh_path, num_preds_above_p)
 
     # Print top-n ious
     for n in n_s:
@@ -300,9 +298,18 @@ if __name__ == "__main__":
     conf_parser = argparse.ArgumentParser(description="Benchmark Siamese SD Mask RCNN model")
     conf_parser.add_argument("--config", action="store", default="cfg/benchmark_siamese.yaml",
                                dest="conf_file", type=str, help="path to the configuration file")
+    conf_parser.add_argument("--pred_masks", type=str, help="path to pred mask directory")
+    conf_parser.add_argument("--pred_info", type=str, help="path to pred info directory")
     conf_args = conf_parser.parse_args()
 
+    print(conf_args)
     # read in config file information from proper section
     config = YamlConfig(conf_args.conf_file)
+
+    if conf_args.pred_masks and conf_args.pred_info:
+        benchmark_existing(config, conf_args.pred_masks, conf_args.pred_info)
+    elif conf_args.pred_masks or conf_args.pred_info:
+        raise ValueError("Need both masks dir and info dir")
+    else:
+        benchmark(config)
     # utils.set_tf_config()
-    benchmark(config)
