@@ -1,4 +1,57 @@
-# Segmenting Unknown 3D Objects from Real<br/> Depth Images using Mask R-CNN Trained<br/> on Synthetic Data
+# SD Mask R-CNN Target Branch Experimentation
+
+This is Andrew Lee's branch for development of the target identification SD Mask R-CNN variant.
+Currently, given a dataset of `(target obj image, pile image, GT obj mask index)`, it is able to identify the desired target object mask in addition to performing segmentation on RGB images of object piles.
+
+For questions please reach out to Andrew Lee or Mike. Andrew is interning and may not be responsive but can advise more generally.
+
+## Setup
+Train using `tools/train_siamese.py` and benchmark using `tools/benchmark_siamese.py`. Configs are specified in the same fashion as with the original SD Mask R-CNN. These scripts are somewhat similar to the original SD Mask R-CNN train and benchmark scripts but needed some tweaks to account for a new dataset format. Because changes have been made to the underlying Keras model inputs and outputs, the original scripts will no longer be functional.
+
+Training with the config and dataset below with no changes should yield a steadily declining loss curve (loss < 0.03 after 20 epochs), and the benchmarking script should report an mIoU of ~0.55. Andrew got 0.567. If the net can't pull this off there's likely a bug in the implementation.
+
+Please don't push changes to this branch- check out your own branch and make changes there. 
+
+## Config
+Current config is not on source control (and it probably should be)- located at `/nfs/diskstation/andrew_lee/cfg/train_siamese_one_loss.yaml`. There are new fields added to reflect changes in dataset format and for training the target branch.
+
+## Dataset Format Changes
+Dataset can be found at `/nfs/diskstation/andrew_lee/wisdom_real_targets/`. As the inputs to the model are no longer just a pile image and corresponding pile GT mask, we had to change the convention of the original Mask R-CNN repo. Each index in the dataset no longer corresponds to an identically-named image/mask stack in the dataset (`image_000123.png/.npy`), but rather a tuple of `(target obj image path, pile image path, index in corresponding GT mask stack)`. These tuples can be found in `target.json` at the root of the dataset directory. Please see the implementations at `TargetDataset` in `sd_maskrcnn/dataset.py`, as well as `model.py#load_inputs_gt` and `model.py#load_target`.
+
+The JSON file containing the tuples is generated in a messy script located at `tools/generate_target_indices.ipynb` (sorry about that). If you plan to generate a new dataset or change the dataset format again you will likely need to run this notebook.
+
+## Benchmarking
+Benchmarking statistics are calculated ad-hoc in `tools/benchmark_siamese.py`. The convention is to put desired statistics into a Python dict and save it as a NumPy structured array. There is also a way to do benchmarking statistics & visualizations only (no inference, no GPU needed) by specifying an existing output directory.
+
+## TODOs
+These are things that Andrew wanted to do but didn't get to, in increasing order of difficulty by his estimates:
+### Research
+- [ ] Time for one forward pass- both network and total incl. pre- and post-processing check for improvements over separate segmentation & target ID pipeline (may already be supported since Andrew rebased recently)
+- [ ] Get precision and recall curves and mean average precision (mAP) statistics. As this is a binary classification task (did you get the target or not), recommended ways to calculate are by either fixing an IoU threshold and varying network confidence, or vice-versa. mAP can be calculated with COCO benchmark tools (see original SD Mask R-CNN implementation).
+- [ ] Double check if random rotations are useful
+- [ ] Regularization and/or other strategies to prevent net from being equally confident in some predictions
+- [ ] (*Mike and Andrew think this is most promising*) Pass in multiple images of target object in different stable poses, and explore architecture tweaks to utilize the additional information from that. Requires non-trivial engineering effort to modify dataset format and dataset loading methods- associated task in Engineering section.
+- [ ] Reenable other losses and train all branches end-to-end. May require some tricks to balance the losses out.
+- [ ] Add a 4th channel for depth data. Work by Andrew Li (ask Mike) indicates that even depth data alone is somewhat sufficient for this task.
+
+### Engineering
+- [ ] Put config in source control
+- [ ] Support Siamese architecture changes in config (e.g. number of layers, layer size) 
+- [ ] Support rotation & other dataset augmentations in config (could look into old Matterport implementation)
+- [ ] Rebase changes from `master` of `BerkeleyAutomation/sd-maskrcnn`and `BerkeleyAutomation/maskrcnn` frequently (annoying, Andrew has neglected this, oops)
+- [ ] Properly implement dataset generation workflow instead of using an iPython notebook- but make sure it's still possible to sanity check.
+- [ ] Design a more formal way of calculating multiple benchmarks and recording their outputs.
+- [ ] Support any number of target images in dataset and model. Requires changes in network architecture and the data generator (both in `model.py`), as well as in the `TargetDataset` class. Probably worth setting a corresponding config field as Keras doesn't do well with dynamic input sizes.
+- [ ] Merge functionality of this branch with the master branch. **This is a difficult task which needs software design chops** (the idiosyncracies in the codebase are because of a failed attempt to do so). Areas to change include putting options for extra branches in config and supporting them in model code, supporting more general benchmarking and dataset functions. If you come up with a suitable abstraction that can support this please run it by Andrew & Mike.
+
+
+
+
+
+# ---ORIGINAL README BELOW---
+
+# Segmenting Unknown 3D Objects from Real<br/> Depth Images using Mask R-CNN Trained<br/> on Synthetic Point Clouds
+>>>>>>> Knowledge transfer
 Michael Danielczuk, Matthew Matl, Saurabh Gupta, Andrew Lee, Andrew Li, Jeffrey Mahler, and Ken Goldberg. https://arxiv.org/abs/1809.05825. [Project Page](https://sites.google.com/view/wisdom-dataset/home)
 
 <p align="center">
