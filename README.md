@@ -38,6 +38,7 @@ These are things that Andrew wanted to do but didn't get to, in increasing order
 - [ ] Put config in source control
 - [ ] Support Siamese architecture changes in config (e.g. number of layers, layer size) 
 - [ ] Support rotation & other dataset augmentations in config (could look into old Matterport implementation)
+- [x] Support benchmarking from existing results directory instead of end-to-end (which requires a free GPU)
 - [ ] Rebase changes from `master` of `BerkeleyAutomation/sd-maskrcnn`and `BerkeleyAutomation/maskrcnn` frequently (annoying, Andrew has neglected this, oops)
 - [ ] Properly implement dataset generation workflow instead of using an iPython notebook- but make sure it's still possible to sanity check.
 - [ ] Design a more formal way of calculating multiple benchmarks and recording their outputs.
