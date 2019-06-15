@@ -29,7 +29,7 @@ These are things that Andrew wanted to do but didn't get to, in increasing order
 - [ ] Time for one forward pass- both network and total incl. pre- and post-processing check for improvements over separate segmentation & target ID pipeline (may already be supported since Andrew rebased recently)
 - [ ] Get precision and recall curves and mean average precision (mAP) statistics. As this is a binary classification task (did you get the target or not), recommended ways to calculate are by either fixing an IoU threshold and varying network confidence, or vice-versa. mAP can be calculated with COCO benchmark tools (see original SD Mask R-CNN implementation).
 - [ ] Double check if random rotations are useful
-- [ ] Regularization and/or other strategies to prevent net from being equally confident in some predictions
+- [ ] Regularization and/or other strategies to prevent net from being equally confident in some predictions, and being overconfident. Suggested references include (https://arxiv.org/pdf/1512.00567.pdf, section 7 and https://arxiv.org/pdf/1701.06548.pdf).
 - [ ] (*Mike and Andrew think this is most promising*) Pass in multiple images of target object in different stable poses, and explore architecture tweaks to utilize the additional information from that. Requires non-trivial engineering effort to modify dataset format and dataset loading methods- associated task in Engineering section.
 - [ ] Reenable other losses and train all branches end-to-end. May require some tricks to balance the losses out.
 - [ ] Add a 4th channel for depth data. Work by Andrew Li (ask Mike) indicates that even depth data alone is somewhat sufficient for this task.
