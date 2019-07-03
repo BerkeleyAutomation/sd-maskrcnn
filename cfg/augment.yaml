@@ -1,5 +1,10 @@
 img_dir: datasets/wisdom/wisdom-sim/depth_ims    # location of all the images to be augmented
-out_dir: datasets/augmented_ims                  # output location of the augmented images
+out_dir: datasets/augmented_ims_kinect                  # output location of the augmented images
+
+average_blur: 1     # Apply an average blur filter to the image
+width: 9            # Width of kernel to apply
+
+double_resize: 1    # Resize image down to half size, then back up
 
 inject_noise: 1     # use noise injection
 noise_level: 0.01   # level of noise injection (given that MAX_VAL of a pixel is 1.0) 

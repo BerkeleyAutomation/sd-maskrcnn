@@ -25,6 +25,7 @@ method of composing them to operate upon lists of images.
 """
 
 import os
+import cv2
 import numpy as np
 import argparse
 from tqdm import tqdm
@@ -34,6 +35,25 @@ from perception import DepthImage
 from autolab_core import YamlConfig
 
 from sd_maskrcnn.utils import mkdir_if_missing
+
+
+def apply_average_blur(img, width=5):
+    """
+    Apply uniform kernel of given width to image
+    """
+    kernel = np.ones((width, width), dtype=float) / (width*width)
+    dst = cv2.filter2D(img, -1, kernel)
+    return dst
+
+
+def double_resize(img):
+    """
+    Size image down, then back down to add some noise
+    """
+    return skimage.transform.rescale(
+                skimage.transform.rescale(img, 0.5, multichannel=False), 
+                2, multichannel=False)
+
 
 def inject_noise(img, noise_level=0.0005):
     """
@@ -47,28 +67,33 @@ def inject_noise(img, noise_level=0.0005):
     # noise[img <= noise_threshold] = 0.0
     return img + noise
 
+
 def inpaint(img):
     """
     Inpaint the image
     """
     # create DepthImage from gray version of img
-    gray_img = skimage.color.rgb2gray(img)
-    depth_img = DepthImage(gray_img)
+    # gray_img = skimage.color.rgb2gray(img)
+    depth_img = DepthImage(img)
 
     # zero out high-gradient areas and inpaint
     thresh_img = depth_img.threshold_gradients_pctile(0.95)
     inpaint_img = thresh_img.inpaint()
     return inpaint_img.data
 
+
 def augment_img(img, config):
     """
     Compose augmentations.
     """
-    if config["inpaint"]:
+    if config['average_blur']:
+        img = apply_average_blur(img, config['width'])
+    if config['double_resize']:
+        img = double_resize(img)
+    if config['inpaint']:
         img = inpaint(img)
-    if config["inject_noise"]:
-        noise_level = config["noise_level"]
-        img = inject_noise(img, noise_level)
+    if config['inject_noise']:
+        img = inject_noise(img, config['noise_level'])
     return img
 
 def augment(config):
@@ -87,7 +112,7 @@ def augment(config):
         if img_file.endswith(".png"):
             # read in image
             img_path = os.path.join(img_dir, img_file)
-            img = skimage.io.imread(img_path, as_grey=True)
+            img = skimage.io.imread(img_path, as_gray=True)
 
             # return list of augmented images and save
             new_img = augment_img(img, config)
@@ -95,6 +120,7 @@ def augment(config):
             skimage.io.imsave(out_path, skimage.img_as_ubyte(new_img))
 
     print("Augmentation complete; files saved in {}.\n".format(out_dir))
+
 
 if __name__ == "__main__":
 
