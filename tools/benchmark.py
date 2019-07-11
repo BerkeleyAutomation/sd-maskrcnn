@@ -238,6 +238,8 @@ def visualize_predictions(run_dir, dataset, inference_config, pred_mask_dir, pre
     for image_id in tqdm(image_ids):
         # Load image and ground truth data and resize for net
         image, _, _, _, _ = modellib.load_image_gt(dataset, inference_config, image_id, use_mini_mask=False)
+        if inference_config.IMAGE_CHANNEL_COUNT == 1:
+            image = np.repeat(image, 3, axis=2)
 
         # load mask and info
         r = np.load(os.path.join(pred_info_dir, 'image_{:06}.npy'.format(image_id))).item()
@@ -269,6 +271,9 @@ def visualize_gts(run_dir, dataset, inference_config, show_bbox=True, show_score
         # Load image and ground truth data and resize for net
         image, _, gt_class_id, gt_bbox, gt_mask = modellib.load_image_gt(dataset, inference_config, image_id,
                                                                         use_mini_mask=False)
+
+        if inference_config.IMAGE_CHANNEL_COUNT == 1:
+            image = np.repeat(image, 3, axis=2)
 
         # Visualize
         scores = np.ones(gt_class_id.size) if show_scores else None
