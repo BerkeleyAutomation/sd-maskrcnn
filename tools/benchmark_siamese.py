@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+import time
 from tqdm import tqdm
 import numpy as np
 import skimage.io as io
@@ -105,6 +106,8 @@ def detect(run_dir, inference_config, model, dataset):
     Continuing to hold over functionality from benchmark.py lest we choose to
     train from scratch and run all benchmarks at once.
     """
+    full_pipeline_start = time.time()
+
     # Create subdirectory for prediction masks
     pred_dir = os.path.join(run_dir, 'pred_masks')
     utils.mkdir_if_missing(pred_dir)
@@ -117,6 +120,7 @@ def detect(run_dir, inference_config, model, dataset):
     print('MAKING PREDICTIONS')
 
     for image_id in tqdm(image_ids):
+        time_start = time.time()
 
         (pile_img, _, _, bbox, masks), (target_img, target_bb, _, target_vector) \
             = modellib.load_inputs_gt(dataset, inference_config, image_id)
@@ -132,6 +136,7 @@ def detect(run_dir, inference_config, model, dataset):
         save_masks_path = os.path.join(pred_dir, 'example_{:06d}.npy'.format(image_id))
         np.save(save_masks_path, save_masks)
 
+        pipeline_step_time = time.time() - time_start
         # Save info
         r_info = {
             'rois': r['rois'],
@@ -142,12 +147,17 @@ def detect(run_dir, inference_config, model, dataset):
             'scores_prefilter': r['scores_prefilter'],
             'class_ids_prefilter': r['class_ids_prefilter'],
             'target_probs_prefilter': r['target_probs_prefilter'],
+            'time': r['time'],
+            'pipeline_step_time': pipeline_step_time
         }
         r_info_path = os.path.join(pred_info_dir, 'example_{:06d}.npy'.format(image_id))
         np.save(r_info_path, r_info)
 
     print('Saved prediction masks to:\t {}'.format(pred_dir))
     print('Saved prediction info (bboxes, scores, classes, target probs) to:\t {}'.format(pred_info_dir))
+
+    full_pipeline_time = time.time() - full_pipeline_start
+    print('full detection pipeline time', full_pipeline_time) 
 
     return pred_dir, pred_info_dir
 
