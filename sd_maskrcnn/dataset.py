@@ -51,8 +51,7 @@ to different pile/target pairs.
 """
 
 class TargetDataset(utils.Dataset):
-    def __init__(self, base_path, images='piles', masks='masks', targets='images',
-                 augment_targets=False):
+    def __init__(self, config, base_path, images='piles', masks='masks', targets='images', augment_targets=False):
         # omg fix this above before u get confused!!!
         assert base_path != "", "You must provide the path to a dataset!"
         self.targets = targets
@@ -60,8 +59,7 @@ class TargetDataset(utils.Dataset):
         self.masks = masks
         self.base_path = base_path
         self.data_tuples = None
-        self.augment_targets = augment_targets
-        super().__init__()
+        super().__init__(config)
 
     def load(self, imset=None):
         self.add_class('clutter', 1, 'fg')
@@ -71,61 +69,33 @@ class TargetDataset(utils.Dataset):
         # Provide optional index file. NOTE: This operates on the JSON files!
         if imset:
             imset = os.path.join(self.base_path, imset)
-            self.image_id = np.load(imset)
+            indices = np.load(imset)
         else:
-            self.image_id = list(range(len(self.data_tuples)))
+            indices = list(range(len(self.data_tuples)))
 
-        for i in self.image_id:
+        for i in indices:
             pile_path = os.path.join(self.base_path, self.images,
                                      self.data_tuples[i][1])
-            target_path = os.path.join(self.base_path, self.images,
-                                       self.data_tuples[i][1])
-            self.add_image('clutter', image_id=i, path=pile_path,
-                           target_path=target_path)
+            mask_path = os.path.join(self.base_path, self.masks,
+                                     self.data_tuples[i][1])
+            target_path = os.path.join(self.base_path, self.targets,
+                                       self.data_tuples[i][0])
+            target_ind = int(self.data_tuples[i][2]) - 1
+            self.add_example(source='clutter', image_id=i, pile_path=pile_path,
+                           pile_mask_path=mask_path, target_path=target_path,
+                           target_index=target_ind)
 
+    def load_example(self, example_id):
+        """Returns a dictionary containing inputs from a training example."""
+        info = self.example_info[example_id]
+        example = {}
+        example['pile_image'] = self._load_image(info['pile_path'])
+        example['target_image'] = self._load_image(info['target_path'])
+        example['pile_mask'], example['class_ids'] = self._load_mask(info['pile_mask_path'])
+        example['target_index'] = info['target_index']
 
-    def load_image(self, image_id):
-        image = skimage.io.imread(os.path.join(self.base_path, self.images,
-                                               self.data_tuples[self.image_id[image_id]][1]))
-        return image
-
-
-    def load_target(self, image_id):
-        """Returns target image"""
-        target = skimage.io.imread(os.path.join(self.base_path, self.targets,
-                                                self.data_tuples[self.image_id[image_id]][0]))
-
-        if self.augment_targets:
-            angle = np.random.randint(10, 350)
-            target = rotate(target, angle)
-
-        return target
-
-    def load_target_index(self, image_id):
-        """Returns index of target mask"""
-        target_index = int(self.data_tuples[self.image_id[image_id]][2]) - 1 # because we no longer consider the background
-        return target_index
-
-    def load_mask(self, image_id):
-        """Returns masks corresponding to pile, class IDs"""
-        Is = []
-        all_masks = skimage.io.imread(os.path.join(self.base_path, self.masks,
-                                                   self.data_tuples[self.image_id[image_id]][1]))
-        for i in np.arange(1,np.max(all_masks)+1):
-            I = all_masks == i # We ignore the background, so the first instance is 0-indexed.
-            if np.any(I):
-                I = I[:,:,np.newaxis]
-                Is.append(I)
-        if len(Is) > 0:
-            mask = np.concatenate(Is, 2)
-
-        class_ids = np.array([1 for _ in range(mask.shape[2])])
-        return mask, class_ids.astype(np.int32)
-
-    @property
-    def indices(self):
-        return self._image_ids
-
+        return example           
+            
 
 
 """
