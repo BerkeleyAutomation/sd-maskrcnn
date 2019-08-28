@@ -45,7 +45,7 @@ def benchmark(config):
     model.load_weights_siamese(config['model']['path'],  config['model']['backbone_path'])
 
     # Create dataset
-    test_dataset = TargetDataset(config['test']['path'], images=config['test']['images'],
+    test_dataset = TargetDataset(config, config['test']['path'], images=config['test']['images'],
                                  masks=config['test']['masks'], targets=config['test']['targets'])
 
     if config['test']['indices']:
@@ -113,8 +113,7 @@ def detect(run_dir, inference_config, model, dataset):
     pred_info_dir = os.path.join(run_dir, 'pred_info')
     utils.mkdir_if_missing(pred_info_dir)
 
-    image_ids = dataset.image_ids
-    indices = dataset.indices
+    image_ids = dataset.example_indices
     print('MAKING PREDICTIONS')
 
     for image_id in tqdm(image_ids):
@@ -157,15 +156,15 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
     """Calculates statistics (mean IoU, precision & recall)"""
     print('CALCULATING STATISTICS')
     # Create subdirectory for prediction visualizations
-    image_ids = dataset.image_ids
+    image_ids = dataset.example_indices
 
-    max_probs = np.zeros_like(dataset.image_ids, dtype=np.float)
+    max_probs = np.zeros_like(dataset.example_indices, dtype=np.float)
 
     ### Top-n IoU
     n_s = [1, 2, 3] #SET
 
-    max_top_n_ious = {n: np.zeros_like(dataset.image_ids, dtype=np.float) for n in n_s}
-    max_top_n_indices = {n: np.zeros_like(dataset.image_ids, dtype=np.int) for n in n_s}
+    max_top_n_ious = {n: np.zeros_like(dataset.example_indices, dtype=np.float) for n in n_s}
+    max_top_n_indices = {n: np.zeros_like(dataset.example_indices, dtype=np.int) for n in n_s}
 
 
     def top_n_iou(pred_masks, target_mask, target_probs, n):
@@ -267,7 +266,7 @@ def visualize_targets(run_dir, dataset, inference_config, pred_mask_dir, pred_in
     vis_dir = os.path.join(run_dir, 'vis')
     utils.mkdir_if_missing(vis_dir)
 
-    image_ids = dataset.image_ids
+    image_ids = dataset.example_indices
 
     for image_id in tqdm(image_ids):
         (pile_img, _, _, bbox, masks), (target_img, _, _, target_vector) \

@@ -16,7 +16,7 @@ from mrcnn import model as modellib, utils as utilslib
 def train(config):
 
     # Training dataset
-    dataset_train = TargetDataset(config['dataset']['path'],
+    dataset_train = TargetDataset(config, config['dataset']['path'],
                                   images=config['dataset']['images'],
                                   masks=config['dataset']['masks'],
                                   targets=config['dataset']['targets'],
@@ -27,14 +27,14 @@ def train(config):
 
     # Validation dataset
     dataset_val = None
-    if config['dataset']['val_indices']:
-        dataset_val = TargetDataset(config['dataset']['path'])
-        dataset_val.load()
-        dataset_val.prepare()
+    # if config['dataset']['val_indices']:
+    #     dataset_val = TargetDataset(config['dataset']['path'])
+    #     dataset_val.load()
+    #     dataset_val.prepare()
 
     # Load config
     train_config = MaskConfig(config['model']['settings'])
-    train_config.STEPS_PER_EPOCH = dataset_train.indices.size/(train_config.IMAGES_PER_GPU*train_config.GPU_COUNT)
+    train_config.STEPS_PER_EPOCH = dataset_train.example_indices.size/(train_config.IMAGES_PER_GPU*train_config.GPU_COUNT)
     # train_config.STEPS_PER_EPOCH = 5
     train_config.display()
 
