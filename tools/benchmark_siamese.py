@@ -14,7 +14,7 @@ from autolab_core import YamlConfig
 
 from sd_maskrcnn import utils
 from sd_maskrcnn.config import MaskConfig
-from sd_maskrcnn.dataset import TargetDataset
+from sd_maskrcnn.dataset import TargetDataset, TargetStackDataset
 from sd_maskrcnn.supplement_benchmark import s_benchmark
 
 from mrcnn import model as modellib, utils as utilslib, visualize
@@ -46,8 +46,11 @@ def benchmark(config):
     model.load_weights_siamese(config['model']['path'],  config['model']['backbone_path'])
 
     # Create dataset
-    test_dataset = TargetDataset(config, config['test']['path'], images=config['test']['images'],
-                                 masks=config['test']['masks'], targets=config['test']['targets'])
+    test_dataset = TargetStackDataset(config, config['test']['path'],
+                                      config['test']['tuples'],
+                                      images=config['test']['images'],
+                                      masks=config['test']['masks'],
+                                      targets=config['test']['targets'])
 
     if config['test']['indices']:
         test_dataset.load(imset=config['test']['indices'])
@@ -122,13 +125,13 @@ def detect(run_dir, inference_config, model, dataset):
     for image_id in tqdm(image_ids):
         time_start = time.time()
 
-        (pile_img, _, _, bbox, masks), (target_img, target_bb, _, target_vector) \
+        (pile_img, _, _, bbox, masks), (target_imgs, target_bbs, _, target_vector) \
             = modellib.load_inputs_gt(dataset, inference_config, image_id)
 
         target_mask = masks[:,:,np.argmax(target_vector)]
         target_pile_bb = bbox[np.argmax(target_vector)]
 
-        r = model.detect([pile_img], [target_img], [target_bb])
+        r = model.detect([pile_img], [target_imgs], [target_bbs])
         r = r[0]
 
         # Save masks
@@ -157,7 +160,7 @@ def detect(run_dir, inference_config, model, dataset):
     print('Saved prediction info (bboxes, scores, classes, target probs) to:\t {}'.format(pred_info_dir))
 
     full_pipeline_time = time.time() - full_pipeline_start
-    print('full detection pipeline time', full_pipeline_time) 
+    print('full detection pipeline time', full_pipeline_time)
 
     return pred_dir, pred_info_dir
 
@@ -296,6 +299,9 @@ def visualize_targets(run_dir, dataset, inference_config, pred_mask_dir, pred_in
 
         file_name = os.path.join(vis_dir, 'vis_{:06d}'.format(image_id))
 
+        # if we have a stack, display first image in stack
+        if len(target_img.shape) == 4:
+            target_img = target_img[0,:,:,:]
         plot_predictions(file_name, pile_img, target_img, masks, bbox, target_vector,
                          r_masks, r['rois'], r['target_probs'])
 

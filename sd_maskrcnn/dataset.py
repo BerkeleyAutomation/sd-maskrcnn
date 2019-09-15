@@ -21,6 +21,7 @@ MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 Author: Mike Danielczuk
 """
 
+import json
 import os
 import skimage
 import numpy as np
@@ -94,8 +95,64 @@ class TargetDataset(utils.Dataset):
         example['pile_mask'], example['class_ids'] = self._load_mask(info['pile_mask_path'])
         example['target_index'] = info['target_index']
 
-        return example           
-            
+        return example
+
+
+"""
+Same directory organization as TargetDataset, but one example JSON tuple is now:
+((target_path_1, target_path_2, ...), pile_image, target_index)
+"""
+class TargetStackDataset(utils.Dataset):
+    def __init__(self, config, base_path, tuple_file, images='piles', masks='masks', targets='images', augment_targets=False):
+        # omg fix this above before u get confused!!!
+        assert base_path != "", "You must provide the path to a dataset!"
+        self.targets = targets
+        self.images = images
+        self.masks = masks
+        self.base_path = base_path
+        self.target_stack_size = config['model']['settings']['stack_size']
+        self.data_tuples = json.load(open(os.path.join(self.base_path, tuple_file)))
+        super().__init__(config)
+
+    def load(self, imset=None):
+        self.add_class('clutter', 1, 'fg')
+
+        # Provide optional index file. NOTE: This operates on the JSON files!
+        if imset:
+            imset = os.path.join(self.base_path, imset)
+            indices = np.load(imset)
+        else:
+            indices = list(range(len(self.data_tuples)))
+
+        for i in indices:
+            pile_path = os.path.join(self.base_path, self.images,
+                                     self.data_tuples[i][1])
+            mask_path = os.path.join(self.base_path, self.masks,
+                                     self.data_tuples[i][1])
+
+            if not isinstance(self.data_tuples[i][0], list):
+                print("Singleton target detected.")
+                self.data_tuples[i][0] = [self.data_tuples[i][0]]
+
+            assert len(self.data_tuples[i][0]) == self.target_stack_size, \
+            "Expected {} target images to stack, but instead found {}.".format(
+                self.target_stack_size, len(self.data_tuples[i][0]))
+            target_stack_paths = [os.path.join(self.base_path, self.targets, path) for path in self.data_tuples[i][0]]
+            target_ind = int(self.data_tuples[i][2]) - 1
+            self.add_example(source='clutter', image_id=i, pile_path=pile_path,
+                           pile_mask_path=mask_path, target_stack_paths=target_stack_paths,
+                           target_index=target_ind)
+
+    def load_example(self, example_id):
+        """Returns a dictionary containing inputs from a training example."""
+        info = self.example_info[example_id]
+        example = {}
+        example['target_images'] = [self._load_image(path) for path in
+                                         info['target_stack_paths']]
+        example['pile_image'] = self._load_image(info['pile_path'])
+        example['pile_mask'], example['class_ids'] = self._load_mask(info['pile_mask_path'])
+        example['target_index'] = info['target_index']
+        return example
 
 
 """
@@ -150,7 +207,6 @@ class ImageDataset(Dataset):
 
     def flip(self, image, flip):
         # flips during training for augmentation
-
         if flip == 1:
             image = image[::-1,:,:]
         elif flip == 2:
@@ -165,7 +221,7 @@ class ImageDataset(Dataset):
             image = np.load(self.image_info[image_id]['path']).squeeze()
         else:
             image = skimage.io.imread(self.image_info[image_id]['path'])
-        
+
         if self._channels < 4 and image.shape[-1] == 4 and image.ndim == 3:
             image = image[...,:3]
         if self._channels == 1 and image.ndim == 2:
