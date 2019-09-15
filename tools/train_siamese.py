@@ -9,18 +9,19 @@ from autolab_core import YamlConfig
 
 from sd_maskrcnn import utils
 from sd_maskrcnn.config import MaskConfig
-from sd_maskrcnn.dataset import TargetDataset
+from sd_maskrcnn.dataset import TargetDataset, TargetStackDataset
 
 from mrcnn import model as modellib, utils as utilslib
 
 def train(config):
 
     # Training dataset
-    dataset_train = TargetDataset(config, config['dataset']['path'],
-                                  images=config['dataset']['images'],
-                                  masks=config['dataset']['masks'],
-                                  targets=config['dataset']['targets'],
-                                  augment_targets=config['dataset']['augment'])
+    dataset_train = TargetStackDataset(config, config['dataset']['path'],
+                                       config['dataset']['tuples'],
+                                       images=config['dataset']['images'],
+                                       masks=config['dataset']['masks'],
+                                       targets=config['dataset']['targets'],
+                                       augment_targets=config['dataset']['augment'])
     #TODO: bring back augment
     dataset_train.load(config['dataset']['train_indices'])
     dataset_train.prepare()
