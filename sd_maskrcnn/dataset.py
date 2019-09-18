@@ -104,6 +104,10 @@ class ImageDataset(Dataset):
             image = image[:,:,0,np.newaxis]
         elif self._channels == 3 and image.ndim == 3 and image.shape[-1] == 1:
             image = skimage.color.gray2rgb(image)
+        elif self._channels == 4 and image.shape[-1] == 3:
+            concat_image = np.concatenate([image, image[:,:,0:1]], axis=2)
+            assert concat_image.shape == (image.shape[0], image.shape[1], image.shape[2] + 1), concat_image.shape
+            image = concat_image
             
         return image
 
