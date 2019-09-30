@@ -127,6 +127,7 @@ class TargetStackDataset(utils.Dataset):
         for i in indices:
             pile_path = os.path.join(self.base_path, self.images,
                                      self.data_tuples[i][1])
+
             mask_path = os.path.join(self.base_path, self.masks,
                                      self.data_tuples[i][1])
 
@@ -139,6 +140,11 @@ class TargetStackDataset(utils.Dataset):
                 self.target_stack_size, len(self.data_tuples[i][0]))
             target_stack_paths = [os.path.join(self.base_path, self.targets, path) for path in self.data_tuples[i][0]]
             target_ind = int(self.data_tuples[i][2]) - 1
+
+            if 'numpy' in self.images:
+                pile_path = pile_path.replace('.png', '.npy')
+                target_stack_paths = [path.replace('.png', '.npy') for path in target_stack_paths]
+
             self.add_example(source='clutter', image_id=i, pile_path=pile_path,
                            pile_mask_path=mask_path, target_stack_paths=target_stack_paths,
                            target_index=target_ind)
@@ -234,7 +240,7 @@ class ImageDataset(Dataset):
             concat_image = np.concatenate([image, image[:,:,0:1]], axis=2)
             assert concat_image.shape == (image.shape[0], image.shape[1], image.shape[2] + 1), concat_image.shape
             image = concat_image
-            
+
         return image
 
     def image_reference(self, image_id):
