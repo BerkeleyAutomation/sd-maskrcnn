@@ -131,7 +131,7 @@ def detect(run_dir, inference_config, model, dataset):
         target_mask = masks[:,:,np.argmax(target_vector)]
         target_pile_bb = bbox[np.argmax(target_vector)]
 
-        r = model.detect([pile_img], [target_imgs], [target_bbs])
+        r = model.detect(images=[pile_img], targets=[target_imgs], target_bbs=[target_bbs])
         r = r[0]
 
         # Save masks

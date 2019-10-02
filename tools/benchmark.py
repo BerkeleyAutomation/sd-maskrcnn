@@ -68,7 +68,7 @@ def benchmark(config):
     config['model']['settings']['gpu_count'] = 1
     config['model']['settings']['images_per_gpu'] = 1
     inference_config = MaskConfig(config['model']['settings'])
-    
+
     model_dir, _ = os.path.split(config['model']['path'])
     model = modellib.MaskRCNN(mode=config['model']['mode'], config=inference_config,
                               model_dir=model_dir)
@@ -108,7 +108,7 @@ def benchmark(config):
 
     ap, ar = coco_benchmark(pred_mask_dir, pred_info_dir, gt_mask_dir)
     if config['vis']['predictions']:
-        visualize_predictions(config['output_dir'], vis_dataset, inference_config, pred_mask_dir, pred_info_dir, 
+        visualize_predictions(config['output_dir'], vis_dataset, inference_config, pred_mask_dir, pred_info_dir,
                               show_bbox=config['vis']['show_bbox_pred'], show_scores=config['vis']['show_scores_pred'], show_class=config['vis']['show_class_pred'])
     if config['vis']['ground_truth']:
         visualize_gts(config['output_dir'], vis_dataset, inference_config, show_scores=False, show_bbox=config['vis']['show_bbox_gt'], show_class=config['vis']['show_class_gt'])
@@ -150,7 +150,7 @@ def detect(run_dir, inference_config, model, dataset, bin_mask_dir=False, overla
     utils.mkdir_if_missing(resized_segmask_dir)
 
     # Feed images into model one by one. For each image, predict and save.
-    image_ids = dataset.image_ids
+    image_ids = dataset.example_indices
     indices = dataset.indices
     times = []
     print('MAKING PREDICTIONS')
@@ -159,11 +159,12 @@ def detect(run_dir, inference_config, model, dataset, bin_mask_dir=False, overla
         image, _, _, _, gt_mask =\
           modellib.load_image_gt(dataset, inference_config, image_id,
             use_mini_mask=False)
-    
+
         # Run object detection
-        results = model.detect([image], verbose=0)
+        results = model.detect(verbose=1, images=[image])
         r = results[0]
         times.append(r['time'])
+        print('rois', r['rois'])
 
         # If we choose to mask out bin pixels, load the bin masks and
         # transform them properly.
@@ -232,7 +233,7 @@ def visualize_predictions(run_dir, dataset, inference_config, pred_mask_dir, pre
     utils.mkdir_if_missing(vis_dir)
 
     # Feed images into model one by one. For each image visualize predictions
-    image_ids = dataset.image_ids
+    image_ids = dataset.example_indices
 
     print('VISUALIZING PREDICTIONS')
     for image_id in tqdm(image_ids):
@@ -245,13 +246,13 @@ def visualize_predictions(run_dir, dataset, inference_config, pred_mask_dir, pre
         r = np.load(os.path.join(pred_info_dir, 'image_{:06}.npy'.format(image_id))).item()
         r_masks = np.load(os.path.join(pred_mask_dir, 'image_{:06}.npy'.format(image_id)))
         # Must transpose from (n, h, w) to (h, w, n)
-        r['masks'] = np.transpose(r_masks, (1, 2, 0))      
+        r['masks'] = np.transpose(r_masks, (1, 2, 0))
         # Visualize
         scores = r['scores'] if show_scores else None
         fig = plt.figure(figsize=(1.7067, 1.7067), dpi=300, frameon=False)
         ax = plt.Axes(fig, [0.,0.,1.,1.])
         fig.add_axes(ax)
-        visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], ['bg', 'obj'], 
+        visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], ['bg', 'obj'],
                                     ax=ax, scores=scores, show_bbox=show_bbox, show_class=show_class)
         file_name = os.path.join(vis_dir, 'vis_{:06d}'.format(image_id))
         fig.savefig(file_name, transparent=True, dpi=300)
@@ -280,7 +281,7 @@ def visualize_gts(run_dir, dataset, inference_config, show_bbox=True, show_score
         fig = plt.figure(figsize=(1.7067, 1.7067), dpi=300, frameon=False)
         ax = plt.Axes(fig, [0.,0.,1.,1.])
         fig.add_axes(ax)
-        visualize.display_instances(image, gt_bbox, gt_mask, gt_class_id, ['bg', 'obj'], 
+        visualize.display_instances(image, gt_bbox, gt_mask, gt_class_id, ['bg', 'obj'],
                                     scores, ax=ax, show_bbox=show_bbox, show_class=show_class)
         file_name = os.path.join(vis_dir, 'gt_vis_{:06d}'.format(image_id))
         height, width = image.shape[:2]
@@ -297,7 +298,7 @@ if __name__ == "__main__":
 
     # read in config file information from proper section
     config = YamlConfig(conf_args.conf_file)
-    
+
     # Set up tf session to use what GPU mem it needs and benchmark
     tf_config = tf.ConfigProto()
     tf_config.gpu_options.allow_growth = True

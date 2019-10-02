@@ -189,7 +189,7 @@ class ImageDataset(Dataset):
         self.masks = config['dataset']['masks']
 
         self._channels = config['model']['settings']['image_channel_count']
-        super().__init__()
+        super().__init__(config)
 
     def load(self, indices_file, augment=False):
         # Load the indices for imset.
@@ -200,48 +200,61 @@ class ImageDataset(Dataset):
         flips = [1, 2, 3]
         for i in self.image_id:
             if 'numpy' in self.images:
-                p = os.path.join(self.base_path, self.images,
+                path = os.path.join(self.base_path, self.images,
+                                'image_{:06d}.npy'.format(i))
+                mask_path = os.path.join(self.base_path, self.masks,
                                 'image_{:06d}.npy'.format(i))
             else:
-                p = os.path.join(self.base_path, self.images,
+                path = os.path.join(self.base_path, self.images,
                                 'image_{:06d}.png'.format(i))
-            self.add_image('clutter', image_id=i, path=p)
+                mask_path = os.path.join(self.base_path, self.masks,
+                                'image_{:06d}.png'.format(i))
 
-            if augment:
-                for flip in flips:
-                    self.add_image('clutter', image_id=i, path=p, flip=flip)
+            self.add_example(source='clutter', image_id=i, pile_path=path, pile_mask_path=mask_path)
 
-    def flip(self, image, flip):
-        # flips during training for augmentation
-        if flip == 1:
-            image = image[::-1,:,:]
-        elif flip == 2:
-            image = image[:,::-1,:]
-        elif flip == 3:
-            image = image[::-1,::-1,:]
-        return image
+            # if augment:
+    #             for flip in flips:
+    #                 self.add_image('clutter', image_id=i, path=p, flip=flip)
 
-    def load_image(self, image_id):
-        # loads image from path
-        if 'numpy' in self.images:
-            image = np.load(self.image_info[image_id]['path']).squeeze()
-        else:
-            image = skimage.io.imread(self.image_info[image_id]['path'])
+    # def flip(self, image, flip):
+    #     # flips during training for augmentation
+    #     if flip == 1:
+    #         image = image[::-1,:,:]
+    #     elif flip == 2:
+    #         image = image[:,::-1,:]
+    #     elif flip == 3:
+    #         image = image[::-1,::-1,:]
+    #     return image
 
-        if self._channels < 4 and image.shape[-1] == 4 and image.ndim == 3:
-            image = image[...,:3]
-        if self._channels == 1 and image.ndim == 2:
-            image = image[:,:,np.newaxis]
-        elif self._channels == 1 and image.ndim == 3:
-            image = image[:,:,0,np.newaxis]
-        elif self._channels == 3 and image.ndim == 3 and image.shape[-1] == 1:
-            image = skimage.color.gray2rgb(image)
-        elif self._channels == 4 and image.shape[-1] == 3:
-            concat_image = np.concatenate([image, image[:,:,0:1]], axis=2)
-            assert concat_image.shape == (image.shape[0], image.shape[1], image.shape[2] + 1), concat_image.shape
-            image = concat_image
+    def load_example(self, example_id):
+        """Returns a dictionary containing inputs from a training example."""
+        info = self.example_info[example_id]
+        example = {}
+        example['pile_image'] = self._load_image(info['pile_path'])
+        example['pile_mask'], example['class_ids'] = self._load_mask(info['pile_mask_path'])
+        return example
 
-        return image
+    # def load_image(self, image_id):
+    #     # loads image from path
+    #     if 'numpy' in self.images:
+    #         image = np.load(self.image_info[image_id]['path']).squeeze()
+    #     else:
+    #         image = skimage.io.imread(self.image_info[image_id]['path'])
+
+    #     if self._channels < 4 and image.shape[-1] == 4 and image.ndim == 3:
+    #         image = image[...,:3]
+    #     if self._channels == 1 and image.ndim == 2:
+    #         image = image[:,:,np.newaxis]
+    #     elif self._channels == 1 and image.ndim == 3:
+    #         image = image[:,:,0,np.newaxis]
+    #     elif self._channels == 3 and image.ndim == 3 and image.shape[-1] == 1:
+    #         image = skimage.color.gray2rgb(image)
+    #     elif self._channels == 4 and image.shape[-1] == 3:
+    #         concat_image = np.concatenate([image, image[:,:,0:1]], axis=2)
+    #         assert concat_image.shape == (image.shape[0], image.shape[1], image.shape[2] + 1), concat_image.shape
+    #         image = concat_image
+
+    #     return image
 
     def image_reference(self, image_id):
         info = self.image_info[image_id]
