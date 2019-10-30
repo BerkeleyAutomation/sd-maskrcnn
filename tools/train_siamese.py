@@ -61,7 +61,7 @@ def train(config):
         weights_path = model.get_imagenet_weights()
     else:
         weights_path = config['model']['weights']
-
+        weights_path_rgb = config['model']['weights_rgb_backbone']
     # Load weights
     print("Loading weights ", weights_path)
     if config['model']['weights'].lower() == "coco":
@@ -74,7 +74,8 @@ def train(config):
         model.set_log_dir()
     else:
         if config['model']['weight_type'].lower() == 'old':
-            model.load_weights_from_sd_mrcnn_model(weights_path)
+            print("Loading rgb backbone weights", weight_paths_rgb)
+            model.load_weights_from_sd_mrcnn_model(weights_path, weights_path_rgb)
         else:
             model.load_weights(weights_path, by_name=True)
 
