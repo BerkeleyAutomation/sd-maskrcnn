@@ -74,7 +74,7 @@ def train(config):
         model.set_log_dir()
     else:
         if config['model']['weight_type'].lower() == 'old':
-            print("Loading rgb backbone weights", weight_paths_rgb)
+            print("Loading rgb backbone weights", weights_path_rgb)
             model.load_weights_from_sd_mrcnn_model(weights_path, weights_path_rgb)
         else:
             model.load_weights(weights_path, by_name=True)
