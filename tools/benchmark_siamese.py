@@ -33,6 +33,10 @@ def benchmark(config):
 
     # Save config in output directory
     config.save(os.path.join(output_dir, config['save_conf_name']))
+    image_shape = config['model']['settings']['image_shape']
+    config['model']['settings']['image_min_dim'] = min(image_shape)
+    config['model']['settings']['image_max_dim'] = max(image_shape)
+
     inference_config = MaskConfig(config['model']['settings'])
     inference_config.GPU_COUNT = 1
     inference_config.IMAGES_PER_GPU = 1
@@ -130,7 +134,6 @@ def detect(run_dir, inference_config, model, dataset):
 
         target_mask = masks[:,:,np.argmax(target_vector)]
         target_pile_bb = bbox[np.argmax(target_vector)]
-
         r = model.detect(images=[pile_img], targets=[target_imgs], target_bbs=[target_bbs])
         r = r[0]
 

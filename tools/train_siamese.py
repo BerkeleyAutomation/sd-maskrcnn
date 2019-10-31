@@ -34,6 +34,9 @@ def train(config):
     #     dataset_val.prepare()
 
     # Load config
+    image_shape = config['model']['settings']['image_shape']
+    config['model']['settings']['image_min_dim'] = min(image_shape)
+    config['model']['settings']['image_max_dim'] = max(image_shape)
     train_config = MaskConfig(config['model']['settings'])
     train_config.STEPS_PER_EPOCH = dataset_train.example_indices.size/(train_config.IMAGES_PER_GPU*train_config.GPU_COUNT)
     # train_config.STEPS_PER_EPOCH = 5
