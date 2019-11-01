@@ -252,13 +252,18 @@ def plot_predictions(file_name, pile_img, target_img, gt_masks, gt_bbs, target_v
         target_img = target_img.squeeze()
     if target_img.ndim == 3 and target_img.shape[-1] == 4:
         target_img = target_img[:,:,:3] # don't show depth channel
-
+    if target_img.ndim == 2:
+        target_img = np.stack([target_img] * 3, axis=2)
     axes[0].imshow(target_img)
+
 
     if pile_img.ndim == 3 and pile_img.shape[-1] == 1:
         pile_img = pile_img.squeeze()
     if pile_img.ndim == 3 and pile_img.shape[-1] == 4:
         pile_img = pile_img[:,:,:3] # don't show depth channel
+    if pile_img.ndim == 2:
+        pile_img = np.stack([pile_img] * 3, axis=2)
+
 
     pred_masks_t = np.transpose(pred_masks, axes=[1, 2, 0])
     visualize.display_instances(pile_img, pred_bbs, pred_masks_t,
