@@ -24,6 +24,7 @@ Author: Mike Danielczuk
 import json
 import os
 import skimage
+import scipy.ndimage
 import numpy as np
 
 from mrcnn.utils import Dataset
@@ -111,6 +112,8 @@ class TargetStackDataset(utils.Dataset):
         self.masks = masks
         self.base_path = base_path
         self.target_stack_size = config['model']['settings']['stack_size']
+
+        self.augment_targets = augment_targets
         self.data_tuples = json.load(open(os.path.join(self.base_path, tuple_file)))
         super().__init__(config)
 
@@ -153,8 +156,12 @@ class TargetStackDataset(utils.Dataset):
         """Returns a dictionary containing inputs from a training example."""
         info = self.example_info[example_id]
         example = {}
-        example['target_images'] = [self._load_image(path) for path in
-                                         info['target_stack_paths']]
+        example['target_images'] = []
+        for path in info['target_stack_paths']:
+            im = self._load_image(path)
+            if self.augment_targets:
+                im = scipy.ndimage.rotate(im, np.random.randint(5, 355), mode='nearest')
+            example['target_images'].append(im)
         example['pile_image'] = self._load_image(info['pile_path'])
         example['pile_mask'], example['class_ids'] = self._load_mask(info['pile_mask_path'])
         example['target_index'] = info['target_index']
