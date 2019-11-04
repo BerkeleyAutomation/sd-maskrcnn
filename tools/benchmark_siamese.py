@@ -47,7 +47,9 @@ def benchmark(config):
 
     # Load trained weights
     print("Loading weights from ", config['model']['path'])
-    model.load_weights_siamese(config['model']['path'],  config['model']['backbone_path'])
+    model.load_weights_siamese(config['model']['path'],
+                               config['model']['backbone_path_rgb'],
+                               config['model']['backbone_path_depth'])
 
     # Create dataset
     test_dataset = TargetStackDataset(config, config['test']['path'],
