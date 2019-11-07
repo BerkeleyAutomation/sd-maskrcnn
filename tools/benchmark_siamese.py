@@ -238,8 +238,22 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
     print('Saved statistics to:\t {}'.format(pred_info_dir))
 
 
-def plot_predictions(file_name, pile_img, target_img, gt_masks, gt_bbs, target_vector, pred_masks, pred_bbs,
-                     pred_target_probs, figsize=(14,6)):
+def plot_predictions(file_name, pile_img, target_img, gt_masks, gt_bbs, target_vector,
+                     pred_masks, pred_bbs, pred_target_probs, figsize=(14,6)):
+    # If 4 channels, remove depth channel (assuming RGBD)
+    if pile_img.ndim == 3 and pile_img.shape[-1] > 3:
+        pile_img = pile_img[:,:,:3]
+    if target_img.ndim == 3 and target_img.shape[-1] > 3:
+        target_img = target_img[:,:,:3]
+
+    # If 1 channel, squeeze
+    if pile_img.ndim == 1 and pile_img.shape[-1] == 1:
+        pile_img = pile_img[:,:,0]
+    if target_img.ndim == 1 and target_img.shape[-1] == 1:
+        target_img = target_img[:,:,0]
+
+
+
     from matplotlib import patches
 
     target_pile_bb = gt_bbs[np.argmax(target_vector)]
@@ -270,7 +284,6 @@ def plot_predictions(file_name, pile_img, target_img, gt_masks, gt_bbs, target_v
                                 np.array([1] * len(pred_target_probs[:,1])),
                                 ['', ''], pred_target_probs[:,1], figsize=figsize, ax=axes[1],
                                 show_bbox=False, show_class=False)
-    # ax.imshow(pile_img)
 
     pred_bb_patch = patches.Rectangle((pred_bb[1], pred_bb[0]), pred_bb[3] - pred_bb[1],
                                       pred_bb[2] - pred_bb[0], linewidth=2,
