@@ -23,6 +23,7 @@ Author: Mike Danielczuk
 
 import json
 import os
+import time
 import skimage
 import scipy.ndimage
 import numpy as np
@@ -112,10 +113,15 @@ class TargetStackDataset(utils.Dataset):
         self.masks = masks
         self.base_path = base_path
         self.target_stack_size = config['model']['settings']['stack_size']
+        self.bg_pixel = config['model']['settings']['bg_pixel']
 
         self.augment_targets = augment_targets
         self.data_tuples = json.load(open(os.path.join(self.base_path, tuple_file)))
         super().__init__(config)
+
+        assert len(self.bg_pixel) == self._channels, "background pixel must match # of channels"
+        self.bg = np.stack(
+            [np.stack([np.array(self.bg_pixel)] * 512)] * 512)
 
     def load(self, imset=None):
         self.add_class('clutter', 1, 'fg')
@@ -139,7 +145,7 @@ class TargetStackDataset(utils.Dataset):
                 self.data_tuples[i][0] = [self.data_tuples[i][0]]
 
             assert len(self.data_tuples[i][0]) == self.target_stack_size, \
-            "Expected {} target images to stack, but instead found {}.".format(
+            "assert self.bg_pixel.shape == Expected {} target images to stack, but instead found {}.".format(
                 self.target_stack_size, len(self.data_tuples[i][0]))
             target_stack_paths = [os.path.join(self.base_path, self.targets, path) for path in self.data_tuples[i][0]]
             target_ind = int(self.data_tuples[i][2]) - 1
@@ -159,14 +165,29 @@ class TargetStackDataset(utils.Dataset):
         example['target_images'] = []
         for path in info['target_stack_paths']:
             im = self._load_image(path)
-            if self.augment_targets:
-                im = scipy.ndimage.rotate(im, np.random.randint(5, 355), mode='nearest')
             example['target_images'].append(im)
         example['pile_image'] = self._load_image(info['pile_path'])
         example['pile_mask'], example['class_ids'] = self._load_mask(info['pile_mask_path'])
         example['target_index'] = info['target_index']
         return example
 
+    def _get_target_bb(self, target_image):
+        target_mask = np.sum(target_image - self.bg_pixel, axis=2)
+        bb = utils.extract_bboxes(
+            target_mask.reshape((target_image.shape[0], target_image.shape[1], 1)))[0]
+        return bb
+
+    def _rotate(self, target_image, rotation):
+        im_h, im_w = target_image.shape[:2]
+        y1, x1, y2, x2 = self._get_target_bb(target_image)
+        crop = target_image[y1-1:y2+1,x1-1:x2+1,:] # pad by one so nearest mode doesn't take colored pixels
+        rotated_crop = scipy.ndimage.rotate(crop, rotation, mode='nearest')
+        crop_h, crop_w = rotated_crop.shape
+        insert_y, insert_x = (im_h - crop_h) // 2, (im_w - crop_w) // 2
+
+        rotated_target = np.copy(self.bg)
+        rotated_target[insert_y:(insert_y + crop_h) , insert_x:(insert_x + crop_w), :] = rotated_crop
+        return rotated_target
 
 """
 ImageDataset creates a Matterport dataset for a directory of
