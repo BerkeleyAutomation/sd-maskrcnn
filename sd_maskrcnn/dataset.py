@@ -23,7 +23,6 @@ Author: Mike Danielczuk
 
 import json
 import os
-import time
 import skimage
 import scipy.ndimage
 import numpy as np
@@ -165,6 +164,8 @@ class TargetStackDataset(utils.Dataset):
         example['target_images'] = []
         for path in info['target_stack_paths']:
             im = self._load_image(path)
+            if self.augment_targets:
+                im = self._rotate(im, np.random.randint(360))
             example['target_images'].append(im)
         example['pile_image'] = self._load_image(info['pile_path'])
         example['pile_mask'], example['class_ids'] = self._load_mask(info['pile_mask_path'])
@@ -182,7 +183,7 @@ class TargetStackDataset(utils.Dataset):
         y1, x1, y2, x2 = self._get_target_bb(target_image)
         crop = target_image[y1-1:y2+1,x1-1:x2+1,:] # pad by one so nearest mode doesn't take colored pixels
         rotated_crop = scipy.ndimage.rotate(crop, rotation, mode='nearest')
-        crop_h, crop_w = rotated_crop.shape
+        crop_h, crop_w = rotated_crop.shape[:2]
         insert_y, insert_x = (im_h - crop_h) // 2, (im_w - crop_w) // 2
 
         rotated_target = np.copy(self.bg)
