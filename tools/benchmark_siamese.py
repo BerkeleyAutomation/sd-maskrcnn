@@ -182,6 +182,7 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
     max_top_n_ious = {n: np.zeros_like(dataset.example_indices, dtype=np.float) for n in n_s}
     max_top_n_indices = {n: np.zeros_like(dataset.example_indices, dtype=np.int) for n in n_s}
 
+    num_correct_targets = 0
 
     def top_n_iou(pred_masks, target_mask, target_probs, n):
         """Given a set of prediction masks and a target mask, returns the
@@ -195,10 +196,10 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
 
 
     for image_id in tqdm(image_ids):
-        (pile_img, _, _, bbox, masks), (_, _, _, target_vector) \
+        (pile_img, _, _, gt_bbox, gt_masks), (_, _, _, target_vector) \
             = modellib.load_inputs_gt(dataset, inference_config, image_id)
 
-        target_mask = masks[:,:,np.argmax(target_vector)]
+        target_mask = gt_masks[:,:,np.argmax(target_vector)]
 
         # load mask and info
         r = np.load(os.path.join(pred_info_dir, 'example_{:06}.npy'.format(image_id))).item()
@@ -214,6 +215,18 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
 
         pred_index = np.argmax(target_probs)
         gt_index = np.argmax(target_vector)
+
+        # load and check bbox ious
+        pred_bbox = r['rois']
+        pred_target_bbox = pred_bbox[pred_index:pred_index+1,:] # shape (1, 4)
+        bbox_ious = np.squeeze(utilslib.compute_overlaps(gt_bbox, pred_target_bbox))
+
+        # if pred target bbox has most iou with gt target bbox
+        if np.argmax(bbox_ious) == gt_index:
+            num_correct_targets += 1
+
+
+    print('Correct target for {} out of {} cases'.format(num_correct_targets, len(image_ids)))
 
     # Print top-n ious
     for n in n_s:
