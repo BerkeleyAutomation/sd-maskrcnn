@@ -184,7 +184,8 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
     max_top_n_ious = {n: np.zeros_like(dataset.example_indices, dtype=np.float) for n in n_s}
     max_top_n_indices = {n: np.zeros_like(dataset.example_indices, dtype=np.int) for n in n_s}
 
-    num_correct_targets = 0
+    num_correct_targets_bbox = 0
+    num_correct_targets_masks = 0
 
     def top_n_iou(pred_masks, target_mask, target_probs, n):
         """Given a set of prediction masks and a target mask, returns the
@@ -225,10 +226,20 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
 
         # if pred target bbox has most iou with gt target bbox
         if np.argmax(bbox_ious) == gt_index:
-            num_correct_targets += 1
+            num_correct_targets_bbox += 1
+
+        pred_target_mask = r_masks[pred_index:pred_index+1,:,:] # shape (1, H, W)
+        pred_target_mask = np.transpose(pred_target_mask, axes=(1,2,0)) # shape (H, W, 1)
+
+        mask_ious = np.squeeze(utilslib.compute_overlaps_masks(gt_masks, pred_target_mask))
+
+        if np.argmax(mask_ious) == gt_index:
+            num_correct_targets_masks += 1
 
 
-    print('Correct target for {} out of {} cases'.format(num_correct_targets, len(image_ids)))
+    print('Correct target (by bbox IoU) for {} out of {} cases'.format(num_correct_targets_bbox, len(image_ids)))
+    print('Correct target (by mask IoU) for {} out of {} cases'.format(num_correct_targets_masks, len(image_ids)))
+
 
     # Print top-n ious
     for n in n_s:
