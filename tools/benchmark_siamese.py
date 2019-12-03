@@ -7,6 +7,7 @@ import numpy as np
 import skimage.io as io
 from sklearn.metrics import average_precision_score, precision_recall_curve
 import matplotlib as mpl
+from matplotlib import patches
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 
@@ -87,8 +88,11 @@ def benchmark_existing(config, pred_mask_dir, pred_info_dir):
     inference_config.IMAGES_PER_GPU = 1
 
     # Create dataset
-    test_dataset = TargetDataset(config['test']['path'], images=config['test']['images'],
-                                 masks=config['test']['masks'], targets=config['test']['targets'])
+    test_dataset = TargetStackDataset(config, config['test']['path'],
+                                      config['test']['tuples'],
+                                      images=config['test']['images'],
+                                      masks=config['test']['masks'],
+                                      targets=config['test']['targets'])
 
     if config['test']['indices']:
         test_dataset.load(imset=config['test']['indices'])
@@ -264,6 +268,58 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
     print('Saved statistics to:\t {}'.format(pred_info_dir))
 
 
+def plot_detailed_predictions(file_name, pile_img, target_img, gt_masks, gt_bbs, target_vector,
+                              pred_masks, pred_bbs, pred_target_probs):
+    assert pile_img.shape[-1] == 4 and target_img.shape[-1] == 4, "for now 4 channel only"
+
+    num_preds = len(pred_bbs)
+
+    pile_rgb = pile_img[:,:,:3]
+    pile_d = np.transpose(np.stack([pile_img[:,:,3]] * 3), axes=(1,2,0))
+
+    target_rgb = target_img[:,:,:3]
+    target_d = np.transpose(np.stack([target_img[:,:,3]] * 3), axes=(1,2,0))
+
+    gt_target_mask = gt_masks[np.argmax(target_vector),:,:]
+    pred_mask_ious = np.squeeze(utilslib.compute_overlaps_masks(pred_masks, [gt_target_mask]))
+
+    fig, ax = plt.subplots(num_preds + 2, 2, figsize=(12, 6 * (num_preds + 2)))
+
+    ax[0][0].imshow(target_rgb)
+    ax[0][1].imshow(target_d)
+
+    ax[1][0].imshow(pile_rgb)
+    ax[1][1].imshow(pile_d)
+
+    gt_target_pile_bb = gt_bbs[np.argmax(target_vector)]
+    gt_target_bb_patch = patches.Rectangle((gt_target_pile_bb[1], gt_target_pile_bb[0]),
+                                        gt_target_pile_bb[3] - gt_target_pile_bb[1],
+                                        gt_target_pile_bb[2] - gt_target_pile_bb[0], linewidth=2,
+                                      alpha=0.8,
+                                      edgecolor='red', facecolor='none')
+
+    ax[1][0].add_patch(gt_target_bb_patch)
+    ax[1][1].add_patch(gt_target_bb_patch)
+
+    ax[1][0].set_title('GT target')
+
+    for k in range(num_preds):
+        j = k + 2
+        ax[j][0].imshow(pile_rgb)
+        ax[j][1].imshow(pile_d)
+        pred_bb_patch = patches.Rectangle((pred_bb[1], pred_bb[0]), pred_bb[3] - pred_bb[1],
+                                          pred_bb[2] - pred_bb[0], linewidth=2, alpha=0.8,
+                                          edgecolor='red', facecolor='none')
+        ax[j][0].add_patch(pred_bb_patch)
+        ax[j][1].add_patch(pred_bb_patch)
+
+        ax[j][0].set_title("Mask IoU: {:03f}".format(pred_mask_ious[k]))
+        ax[j][1].set_title("Target Confidence: {:03f}".format(pred_target_probs[k]))
+
+    plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
+    plt.close()
+
+
 def plot_predictions(file_name, pile_img, target_img, gt_masks, gt_bbs, target_vector,
                      pred_masks, pred_bbs, pred_target_probs, figsize=(14,6)):
     # If 4 channels, remove depth channel (assuming RGBD)
@@ -277,10 +333,6 @@ def plot_predictions(file_name, pile_img, target_img, gt_masks, gt_bbs, target_v
         pile_img = pile_img[:,:,0]
     if target_img.ndim == 1 and target_img.shape[-1] == 1:
         target_img = target_img[:,:,0]
-
-
-
-    from matplotlib import patches
 
     target_pile_bb = gt_bbs[np.argmax(target_vector)]
     pred_index = np.argmax(pred_target_probs[:,1])
@@ -344,7 +396,7 @@ def visualize_targets(run_dir, dataset, inference_config, pred_mask_dir, pred_in
         # if we have a stack, display first image in stack
         if len(target_img.shape) == 4:
             target_img = target_img[0,:,:,:]
-        plot_predictions(file_name, pile_img, target_img, masks, bbox, target_vector,
+        plot_detailed_predictions(file_name, pile_img, target_img, masks, bbox, target_vector,
                          r_masks, r['rois'], r['target_probs'])
 
     print('Saved prediction visualizations to:\t {}'.format(vis_dir))
