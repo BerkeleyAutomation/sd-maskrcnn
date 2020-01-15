@@ -25,14 +25,14 @@ import numpy as np
 import gym
 
 from autolab_core import Logger
-from pyrender import (Scene, IntrinsicsCamera, Mesh, 
-                      Viewer, OffscreenRenderer, RenderFlags)
+from pyrender import (Scene, IntrinsicsCamera, Mesh, DirectionalLight, Viewer,
+                      MetallicRoughnessMaterial, Node, OffscreenRenderer, RenderFlags)
 
 from .physics_engine import PybulletPhysicsEngine
 from .state_spaces import HeapAndCameraStateSpace
 
 class BinHeapEnv(gym.Env):
-    """ OpenAI Gym-style environment for learning bin picking policies. """
+    """ OpenAI Gym-style environment for creating object heaps in a bin. """
 
     def __init__(self, config):
         
@@ -128,19 +128,31 @@ class BinHeapEnv(gym.Env):
         scene.add(camera, pose=pose_m, name=self.camera.frame)
         scene.main_camera_node = next(iter(scene.get_nodes(name=self.camera.frame)))
 
+        material = MetallicRoughnessMaterial(
+            baseColorFactor=np.array([1, 1, 1, 1.0]),
+            metallicFactor=0.2,
+            roughnessFactor=0.8
+        )
+
         # add workspace objects
         for obj_key in self.state.workspace_keys:
             obj_state = self.state[obj_key]
-            obj_mesh = Mesh.from_trimesh(obj_state.mesh)
+            obj_mesh = Mesh.from_trimesh(obj_state.mesh, material=material)
             T_obj_world = obj_state.pose.matrix
             scene.add(obj_mesh, pose=T_obj_world, name=obj_key)
 
         # add scene objects
         for obj_key in self.state.obj_keys:
             obj_state = self.state[obj_key]
-            obj_mesh = Mesh.from_trimesh(obj_state.mesh)
+            obj_mesh = Mesh.from_trimesh(obj_state.mesh, material=material)
             T_obj_world = obj_state.pose.matrix
             scene.add(obj_mesh, pose=T_obj_world, name=obj_key)
+
+        # add light (for color rendering)
+        light = DirectionalLight(color=np.ones(3), intensity=1.0)
+        scene.add(light, pose=np.eye(4))
+        ray_light_nodes = self._create_raymond_lights()
+        [scene.add_node(rln) for rln in ray_light_nodes]
 
         self._scene = scene
 
@@ -168,10 +180,11 @@ class BinHeapEnv(gym.Env):
 
         Viewer(self.scene, use_raymond_lighting=True)
 
-    def render_camera_image(self):
+    def render_camera_image(self, color=True):
         """ Render the camera image for the current scene. """
         renderer = OffscreenRenderer(self.camera.width, self.camera.height)
-        image = renderer.render(self._scene, flags=RenderFlags.DEPTH_ONLY)
+        flags = RenderFlags.NONE if color else RenderFlags.DEPTH_ONLY
+        image = renderer.render(self._scene, flags=flags)
         renderer.delete()
         return image
     
@@ -179,7 +192,7 @@ class BinHeapEnv(gym.Env):
         """Renders segmentation masks (modal and amodal) for each object in the state.
         """
 
-        full_depth = self.observation        
+        full_depth = self.render_camera_image(color=False)
         modal_data = np.zeros((full_depth.shape[0], full_depth.shape[1], len(self.obj_keys)), dtype=np.uint8)
         amodal_data = np.zeros((full_depth.shape[0], full_depth.shape[1], len(self.obj_keys)), dtype=np.uint8)
         renderer = OffscreenRenderer(self.camera.width, self.camera.height)
@@ -209,3 +222,31 @@ class BinHeapEnv(gym.Env):
             mn.mesh.is_visible = True
 
         return amodal_data, modal_data
+
+    def _create_raymond_lights(self):
+        thetas = np.pi * np.array([1.0 / 6.0, 1.0 / 6.0, 1.0 / 6.0])
+        phis = np.pi * np.array([0.0, 2.0 / 3.0, 4.0 / 3.0])
+
+        nodes = []
+
+        for phi, theta in zip(phis, thetas):
+            xp = np.sin(theta) * np.cos(phi)
+            yp = np.sin(theta) * np.sin(phi)
+            zp = np.cos(theta)
+
+            z = np.array([xp, yp, zp])
+            z = z / np.linalg.norm(z)
+            x = np.array([-z[1], z[0], 0.0])
+            if np.linalg.norm(x) == 0:
+                x = np.array([1.0, 0.0, 0.0])
+            x = x / np.linalg.norm(x)
+            y = np.cross(z, x)
+
+            matrix = np.eye(4)
+            matrix[:3,:3] = np.c_[x,y,z]
+            nodes.append(Node(
+                light=DirectionalLight(color=np.ones(3), intensity=1.0),
+                matrix=matrix
+            ))
+
+        return nodes

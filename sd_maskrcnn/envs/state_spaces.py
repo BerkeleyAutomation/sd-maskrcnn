@@ -126,12 +126,12 @@ class HeapStateSpace(gym.Space):
         inds = np.arange(len(object_keys))
         np.random.shuffle(inds)
         self.all_object_keys = list(np.array(object_keys)[inds][:num_objects])
-        mesh_filenames = list(np.array(mesh_filenames)[inds][:num_objects])
+        all_mesh_filenames = list(np.array(mesh_filenames)[inds][:num_objects])
         self.train_keys = self.all_object_keys[:int(len(self.all_object_keys)*self._train_pct)]
         self.test_keys = self.all_object_keys[int(len(self.all_object_keys)*self._train_pct):]
         self.obj_ids = dict([(key, i+1) for i,key in enumerate(self.all_object_keys)])
         self.mesh_filenames = {}
-        [self.mesh_filenames.update({k:v}) for k,v in zip(self.all_object_keys, mesh_filenames)]
+        [self.mesh_filenames.update({k:v}) for k,v in zip(self.all_object_keys, all_mesh_filenames)]
 
     @property
     def obj_keys(self):
@@ -243,8 +243,9 @@ class HeapStateSpace(gym.Space):
         objs_in_heap = []
         total_drops = 0
         while total_drops < total_num_objs and len(objs_in_heap) < num_objs:
-            obj_key = sample_keys[total_drops]
+            obj_key = sample_keys[obj_inds[total_drops]]
             obj_mesh = trimesh.load_mesh(self.mesh_filenames[obj_key])
+            obj_mesh.visual = trimesh.visual.ColorVisuals(obj_mesh, vertex_colors=(0.7,0.7,0.7,1.0))
             obj_mesh.density = self.obj_density
             obj = ObjectState(obj_key, obj_mesh)
             _, radius = trimesh.nsphere.minimum_nsphere(obj.mesh)
