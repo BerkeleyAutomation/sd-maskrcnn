@@ -21,6 +21,38 @@ from sd_maskrcnn.supplement_benchmark import s_benchmark
 from mrcnn import model as modellib, utils as utilslib, visualize
 
 
+def average_precision(retrievals, confidences, gt_index):
+    """Calculates average precision COCO-style, 0.5:0.05:0.95.
+    From https://scikit-learn.org/stable/modules/generated/sklearn.metrics.average_precision_score.html.
+    As there's only one positive label, recall can only be 0 or 1.
+    Returns a single average precision metric."""
+    p_r_s = []
+    for thresh in np.arange(0.5, 1, 0.05):
+        p_r_s.append(precision_recall(retrievals, confidences, gt_index, thresh))
+
+    ap = 0
+    last_r = 0
+    for p, r in p_r_s:
+        ap += (r - last_r) * p
+        last_r = r
+    assert ap <= 1.0
+    return ap
+
+
+def precision_recall(retrievals, confidences, gt_index, thresh):
+    """Calculates precision and recall given a list of retrieved GT mask indices,
+    confidence scores, and a single correct target mask index at a given threshold.
+
+    Currently assumes exactly one target object per detection.
+
+    Returns (precision, recall)."""
+    filtered = [r for r, c in zip(retrievals, confidences) if c >= thresh]
+    if gt_index in filtered:
+        return (1 / len(filtered), 1)
+    else:
+        return (0, 0)
+
+
 def iou(mask1, mask2):
     return np.sum(np.logical_and(mask1, mask2)) / np.sum(np.logical_or(mask1, mask2))
 
@@ -57,7 +89,8 @@ def benchmark(config):
                                       config['test']['tuples'],
                                       images=config['test']['images'],
                                       masks=config['test']['masks'],
-                                      targets=config['test']['targets'])
+                                      targets=config['test']['targets'],
+                                      vis_file=config['test']['visibilities'])
 
     if config['test']['indices']:
         test_dataset.load(imset=config['test']['indices'])
@@ -80,6 +113,9 @@ def benchmark_existing(config, pred_mask_dir, pred_info_dir):
     # Create new directory for outputs
     output_dir = config['output_dir']
     utils.mkdir_if_missing(output_dir)
+    image_shape = config['model']['settings']['image_shape']
+    config['model']['settings']['image_min_dim'] = min(image_shape)
+    config['model']['settings']['image_max_dim'] = max(image_shape)
 
     # Save config in output directory
     config.save(os.path.join(output_dir, config['save_conf_name']))
@@ -92,7 +128,8 @@ def benchmark_existing(config, pred_mask_dir, pred_info_dir):
                                       config['test']['tuples'],
                                       images=config['test']['images'],
                                       masks=config['test']['masks'],
-                                      targets=config['test']['targets'])
+                                      targets=config['test']['targets'],
+                                      vis_file=config['test']['visibilities'])
 
     if config['test']['indices']:
         test_dataset.load(imset=config['test']['indices'])
@@ -188,9 +225,12 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
     max_top_n_ious = {n: np.zeros_like(dataset.example_indices, dtype=np.float) for n in n_s}
     max_top_n_indices = {n: np.zeros_like(dataset.example_indices, dtype=np.int) for n in n_s}
 
-    num_correct_targets_bbox = 0
-    num_correct_targets_masks = 0
+    correct_targets_bbox = np.zeros_like(dataset.example_indices, dtype=np.int)
+    correct_targets_masks = np.zeros_like(dataset.example_indices, dtype=np.int)
 
+    average_precisions = np.zeros_like(dataset.example_indices, dtype=np.float)
+
+    ### TODO: REFACTOR TO USE utilslib FUNCTIONS FOR MASK OVERLAPS ###
     def top_n_iou(pred_masks, target_mask, target_probs, n):
         """Given a set of prediction masks and a target mask, returns the
         argmax and maximum prediction-target IoU over the top n predictions by predicted
@@ -206,6 +246,8 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
         (pile_img, _, _, gt_bbox, gt_masks), (_, _, _, target_vector) \
             = modellib.load_inputs_gt(dataset, inference_config, image_id)
 
+        example_meta = dataset.load_example_metadata(image_id)
+
         target_mask = gt_masks[:,:,np.argmax(target_vector)]
 
         # load mask and info
@@ -220,30 +262,30 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
             max_top_n_ious[n][image_id] = max_iou
             max_top_n_indices[n][image_id] = max_index
 
+        # Obtain pred-GT mask matrix of IoUs
+        pred_masks = np.transpose(r_masks, axes=(1,2,0))
+        iou_matrix = utilslib.compute_overlaps_masks(pred_masks, gt_masks) # k preds x n GTs
+        retrievals = np.argmax(iou_matrix, axis=1)
+
         pred_index = np.argmax(target_probs)
         gt_index = np.argmax(target_vector)
 
-        # load and check bbox ious
-        pred_bbox = r['rois']
-        pred_target_bbox = pred_bbox[pred_index:pred_index+1,:] # shape (1, 4)
-        bbox_ious = np.squeeze(utilslib.compute_overlaps(gt_bbox, pred_target_bbox))
+        ###### Precision, Recall ######
+        ap = average_precision(retrievals, target_probs, gt_index)
+        average_precisions[image_id] = ap
 
-        # if pred target bbox has most iou with gt target bbox
-        if np.argmax(bbox_ious) == gt_index:
-            num_correct_targets_bbox += 1
+        # pred_target_mask = r_masks[pred_index:pred_index+1,:,:] # shape (1, H, W)
+        # pred_target_mask = np.transpose(pred_target_mask, axes=(1,2,0)) # shape (H, W, 1)
 
-        pred_target_mask = r_masks[pred_index:pred_index+1,:,:] # shape (1, H, W)
-        pred_target_mask = np.transpose(pred_target_mask, axes=(1,2,0)) # shape (H, W, 1)
+        # mask_ious = np.squeeze(utilslib.compute_overlaps_masks(gt_masks, pred_target_mask))
+        target_mask_ious = iou_matrix[pred_index,:]
 
-        mask_ious = np.squeeze(utilslib.compute_overlaps_masks(gt_masks, pred_target_mask))
-
-        if np.argmax(mask_ious) == gt_index:
-            num_correct_targets_masks += 1
+        if np.argmax(target_mask_ious) == gt_index:
+            correct_targets_masks[image_id] = 1
 
 
-    print('Correct target (by bbox IoU) for {} out of {} cases'.format(num_correct_targets_bbox, len(image_ids)))
-    print('Correct target (by mask IoU) for {} out of {} cases'.format(num_correct_targets_masks, len(image_ids)))
-
+    print('Correct target (by mask IoU) for {} out of {} cases'.format(np.sum(correct_targets_masks), len(image_ids)))
+    print('mAP[0.5:0.05:0.95]:', np.mean(average_precisions))
 
     # Print top-n ious
     for n in n_s:
@@ -256,6 +298,8 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
         np.save(iou_path, max_top_n_ious[n])
         np.save(indices_path, max_top_n_indices[n])
 
+    np.save(os.path.join(pred_info_dir, 'correct_targets_masks.npy'), correct_targets_masks)
+    np.save(os.path.join(pred_info_dir, 'average_precisions.npy'), average_precisions)
 
     # Histogram of IoU values
     for n in n_s:
@@ -269,52 +313,72 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
 
 
 def plot_detailed_predictions(file_name, pile_img, target_img, gt_masks, gt_bbs, target_vector,
-                              pred_masks, pred_bbs, pred_target_probs):
+                              pred_masks, pred_bbs, pred_target_probs,
+                              obj_class='', obj_vis=0):
     assert pile_img.shape[-1] == 4 and target_img.shape[-1] == 4, "for now 4 channel only"
 
     num_preds = len(pred_bbs)
 
-    pile_rgb = pile_img[:,:,:3]
-    pile_d = np.transpose(np.stack([pile_img[:,:,3]] * 3), axes=(1,2,0))
+    # cropping & splitting
+    py1, px1, py2, px2 = 110, 90, 350, 410
+    pile_rgb = pile_img[py1:py2,px1:px2,:3]
+    pile_d = pile_img[py1:py2,px1:px2,3]
 
     target_rgb = target_img[:,:,:3]
-    target_d = np.transpose(np.stack([target_img[:,:,3]] * 3), axes=(1,2,0))
+    ty1, tx1, ty2, tx2 = utilslib.extract_bboxes(np.sum(target_rgb, axis=2)[:,:,np.newaxis] != 0)[0]
+    target_rgb = target_img[ty1:ty2,tx1:tx2,:3]
+    target_d = target_img[ty1:ty2,tx1:tx2,3]
 
-    gt_target_mask = gt_masks[np.argmax(target_vector),:,:]
-    pred_mask_ious = np.squeeze(utilslib.compute_overlaps_masks(pred_masks, [gt_target_mask]))
+    pred_masks = np.transpose(pred_masks, axes=(1,2,0))
+    gt_target_mask = gt_masks[:,:,np.argmax(target_vector):np.argmax(target_vector)+1]
+
+    pred_mask_ious = np.squeeze(utilslib.compute_overlaps_masks(pred_masks, gt_target_mask))
 
     fig, ax = plt.subplots(num_preds + 2, 2, figsize=(12, 6 * (num_preds + 2)))
 
     ax[0][0].imshow(target_rgb)
-    ax[0][1].imshow(target_d)
+    ax[0][1].imshow(target_d, cmap='gray_r')
 
     ax[1][0].imshow(pile_rgb)
-    ax[1][1].imshow(pile_d)
+    ax[1][1].imshow(pile_d, cmap='gray_r')
 
-    gt_target_pile_bb = gt_bbs[np.argmax(target_vector)]
-    gt_target_bb_patch = patches.Rectangle((gt_target_pile_bb[1], gt_target_pile_bb[0]),
+    # adjust for crop
+    gt_target_pile_bb = gt_bbs[np.argmax(target_vector)] - np.array([py1, px1, py1, px1])
+
+    ax[1][0].add_patch(patches.Rectangle((gt_target_pile_bb[1], gt_target_pile_bb[0]),
                                         gt_target_pile_bb[3] - gt_target_pile_bb[1],
                                         gt_target_pile_bb[2] - gt_target_pile_bb[0], linewidth=2,
                                       alpha=0.8,
-                                      edgecolor='red', facecolor='none')
+                                      edgecolor='red', facecolor='none'))
+    ax[1][1].add_patch(patches.Rectangle((gt_target_pile_bb[1], gt_target_pile_bb[0]),
+                                        gt_target_pile_bb[3] - gt_target_pile_bb[1],
+                                        gt_target_pile_bb[2] - gt_target_pile_bb[0], linewidth=2,
+                                      alpha=0.8,
+                                      edgecolor='red', facecolor='none'))
 
-    ax[1][0].add_patch(gt_target_bb_patch)
-    ax[1][1].add_patch(gt_target_bb_patch)
+    ax[1][0].set_title('GT target - {}'.format(obj_class))
+    ax[1][1].set_title('Visibility: {:.3f}'.format(obj_vis))
 
-    ax[1][0].set_title('GT target')
+    target_plot_indices = np.argsort(np.argsort(pred_target_probs[:,1] * -1))
 
     for k in range(num_preds):
-        j = k + 2
+        j = target_plot_indices[k] + 2
+        # print('pred', k, 'plot index', j, 'prob', pred_target_probs[k,1])
+        # adjust for crop
+        pred_bb = pred_bbs[k,:] - np.array([py1, px1, py1, px1])
         ax[j][0].imshow(pile_rgb)
-        ax[j][1].imshow(pile_d)
-        pred_bb_patch = patches.Rectangle((pred_bb[1], pred_bb[0]), pred_bb[3] - pred_bb[1],
+        ax[j][1].imshow(pile_d, cmap='gray_r')
+        ax[j][0].add_patch(patches.Rectangle((pred_bb[1], pred_bb[0]), pred_bb[3] - pred_bb[1],
                                           pred_bb[2] - pred_bb[0], linewidth=2, alpha=0.8,
-                                          edgecolor='red', facecolor='none')
-        ax[j][0].add_patch(pred_bb_patch)
-        ax[j][1].add_patch(pred_bb_patch)
+                                             edgecolor='red', linestyle='dashed',
+                                             facecolor='none'))
+        ax[j][1].add_patch(patches.Rectangle((pred_bb[1], pred_bb[0]), pred_bb[3] - pred_bb[1],
+                                          pred_bb[2] - pred_bb[0], linewidth=2, alpha=0.8,
+                                             edgecolor='red', linestyle='dashed',
+                                             facecolor='none'))
 
-        ax[j][0].set_title("Mask IoU: {:03f}".format(pred_mask_ious[k]))
-        ax[j][1].set_title("Target Confidence: {:03f}".format(pred_target_probs[k]))
+        ax[j][0].set_title("Mask IoU: {:.3f}".format(pred_mask_ious[k]))
+        ax[j][1].set_title("Target Confidence: {:.3f}".format(pred_target_probs[k,1]))
 
     plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
     plt.close()
@@ -379,6 +443,8 @@ def visualize_targets(run_dir, dataset, inference_config, pred_mask_dir, pred_in
         (pile_img, _, _, bbox, masks), (target_img, _, _, target_vector) \
             = modellib.load_inputs_gt(dataset, inference_config, image_id)
 
+        example_meta = dataset.load_example_metadata(image_id)
+
         target_mask = masks[:,:,np.argmax(target_vector)]
         target_pile_bb = bbox[np.argmax(target_vector)]
 
@@ -395,9 +461,11 @@ def visualize_targets(run_dir, dataset, inference_config, pred_mask_dir, pred_in
 
         # if we have a stack, display first image in stack
         if len(target_img.shape) == 4:
-            target_img = target_img[0,:,:,:]
+            target_img = target_img[3,:,:,:]
         plot_detailed_predictions(file_name, pile_img, target_img, masks, bbox, target_vector,
-                         r_masks, r['rois'], r['target_probs'])
+                                  r_masks, r['rois'], r['target_probs'],
+                                  obj_class=example_meta['obj_class'],
+                                  obj_vis=example_meta['obj_visibility'])
 
     print('Saved prediction visualizations to:\t {}'.format(vis_dir))
 
