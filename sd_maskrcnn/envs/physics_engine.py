@@ -97,7 +97,7 @@ class PybulletPhysicsEngine(PhysicsEngine):
                                        useFixedBase=static,
                                        physicsClientId=self._physics_client)
         except:
-            raise Exception('Failed to load %s' %(filename))
+            raise Exception('Failed to load %s' %(urdf_filename))
         
         if self._debug:
             self._add_to_scene(obj)
