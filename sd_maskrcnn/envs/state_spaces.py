@@ -357,30 +357,7 @@ class HeapStateSpace(gym.Space):
 
         return HeapState(workspace_obj_states, objs_in_heap, metadata=metadata)
 
-    def _add_object_to_simulation(self, obj, useFixedBase=0):
 
-        # create URDF
-        urdf_dir = os.path.join(self._urdf_cache_dir, obj.key)
-        name = os.path.basename(urdf_dir)
-        name = '{}.urdf'.format(name)
-        urdf_filename = os.path.join(urdf_dir, name)
-        self.urdf_filenames[obj.key] = urdf_filename
-        obj.mesh.density = self.obj_density
-        # Mess with center of mass
-        geometry = obj.mesh.copy()
-        geometry.apply_translation(-obj.mesh.center_mass)
-        if not os.path.exists(urdf_filename):
-            try:
-                os.makedirs(urdf_dir)
-            except:
-                self._logger.warning('Failed to create dir %s. The object may have been created simultaneously by another process' %(urdf_dir))
-            self._logger.info('Exporting URDF for object %s' %(obj.key))
-            trimesh.exchange.export.export_urdf(geometry, urdf_dir)
-
-        # add to simulator
-        obj_id = self._physics_engine.add_urdf(self.urdf_filenames[obj.key], obj.pose, obj.mesh.center_mass, useFixedBase=useFixedBase)
-        return obj_id
-    
 class HeapAndCameraStateSpace(gym.Space):
     """ State space for environments. """
     def __init__(self, physics_engine, config):
