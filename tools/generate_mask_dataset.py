@@ -44,6 +44,14 @@ SEED = 744
 # set up logger
 logger = Logger.get_logger('tools/generate_segmask_dataset.py')
 
+def bbox(img):
+    rows = np.any(img, axis=1)
+    cols = np.any(img, axis=0)
+    rmin, rmax = np.where(rows)[0][[0, -1]]
+    cmin, cmax = np.where(cols)[0][[0, -1]]
+
+    return rmin, rmax, cmin, cmax
+
 def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, warm_start=False):
     """ Generate a segmentation training dataset
 
@@ -97,6 +105,12 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
     depth_dir = os.path.join(image_dir, 'depth_ims')
     if image_config['depth'] and not os.path.exists(depth_dir):
         os.mkdir(depth_dir)
+    dist_dir = os.path.join(image_dir, 'dist_ims')
+    if image_config['dist'] and not os.path.exists(dist_dir):
+        os.mkdir(dist_dir)
+    soft_dist_dir = os.path.join(image_dir, 'soft_dist_ims')
+    if image_config['soft_dist'] and not os.path.exists(soft_dist_dir):
+        os.mkdir(soft_dist_dir)
     amodal_dir = os.path.join(image_dir, 'amodal_masks')
     if image_config['amodal'] and not os.path.exists(amodal_dir):
         os.mkdir(amodal_dir)
@@ -143,6 +157,22 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
         
         if image_config['depth']:
             image_tensor_config['fields']['depth_im'] = {
+                'dtype': 'float32',
+                'channels': 1,
+                'height': im_height,
+                'width': im_width
+            }
+        
+        if image_config['dist']:
+            image_tensor_config['fields']['dist_im'] = {
+                'dtype': 'uint8',
+                'channels': 1,
+                'height': im_height,
+                'width': im_width
+            }
+        
+        if image_config['soft_dist']:
+            image_tensor_config['fields']['soft_dist_im'] = {
                 'dtype': 'float32',
                 'channels': 1,
                 'height': im_height,
@@ -257,6 +287,10 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                 os.remove(os.path.join(depth_dir, im_name))
             if os.path.exists(os.path.join(color_dir, im_name)):
                 os.remove(os.path.join(color_dir, im_name))
+            if os.path.exists(os.path.join(dist_dir, im_name)):
+                os.remove(os.path.join(dist_dir, im_name))
+            if os.path.exists(os.path.join(soft_dist_dir, im_name)):
+                os.remove(os.path.join(soft_dist_dir, im_name))
             if os.path.exists(os.path.join(semantic_dir, im_name)):
                 os.remove(os.path.join(semantic_dir, im_name))
             if os.path.exists(os.path.join(modal_dir, im_basename)):
@@ -366,7 +400,9 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                         color_obs, depth_obs = obs
                     else:
                         depth_obs = obs
-                                        
+                    
+                    dist_im, soft_dist_im = env.find_target_distribution_2d()
+                    
                     # vis obs
                     if vis_config['obs']:
                         if image_config['depth']:
@@ -377,7 +413,14 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                             plt.figure()
                             plt.imshow(color_obs)
                             plt.title('Color Observation')
-                        plt.show()
+                        if image_config['dist']:
+                            plt.figure()
+                            plt.imshow(dist_im)
+                            plt.show()
+                        if image_config['soft_dist']:
+                            plt.figure()
+                            plt.imshow(soft_dist_im)
+                            plt.show()
 
                     if image_config['modal'] or image_config['amodal'] or image_config['semantic']:
                                             
@@ -385,6 +428,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                         amodal_segmasks, modal_segmasks = env.render_segmentation_images()
 
                         # retrieve segmask data
+                        # bboxes = np.zeros((4, env.num_objects))
                         modal_segmask_arr = np.iinfo(np.uint8).max * np.ones([im_height,
                                                                             im_width,
                                                                             segmask_channels], dtype=np.uint8)
@@ -401,6 +445,8 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                         if image_config['semantic']:
                             for j in range(env.num_objects):
                                 this_obj_px = np.where(modal_segmasks[:,:,j] > 0)
+                                bboxes[:,j] = (np.min(this_obj_px[0], initial=0), np.max(this_obj_px[0], initial=0), 
+                                            np.min(this_obj_px[1], initial=0), np.max(this_obj_px[1], initial=0))
                                 stacked_segmask_arr[this_obj_px[0], this_obj_px[1],0] = j+1
 
                     # visualize
@@ -415,6 +461,10 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                             image_datapoint['color_im'] = color_obs
                         if image_config['depth']:
                             image_datapoint['depth_im'] = depth_obs[:,:,None]
+                        if image_config['dist']:
+                            image_datapoint['dist_im'] = dist_im
+                        if image_config['soft_dist']:
+                            image_datapoint['soft_dist_im'] = soft_dist_im
                         if image_config['modal']:
                             image_datapoint['modal_segmasks'] = modal_segmask_arr
                         if image_config['amodal']:
@@ -435,6 +485,10 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                         ColorImage(color_obs).save(os.path.join(color_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))
                     if image_config['depth']:
                         DepthImage(depth_obs).save(os.path.join(depth_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))
+                    if image_config['dist']:
+                        BinaryImage(dist_im).save(os.path.join(dist_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))
+                    if image_config['soft_dist']:
+                        GrayscaleImage(soft_dist_im).save(os.path.join(soft_dist_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))
                     if image_config['modal']:
                         modal_id_dir = os.path.join(modal_dir, 'image_{:06d}'.format(num_images_per_state*state_id + k))
                         if not os.path.exists(modal_id_dir):

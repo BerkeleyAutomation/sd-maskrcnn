@@ -23,6 +23,8 @@ Author: Mike Danielczuk
 
 import numpy as np
 import gym
+import trimesh
+import skimage.morphology as skm
 
 from autolab_core import Logger
 from pyrender import (Scene, IntrinsicsCamera, Mesh, DirectionalLight, Viewer,
@@ -78,6 +80,10 @@ class BinHeapEnv(gym.Env):
     @property
     def obj_keys(self):
         return self.state.obj_keys
+
+    @property
+    def target_key(self):
+        return self.state.metadata['target_key']
 
     def _reset_state_space(self):
         """ Sample a new static and dynamic state. """
@@ -223,6 +229,121 @@ class BinHeapEnv(gym.Env):
 
         return amodal_data, modal_data
 
+
+    def render_target_modal_mask(self):
+        """Renders segmentation masks (modal and amodal) for target object. """
+
+        target_node = next(iter(self._scene.get_nodes(name=self.target_key)))
+        target_node.mesh.is_visible = False
+        bin_node = next(iter(self._scene.get_nodes(name='bin')))
+        bin_node.mesh.is_visible = False
+
+        renderer = OffscreenRenderer(self.camera.width, self.camera.height)
+        full_depth = renderer.render(self._scene, flags=RenderFlags.DEPTH_ONLY)
+
+        # Hide all meshes
+        for mn in self._scene.mesh_nodes:
+            mn.mesh.is_visible = False
+
+        plane_node = next(iter(self._scene.get_nodes(name='plane')))
+        plane_node.mesh.is_visible = True
+        plane_depth = renderer.render(self._scene, flags=RenderFlags.DEPTH_ONLY)
+
+        target_node.mesh.is_visible = True
+        depth = renderer.render(self._scene, flags=RenderFlags.DEPTH_ONLY)
+        modal_mask = depth - full_depth < 0
+
+        renderer.delete()
+        
+        # Show all meshes
+        for mn in self._scene.mesh_nodes:
+            mn.mesh.is_visible = True
+
+        return full_depth, depth, modal_mask, plane_depth
+
+
+    # @profile
+    def find_target_distribution_2d(self):
+
+        # Render target object and full depth image to get offset and centroid
+        full_depth, target_depth, target_mask, plane_depth = self.render_target_modal_mask()
+        nonzero_target_inds = np.stack(np.where(target_depth - plane_depth < 0))
+        target_centroid = np.mean(nonzero_target_inds, axis=1)[:,None]
+        nonzero_target_depth_offset = plane_depth[nonzero_target_inds[0], nonzero_target_inds[1]] - target_depth[nonzero_target_inds[0], nonzero_target_inds[1]] 
+        
+        # Generate meshgrid for translations to apply
+        num_x_steps = 51
+        num_y_steps = 38
+        x = np.linspace(0, self.camera.width-1, num=num_x_steps, dtype=np.int)
+        y = np.linspace(0, self.camera.height-1, num=num_y_steps, dtype=np.int)
+        grid = np.meshgrid(y, x)
+        grid = np.array([grid[0].flatten(), grid[1].flatten()])
+        grid -= target_centroid.astype(np.int)
+
+        # Shift target depth and add offset to create new depth images
+        shifted_target_inds = np.repeat(nonzero_target_inds[None,...], grid.shape[1], axis=0) + grid[None,...].T
+        shifted_target_inds[:,0,:][shifted_target_inds[:,0,:] >= self.camera.height] = self.camera.height - 1
+        shifted_target_inds[:,1,:][shifted_target_inds[:,1,:] >= self.camera.width] = self.camera.width - 1
+        shifted_target_inds = np.array([np.repeat(np.arange(grid.shape[1]), nonzero_target_inds.shape[1]), shifted_target_inds[:,0,:].flatten(), shifted_target_inds[:,1:].flatten()])
+        shifted_target_ims = np.zeros((grid.shape[1], target_depth.shape[0], target_depth.shape[1]))
+        shifted_target_ims[shifted_target_inds[0], shifted_target_inds[1], shifted_target_inds[2]] = plane_depth[shifted_target_inds[1], shifted_target_inds[2]] - np.tile(nonzero_target_depth_offset, grid.shape[1])
+
+        modal_masks = np.logical_and(shifted_target_ims < full_depth, shifted_target_ims > 0)
+        mask_ious = np.sum(np.logical_and(modal_masks, target_mask), axis=(1,2)) / np.sum(np.logical_or(modal_masks, target_mask), axis=(1,2))
+        mask_ious[np.sum(target_mask) == 0 and np.sum(modal_masks, axis=(1,2)) == 0] = 1.0
+
+        # for i,iou in enumerate(mask_ious):
+        #     if iou > 0.9 and np.sum(target_mask) == 0:
+        #         print('AND: {}, OR: {}'.format(np.sum(np.logical_and(modal_masks[i], target_mask)), np.sum(np.logical_or(modal_masks[i], target_mask))))
+        #         import matplotlib.pyplot as plt
+        #         plt.figure()
+        #         plt.imshow(full_depth)
+        #         plt.figure()
+        #         plt.imshow(shifted_target_ims[i])
+        #         plt.figure()
+        #         plt.imshow(target_depth)
+        #         # plt.figure()
+        #         # plt.scatter(target_centroid[1], target_centroid[0])
+        #         # new_centroid = grid[:, i, None] + target_centroid
+        #         # plt.scatter(new_centroid[1], new_centroid[0])
+        #         # plt.xlim(0,512)
+        #         # plt.ylim(384,0)
+        #         import pdb; pdb.set_trace()
+        #         plt.show()
+
+        iou_centers = (target_centroid + grid[:, np.where(mask_ious > 0.9)[0]]).astype(np.int)
+        iou_centers[0,:][iou_centers[0,:] >= self.camera.height] = self.camera.height - 1
+        iou_centers[1,:][iou_centers[1,:] >= self.camera.width] = self.camera.width - 1
+        iou_centers = np.concatenate((iou_centers, target_centroid.astype(np.int)), axis=1)
+
+        dist_im = np.zeros_like(full_depth, dtype=np.bool)
+        dist_im[iou_centers[0,:], iou_centers[1,:]] = True
+        dist_im = skm.binary_dilation(dist_im, selem=np.ones((11,11))).astype(np.uint8)
+
+        soft_dist_im = np.sum(shifted_target_ims[mask_ious > 0.9,...] > 0, axis=0) + (plane_depth-target_depth > 0).astype(np.uint8)
+        soft_dist_im = (np.iinfo(np.uint8).max * soft_dist_im / np.max(soft_dist_im)).astype(np.uint8)
+
+        return dist_im, soft_dist_im
+
+    def _generate_rotation_matrices(self, step=np.pi/32):
+        angles = np.arange(step, 2*np.pi, step)
+        num_angles = len(angles)
+        axes = np.tile(np.array([[1,0,0],[0,1,0],[0,0,1]]), num_angles).astype(np.float)
+        angles = np.repeat(angles, 3)
+
+        sina = np.sin(angles)
+        cosa = np.cos(angles)
+        M = np.zeros((len(angles), 4, 4))
+        M[:, range(4), range(4)] = np.array([cosa, cosa, cosa, np.ones(len(angles))]).T
+        M[:, :3, :3] += np.transpose(np.einsum('ij,kj->ikj', axes, axes) * (1.0 - cosa), (2,0,1))
+        
+        axes *= sina
+        M[:, :3, :3] += np.transpose([[np.zeros(len(angles)), -axes[2], axes[1]], 
+                                      [axes[2], np.zeros(len(angles)), -axes[0]], 
+                                      [-axes[1], axes[0], np.zeros(len(angles))]], (2,0,1))
+
+        return M
+
     def _create_raymond_lights(self):
         thetas = np.pi * np.array([1.0 / 6.0, 1.0 / 6.0, 1.0 / 6.0])
         phis = np.pi * np.array([0.0, 2.0 / 3.0, 4.0 / 3.0])
@@ -250,3 +371,68 @@ class BinHeapEnv(gym.Env):
             ))
 
         return nodes
+
+    # def find_target_distribution(self, num=100):
+
+    #     # Generate random rotation matrices and apply to current pose
+    #     rand_rots = trimesh.transformations.random_rotation_matrix(num=num)
+    #     rand_rots = np.concatenate((rand_rots, self._generate_rotation_matrices()), axis=0)
+    #     num = len(rand_rots)
+    #     curr_pose = next(iter(self._scene.get_nodes(name=self.target_key))).matrix
+    #     rand_poses = np.einsum('ij,...jk->...ik', curr_pose, rand_rots)
+    #     mask_ious = np.zeros(num, dtype=np.float)
+    #     full_depth = np.zeros((num,self.camera.height,self.camera.width), dtype=np.float)
+    #     modal_masks = np.zeros((num,self.camera.height,self.camera.width), dtype=np.bool)
+
+    #     # Render depth images with all meshes, then hide all non-target meshes
+    #     renderer = OffscreenRenderer(self.camera.width, self.camera.height)
+    #     target_node = next(iter(self._scene.get_nodes(name=self.target_key)))
+        
+    #     orig_full_depth = renderer.render(self._scene, flags=RenderFlags.DEPTH_ONLY)
+    #     for mn in self._scene.mesh_nodes:
+    #         mn.mesh.is_visible = False
+    #     target_node.mesh.is_visible = True
+    #     depth = renderer.render(self._scene, flags=RenderFlags.DEPTH_ONLY)
+    #     orig_modal_mask = np.logical_and(
+    #         (np.abs(orig_full_depth - depth) < 1e-6), orig_full_depth > 0.0
+    #     )
+
+    #     for mn in self._scene.mesh_nodes:
+    #         mn.mesh.is_visible = True
+
+    #     for i,rp in enumerate(rand_poses):
+    #         target_node.matrix = rp
+    #         full_depth[i] = renderer.render(self._scene, flags=RenderFlags.DEPTH_ONLY)
+
+    #     for mn in self._scene.mesh_nodes:
+    #         mn.mesh.is_visible = False
+    #     target_node.mesh.is_visible = True
+
+    #     for i,rp in enumerate(rand_poses):
+    #         target_node.matrix = rp
+    #         depth = renderer.render(self._scene, flags=RenderFlags.DEPTH_ONLY)
+    #         modal_masks[i] = np.logical_and(
+    #             (np.abs(full_depth[i] - depth) < 1e-6), full_depth[i] > 0.0
+    #         )
+            
+    #         mask_ious[i] = np.sum(np.logical_and(modal_masks[i], orig_modal_mask)) / np.sum(np.logical_or(modal_masks[i], orig_modal_mask))
+
+    #         # if mask_ious[i] > 0.95:
+    #         #     import matplotlib.pyplot as plt
+    #         #     plt.figure()
+    #         #     plt.imshow(modal_masks[i])
+    #         #     plt.figure()
+    #         #     plt.imshow(orig_modal_mask)
+    #         #     plt.figure()
+    #         #     plt.imshow(full_depth[i])
+    #         #     plt.figure()
+    #         #     plt.imshow(orig_full_depth)
+    #         #     plt.show()
+
+    #     renderer.delete()
+        
+    #     # Show all meshes
+    #     for mn in self._scene.mesh_nodes:
+    #         mn.mesh.is_visible = True
+
+    #     return rand_poses, mask_ious
