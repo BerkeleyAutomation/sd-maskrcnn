@@ -104,7 +104,7 @@ Same directory organization as TargetDataset, but one example JSON tuple is now:
 ((target_path_1, target_path_2, ...), pile_image, target_index)
 """
 class TargetStackDataset(utils.Dataset):
-    def __init__(self, config, base_path, tuple_file, images='piles', masks='masks', targets='images', augment_targets=False):
+    def __init__(self, config, base_path, tuple_file, images='piles', masks='masks', targets='images', vis_file=None, augment_targets=False):
         # omg fix this above before u get confused!!!
         assert base_path != "", "You must provide the path to a dataset!"
         self.targets = targets
@@ -116,6 +116,9 @@ class TargetStackDataset(utils.Dataset):
 
         self.augment_targets = augment_targets
         self.data_tuples = json.load(open(os.path.join(self.base_path, tuple_file)))
+        self.visibility_tuples = None
+        if vis_file is not None:
+            self.visibility_tuples = json.load(open(os.path.join(self.base_path, vis_file)))
         super().__init__(config)
 
         assert len(self.bg_pixel) == self._channels, "background pixel must match # of channels"
@@ -153,9 +156,15 @@ class TargetStackDataset(utils.Dataset):
                 pile_path = pile_path.replace('.png', '.npy')
                 target_stack_paths = [path.replace('.png', '.npy') for path in target_stack_paths]
 
+            obj_class, obj_visibility = '', 0
+            if self.visibility_tuples is not None:
+                vis_tup = self.visibility_tuples[i]
+                obj_class, obj_visibility = vis_tup[0], vis_tup[1]
+
             self.add_example(source='clutter', image_id=i, pile_path=pile_path,
-                           pile_mask_path=mask_path, target_stack_paths=target_stack_paths,
-                           target_index=target_ind)
+                             pile_mask_path=mask_path, target_stack_paths=target_stack_paths,
+                             target_index=target_ind, obj_class=obj_class,
+                             obj_visibility=obj_visibility)
 
     def load_example(self, example_id):
         """Returns a dictionary containing inputs from a training example."""
@@ -171,6 +180,15 @@ class TargetStackDataset(utils.Dataset):
         example['pile_mask'], example['class_ids'] = self._load_mask(info['pile_mask_path'])
         example['target_index'] = info['target_index']
         return example
+
+    def load_example_metadata(self, example_id):
+        """Returns a dictionary of example metadata (not inputs). Primarily used for
+        benchmarking and analysis."""
+        info = self.example_info[example_id]
+        meta = {}
+        meta['obj_class'] = info['obj_class']
+        meta['obj_visibility'] = info['obj_visibility']
+        return meta
 
     def _get_target_bb(self, target_image):
         target_mask = np.sum(target_image - self.bg_pixel, axis=2)
