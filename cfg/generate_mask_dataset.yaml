@@ -12,9 +12,9 @@ urdf_cache_dir: datasets/objects/urdf/cache/        # Directory to store URDF fi
 images:
   color: 1
   depth: 1
-  modal: 0
-  amodal: 0
-  semantic: 0
+  modal: 1
+  amodal: 1
+  semantic: 1
 
 vis:                                                # Visualization flags for viewing each state and generated images
   state: 0
