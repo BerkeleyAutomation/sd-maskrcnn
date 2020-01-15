@@ -22,16 +22,6 @@ dataset:
     tensors:
       datapoints_per_file: 100
       fields:
-        depth_im:
-          dtype: float32
-          channels: 1
-        modal_segmasks:
-          dtype: uint8
-        amodal_segmasks:
-          dtype: uint8
-        stacked_segmasks:
-          channels: 1
-          dtype: uint8
         camera_pose:
           dtype: float32
         camera_intrs:
