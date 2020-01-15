@@ -126,12 +126,12 @@ class HeapStateSpace(gym.Space):
         inds = np.arange(len(object_keys))
         np.random.shuffle(inds)
         self.all_object_keys = list(np.array(object_keys)[inds][:num_objects])
-        mesh_filenames = list(np.array(mesh_filenames)[inds][:num_objects])
+        all_mesh_filenames = list(np.array(mesh_filenames)[inds][:num_objects])
         self.train_keys = self.all_object_keys[:int(len(self.all_object_keys)*self._train_pct)]
         self.test_keys = self.all_object_keys[int(len(self.all_object_keys)*self._train_pct):]
         self.obj_ids = dict([(key, i+1) for i,key in enumerate(self.all_object_keys)])
         self.mesh_filenames = {}
-        [self.mesh_filenames.update({k:v}) for k,v in zip(self.all_object_keys, mesh_filenames)]
+        [self.mesh_filenames.update({k:v}) for k,v in zip(self.all_object_keys, all_mesh_filenames)]
 
     @property
     def obj_keys(self):
@@ -243,8 +243,9 @@ class HeapStateSpace(gym.Space):
         objs_in_heap = []
         total_drops = 0
         while total_drops < total_num_objs and len(objs_in_heap) < num_objs:
-            obj_key = sample_keys[total_drops]
+            obj_key = sample_keys[obj_inds[total_drops]]
             obj_mesh = trimesh.load_mesh(self.mesh_filenames[obj_key])
+            obj_mesh.visual = trimesh.visual.ColorVisuals(obj_mesh, vertex_colors=(0.7,0.7,0.7,1.0))
             obj_mesh.density = self.obj_density
             obj = ObjectState(obj_key, obj_mesh)
             _, radius = trimesh.nsphere.minimum_nsphere(obj.mesh)
@@ -356,30 +357,7 @@ class HeapStateSpace(gym.Space):
 
         return HeapState(workspace_obj_states, objs_in_heap, metadata=metadata)
 
-    def _add_object_to_simulation(self, obj, useFixedBase=0):
 
-        # create URDF
-        urdf_dir = os.path.join(self._urdf_cache_dir, obj.key)
-        name = os.path.basename(urdf_dir)
-        name = '{}.urdf'.format(name)
-        urdf_filename = os.path.join(urdf_dir, name)
-        self.urdf_filenames[obj.key] = urdf_filename
-        obj.mesh.density = self.obj_density
-        # Mess with center of mass
-        geometry = obj.mesh.copy()
-        geometry.apply_translation(-obj.mesh.center_mass)
-        if not os.path.exists(urdf_filename):
-            try:
-                os.makedirs(urdf_dir)
-            except:
-                self._logger.warning('Failed to create dir %s. The object may have been created simultaneously by another process' %(urdf_dir))
-            self._logger.info('Exporting URDF for object %s' %(obj.key))
-            trimesh.exchange.export.export_urdf(geometry, urdf_dir)
-
-        # add to simulator
-        obj_id = self._physics_engine.add_urdf(self.urdf_filenames[obj.key], obj.pose, obj.mesh.center_mass, useFixedBase=useFixedBase)
-        return obj_id
-    
 class HeapAndCameraStateSpace(gym.Space):
     """ State space for environments. """
     def __init__(self, physics_engine, config):

@@ -7,7 +7,7 @@ tqdm
 matplotlib
 autolab_core>=0.0.9
 autolab-perception
-tensorflow-gpu>=1.10
+tensorflow-gpu>=1.10<1.13
 gym>=0.11
 pyglet==1.4.0b1
 pyrender>=0.1.23
