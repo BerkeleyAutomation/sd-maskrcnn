@@ -27,10 +27,10 @@ state_space:
         - 0.1
         - 0.1
 
-    mean_objs: 5        # Poisson dist mean for number of objects in each heap
-    min_objs: 2         # Min objs in each heap
-    max_objs: 10        # Max objs in each heap
-    replace: 0          # Sample objects with replacement?
+    mean_objs: 12        # Poisson dist mean for number of objects in each heap
+    min_objs: 10         # Min objs in each heap
+    max_objs: 15        # Max objs in each heap
+    replace: 1          # Sample objects with replacement?
     max_obj_diam: 0.3   # Max diameter of object to be dropped (otherwise it will be skipped)
     drop_height: 0.2
     
@@ -40,11 +40,14 @@ state_space:
     mag_w_thresh: 0.1
 
     objects:
-      mesh_dir: datasets/objects/meshes/    # Directory containing meshes to be dropped
-      num_objects: 50                       # Number of objects in dataset (test and train)
+      mesh_dir: /nfs/diskstation/objects/meshes/    # Directory containing meshes to be dropped
+      num_objects: 2000                     # Number of objects in dataset (test and train)
       train_pct: 0.8                        # Percentage of objects to be designated as train
+      target_key: thingiverse~flat_lid_274162
       object_keys:                          # Folders containing meshes
-        ycb: all                            # all -> all meshes in folder. Can also specify list of mesh names
+        thingiverse: all
+        thingiverse_packaged: all
+        # ycb: all                            # all -> all meshes in folder. Can also specify list of mesh names
 
       planar_translation:                   # Amount of translation around the center point to drop each object
         min:                                # Uniform random variable
