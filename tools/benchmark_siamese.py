@@ -313,19 +313,20 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
 def plot_detailed_predictions(file_name, pile_img, target_img, gt_masks, gt_bbs, target_vector,
                               pred_masks, pred_bbs, pred_target_probs,
                               obj_class='', obj_vis=0):
-    assert pile_img.shape[-1] == 4 and target_img.shape[-1] == 4, "for now 4 channel only"
+    assert pile_img.shape[-1] == target_img.shape[-1], "channel count must match"
+
+    depth_channel = (pile_img.shape[-1] == 4)
 
     num_preds = len(pred_bbs)
 
     # cropping & splitting
     py1, px1, py2, px2 = 110, 90, 350, 410
     pile_rgb = pile_img[py1:py2,px1:px2,:3]
-    pile_d = pile_img[py1:py2,px1:px2,3]
 
     target_rgb = target_img[:,:,:3]
     ty1, tx1, ty2, tx2 = utilslib.extract_bboxes(np.sum(target_rgb, axis=2)[:,:,np.newaxis] != 0)[0]
     target_rgb = target_img[ty1:ty2,tx1:tx2,:3]
-    target_d = target_img[ty1:ty2,tx1:tx2,3]
+
 
     pred_masks = np.transpose(pred_masks, axes=(1,2,0))
     gt_target_mask = gt_masks[:,:,np.argmax(target_vector):np.argmax(target_vector)+1]
@@ -335,10 +336,7 @@ def plot_detailed_predictions(file_name, pile_img, target_img, gt_masks, gt_bbs,
     fig, ax = plt.subplots(num_preds + 2, 2, figsize=(12, 6 * (num_preds + 2)))
 
     ax[0][0].imshow(target_rgb)
-    ax[0][1].imshow(target_d, cmap='gray_r')
-
     ax[1][0].imshow(pile_rgb)
-    ax[1][1].imshow(pile_d, cmap='gray_r')
 
     # adjust for crop
     gt_target_pile_bb = gt_bbs[np.argmax(target_vector)] - np.array([py1, px1, py1, px1])
@@ -348,11 +346,18 @@ def plot_detailed_predictions(file_name, pile_img, target_img, gt_masks, gt_bbs,
                                         gt_target_pile_bb[2] - gt_target_pile_bb[0], linewidth=2,
                                       alpha=0.8,
                                       edgecolor='red', facecolor='none'))
-    ax[1][1].add_patch(patches.Rectangle((gt_target_pile_bb[1], gt_target_pile_bb[0]),
-                                        gt_target_pile_bb[3] - gt_target_pile_bb[1],
-                                        gt_target_pile_bb[2] - gt_target_pile_bb[0], linewidth=2,
-                                      alpha=0.8,
-                                      edgecolor='red', facecolor='none'))
+    if depth_channel:
+        pile_d = pile_img[py1:py2,px1:px2,3]
+        target_d = target_img[ty1:ty2,tx1:tx2,3]
+        ax[0][1].imshow(target_d, cmap='gray_r')
+        ax[1][1].imshow(pile_d, cmap='gray_r')
+
+        ax[1][1].add_patch(patches.Rectangle((gt_target_pile_bb[1], gt_target_pile_bb[0]),
+                                             gt_target_pile_bb[3] - gt_target_pile_bb[1],
+                                             gt_target_pile_bb[2] - gt_target_pile_bb[0],
+                                             linewidth=2,
+                                             alpha=0.8,
+                                             edgecolor='red', facecolor='none'))
 
     ax[1][0].set_title('GT target - {}'.format(obj_class))
     ax[1][1].set_title('Visibility: {:.3f}'.format(obj_vis))
@@ -365,18 +370,21 @@ def plot_detailed_predictions(file_name, pile_img, target_img, gt_masks, gt_bbs,
         # adjust for crop
         pred_bb = pred_bbs[k,:] - np.array([py1, px1, py1, px1])
         ax[j][0].imshow(pile_rgb)
-        ax[j][1].imshow(pile_d, cmap='gray_r')
         ax[j][0].add_patch(patches.Rectangle((pred_bb[1], pred_bb[0]), pred_bb[3] - pred_bb[1],
                                           pred_bb[2] - pred_bb[0], linewidth=2, alpha=0.8,
                                              edgecolor='red', linestyle='dashed',
                                              facecolor='none'))
-        ax[j][1].add_patch(patches.Rectangle((pred_bb[1], pred_bb[0]), pred_bb[3] - pred_bb[1],
-                                          pred_bb[2] - pred_bb[0], linewidth=2, alpha=0.8,
-                                             edgecolor='red', linestyle='dashed',
-                                             facecolor='none'))
-
         ax[j][0].set_title("Mask IoU: {:.3f}".format(pred_mask_ious[k]))
         ax[j][1].set_title("Target Confidence: {:.3f}".format(pred_target_probs[k,1]))
+
+        if depth_channel:
+            ax[j][1].imshow(pile_d, cmap='gray_r')
+            ax[j][1].add_patch(patches.Rectangle((pred_bb[1], pred_bb[0]),
+                                                 pred_bb[3] - pred_bb[1],
+                                                 pred_bb[2] - pred_bb[0],
+                                                 linewidth=2, alpha=0.8,
+                                                 edgecolor='red', linestyle='dashed',
+                                                 facecolor='none'))
 
     plt.savefig(file_name, bbox_inches='tight', pad_inches=0)
     plt.close()
