@@ -260,6 +260,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
         metadata = json.load(open(os.path.join(output_dataset_path, 'metadata.json'), 'r'))
         test_inds = np.load(os.path.join(image_dir, 'test_indices.npy')).tolist()
         train_inds = np.load(os.path.join(image_dir, 'train_indices.npy')).tolist()
+        targets = np.load(os.path.join(image_dir, 'targets.npy')).tolist()
 
         # set obj ids and splits
         reverse_obj_ids = metadata['obj_ids']
@@ -301,6 +302,10 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                 train_inds.remove(im_ind)
             elif im_ind in test_inds:
                 test_inds.remove(im_ind)
+            try:
+                targets.remove(im_ind)
+            except:
+                pass
    
     else:
 
@@ -320,6 +325,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                   indent=JSON_INDENT, sort_keys=True)
         train_inds = []
         test_inds = []
+        targets = []
     
     # generate states and images
     state_id = num_prev_states
@@ -445,8 +451,8 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                         if image_config['semantic']:
                             for j in range(env.num_objects):
                                 this_obj_px = np.where(modal_segmasks[:,:,j] > 0)
-                                bboxes[:,j] = (np.min(this_obj_px[0], initial=0), np.max(this_obj_px[0], initial=0), 
-                                            np.min(this_obj_px[1], initial=0), np.max(this_obj_px[1], initial=0))
+                                # bboxes[:,j] = (np.min(this_obj_px[0], initial=0), np.max(this_obj_px[0], initial=0), 
+                                #             np.min(this_obj_px[1], initial=0), np.max(this_obj_px[1], initial=0))
                                 stacked_segmask_arr[this_obj_px[0], this_obj_px[1],0] = j+1
 
                     # visualize
@@ -509,11 +515,13 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                         train_inds.append(num_images_per_state*state_id + k)
                     else:
                         test_inds.append(num_images_per_state*state_id + k)
+                    targets.append(env.target_key)
 
                 # auto-flush after every so many timesteps
                 if state_id % states_per_flush == 0:
                     np.save(os.path.join(image_dir, 'train_indices.npy'), train_inds)
-                    np.save(os.path.join(image_dir, 'test_indices.npy'), test_inds)                    
+                    np.save(os.path.join(image_dir, 'test_indices.npy'), test_inds)
+                    np.save(os.path.join(image_dir, 'targets.npy'), targets)                    
                     if save_tensors:
                         state_dataset.flush()
                         image_dataset.flush()
@@ -549,7 +557,8 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
         
     # write all datasets to file, save indices
     np.save(os.path.join(image_dir, 'train_indices.npy'), train_inds)
-    np.save(os.path.join(image_dir, 'test_indices.npy'), test_inds)        
+    np.save(os.path.join(image_dir, 'test_indices.npy'), test_inds)
+    np.save(os.path.join(image_dir, 'targets.npy'), targets)        
     if save_tensors: 
         state_dataset.flush()
         image_dataset.flush()

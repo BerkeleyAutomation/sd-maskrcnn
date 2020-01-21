@@ -125,14 +125,14 @@ class HeapStateSpace(gym.Space):
 
         inds = np.arange(len(object_keys))
         np.random.shuffle(inds)
-        if 'target_key' in obj_config:
-            self.target_key = obj_config['target_key']
+        self.target_keys = obj_config['target_keys'] if 'target_keys' in obj_config else []
         self.all_object_keys = list(np.array(object_keys)[inds][:num_objects])
         all_mesh_filenames = list(np.array(mesh_filenames)[inds][:num_objects])
         self.train_keys = self.all_object_keys[:int(len(self.all_object_keys)*self._train_pct)]
         self.test_keys = self.all_object_keys[int(len(self.all_object_keys)*self._train_pct):]
         self.obj_ids = dict([(key, i+1) for i,key in enumerate(self.all_object_keys)])
-        self.mesh_filenames = {self.target_key: mesh_filenames[object_keys.index(self.target_key)]}
+        self.mesh_filenames = {}
+        [self.mesh_filenames.update({tk: mesh_filenames[object_keys.index(tk)]}) for tk in self.target_keys]
         [self.mesh_filenames.update({k:v}) for k,v in zip(self.all_object_keys, all_mesh_filenames)]
 
     @property
@@ -232,6 +232,9 @@ class HeapStateSpace(gym.Space):
         num_objs = min(num_objs, self.max_objs)
         num_objs = max(num_objs, self.min_objs)
         obj_inds = np.random.permutation(np.arange(total_num_objs))
+
+        # sample heap target
+        heap_target = np.random.choice(self.target_keys) if self.target_keys else None
             
         # log
         self._logger.info('Sampling %d objects' %(num_objs))
@@ -245,9 +248,9 @@ class HeapStateSpace(gym.Space):
         objs_in_heap = []
         total_drops = 0
         while total_drops < total_num_objs and len(objs_in_heap) < num_objs:
-            obj_key = sample_keys[obj_inds[total_drops]] if total_drops > 0 else self.target_key
+            obj_key = sample_keys[obj_inds[total_drops]] if total_drops > 0 else heap_target
             obj_mesh = trimesh.load_mesh(self.mesh_filenames[obj_key])
-            obj_mesh.visual = trimesh.visual.ColorVisuals(obj_mesh, vertex_colors=(0.7,0.7,0.7,1.0)) if total_drops > 0 else trimesh.visual.ColorVisuals(obj_mesh, vertex_colors=(1.0,0.0,0.0,1.0))
+            obj_mesh.visual = trimesh.visual.ColorVisuals(obj_mesh, vertex_colors=(0.7,0.7,0.7,1.0)) if obj_key != heap_target or total_drops > 0 else trimesh.visual.ColorVisuals(obj_mesh, vertex_colors=(1.0,0.0,0.0,1.0))
             obj_mesh.density = self.obj_density
             obj = ObjectState(obj_key, obj_mesh)
             _, radius = trimesh.nsphere.minimum_nsphere(obj.mesh)
@@ -353,7 +356,7 @@ class HeapStateSpace(gym.Space):
         self._physics_engine.stop()
 
         # add metadata for heap state and return it
-        metadata = {'split': TRAIN_ID, 'target_key': self.target_key}
+        metadata = {'split': TRAIN_ID, 'target_key': heap_target}
         if not train:
             metadata['split'] = TEST_ID
 

@@ -12,10 +12,10 @@ urdf_cache_dir: /nfs/diskstation/objects/urdf/cache/        # Directory to store
 images:
   color: 1
   depth: 1
-  dist: 1
+  dist: 0
   soft_dist: 1
-  modal: 1
-  amodal: 1
+  modal: 0
+  amodal: 0
   semantic: 1
 
 vis:                                                # Visualization flags for viewing each state and generated images
