@@ -105,6 +105,9 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
     depth_dir = os.path.join(image_dir, 'depth_ims')
     if image_config['depth'] and not os.path.exists(depth_dir):
         os.mkdir(depth_dir)
+    target_dir = os.path.join(image_dir, 'target_ims')
+    if image_config['target'] and not os.path.exists(target_dir):
+        os.mkdir(target_dir)
     dist_dir = os.path.join(image_dir, 'dist_ims')
     if image_config['dist'] and not os.path.exists(dist_dir):
         os.mkdir(dist_dir)
@@ -159,6 +162,14 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
             image_tensor_config['fields']['depth_im'] = {
                 'dtype': 'float32',
                 'channels': 1,
+                'height': im_height,
+                'width': im_width
+            }
+
+        if image_config['target']:
+            image_tensor_config['fields']['target_im'] = {
+                'dtype': 'uint8',
+                'channels': 3,
                 'height': im_height,
                 'width': im_width
             }
@@ -260,7 +271,6 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
         metadata = json.load(open(os.path.join(output_dataset_path, 'metadata.json'), 'r'))
         test_inds = np.load(os.path.join(image_dir, 'test_indices.npy')).tolist()
         train_inds = np.load(os.path.join(image_dir, 'train_indices.npy')).tolist()
-        targets = np.load(os.path.join(image_dir, 'targets.npy')).tolist()
 
         # set obj ids and splits
         reverse_obj_ids = metadata['obj_ids']
@@ -288,6 +298,8 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                 os.remove(os.path.join(depth_dir, im_name))
             if os.path.exists(os.path.join(color_dir, im_name)):
                 os.remove(os.path.join(color_dir, im_name))
+            if os.path.exists(os.path.join(target_dir, im_name)):
+                os.remove(os.path.join(target_dir, im_name))
             if os.path.exists(os.path.join(dist_dir, im_name)):
                 os.remove(os.path.join(dist_dir, im_name))
             if os.path.exists(os.path.join(soft_dist_dir, im_name)):
@@ -302,10 +314,6 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                 train_inds.remove(im_ind)
             elif im_ind in test_inds:
                 test_inds.remove(im_ind)
-            try:
-                targets.remove(im_ind)
-            except:
-                pass
    
     else:
 
@@ -325,7 +333,6 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                   indent=JSON_INDENT, sort_keys=True)
         train_inds = []
         test_inds = []
-        targets = []
     
     # generate states and images
     state_id = num_prev_states
@@ -407,6 +414,10 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                     else:
                         depth_obs = obs
                     
+                    target_im = env.render_target_image(color=image_config['color'])
+                    if image_config['color']:
+                        target_im = target_im[0]
+
                     dist_im, soft_dist_im = env.find_target_distribution_2d()
                     
                     # vis obs
@@ -419,14 +430,19 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                             plt.figure()
                             plt.imshow(color_obs)
                             plt.title('Color Observation')
+                        if image_config['target']:
+                            plt.figure()
+                            plt.imshow(target_im)
+                            plt.title('Target')
                         if image_config['dist']:
                             plt.figure()
                             plt.imshow(dist_im)
-                            plt.show()
+                            plt.title('Target Distribution')
                         if image_config['soft_dist']:
                             plt.figure()
                             plt.imshow(soft_dist_im)
-                            plt.show()
+                            plt.title('Target Soft Distribution')
+                        plt.show()
 
                     if image_config['modal'] or image_config['amodal'] or image_config['semantic']:
                                             
@@ -467,6 +483,8 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                             image_datapoint['color_im'] = color_obs
                         if image_config['depth']:
                             image_datapoint['depth_im'] = depth_obs[:,:,None]
+                        if image_config['target']:
+                            image_datapoint['target_im'] = target_im
                         if image_config['dist']:
                             image_datapoint['dist_im'] = dist_im
                         if image_config['soft_dist']:
@@ -491,6 +509,8 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                         ColorImage(color_obs).save(os.path.join(color_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))
                     if image_config['depth']:
                         DepthImage(depth_obs).save(os.path.join(depth_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))
+                    if image_config['target']:
+                        ColorImage(target_im).save(os.path.join(target_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))                    
                     if image_config['dist']:
                         BinaryImage(dist_im).save(os.path.join(dist_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))
                     if image_config['soft_dist']:
@@ -515,13 +535,11 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                         train_inds.append(num_images_per_state*state_id + k)
                     else:
                         test_inds.append(num_images_per_state*state_id + k)
-                    targets.append(env.target_key)
 
                 # auto-flush after every so many timesteps
                 if state_id % states_per_flush == 0:
                     np.save(os.path.join(image_dir, 'train_indices.npy'), train_inds)
                     np.save(os.path.join(image_dir, 'test_indices.npy'), test_inds)
-                    np.save(os.path.join(image_dir, 'targets.npy'), targets)                    
                     if save_tensors:
                         state_dataset.flush()
                         image_dataset.flush()
@@ -558,7 +576,6 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
     # write all datasets to file, save indices
     np.save(os.path.join(image_dir, 'train_indices.npy'), train_inds)
     np.save(os.path.join(image_dir, 'test_indices.npy'), test_inds)
-    np.save(os.path.join(image_dir, 'targets.npy'), targets)        
     if save_tensors: 
         state_dataset.flush()
         image_dataset.flush()

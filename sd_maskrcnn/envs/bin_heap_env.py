@@ -194,6 +194,28 @@ class BinHeapEnv(gym.Env):
         renderer.delete()
         return image
     
+    def render_target_image(self, color=True):
+        """ Render the target image for the current scene. """
+        renderer = OffscreenRenderer(self.camera.width, self.camera.height)
+        flags = RenderFlags.NONE if color else RenderFlags.DEPTH_ONLY
+        
+        # Hide all meshes
+        for mn in self._scene.mesh_nodes:
+            mn.mesh.is_visible = False
+
+        # Show target mesh
+        target_node = next(iter(self._scene.get_nodes(name=self.target_key)))
+        target_node.mesh.is_visible = True
+
+        image = renderer.render(self._scene, flags=flags)
+        renderer.delete()
+
+        # Show all meshes
+        for mn in self._scene.mesh_nodes:
+            mn.mesh.is_visible = True
+            
+        return image
+    
     def render_segmentation_images(self):
         """Renders segmentation masks (modal and amodal) for each object in the state.
         """

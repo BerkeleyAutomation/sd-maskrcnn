@@ -12,6 +12,7 @@ urdf_cache_dir: /nfs/diskstation/objects/urdf/cache/        # Directory to store
 images:
   color: 1
   depth: 1
+  target: 1
   dist: 0
   soft_dist: 1
   modal: 0
