@@ -27,6 +27,8 @@ import time
 import trimesh
 import pybullet
 import numpy as np
+import shutil
+import pkg_resources
 
 from autolab_core import RigidTransform, Logger
 from pyrender import Scene, Viewer, Mesh, Node, PerspectiveCamera
@@ -65,8 +67,13 @@ class PybulletPhysicsEngine(PhysicsEngine):
         self._urdf_cache_dir = urdf_cache_dir
         if not os.path.isabs(self._urdf_cache_dir):
             self._urdf_cache_dir = os.path.join(os.getcwd(), self._urdf_cache_dir)
-        if not os.path.exists(self._urdf_cache_dir):
-            os.makedirs(self._urdf_cache_dir)
+        if not os.path.exists(os.path.join(self._urdf_cache_dir, 'plane')):
+            os.makedirs(os.path.join(self._urdf_cache_dir, 'plane'))
+        shutil.copy(pkg_resources.resource_filename('sd_maskrcnn', 'data/plane/plane.urdf'), 
+                    os.path.join(self._urdf_cache_dir, 'plane', 'plane.urdf'))
+        shutil.copy(pkg_resources.resource_filename('sd_maskrcnn', 'data/plane/plane_convex_piece_0.obj'), 
+                    os.path.join(self._urdf_cache_dir, 'plane', 'plane_convex_piece_0.obj'))
+
 
     def add(self, obj, static=False):
 

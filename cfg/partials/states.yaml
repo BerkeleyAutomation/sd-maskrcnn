@@ -43,7 +43,12 @@ state_space:
       mesh_dir: /nfs/diskstation/objects/meshes/    # Directory containing meshes to be dropped
       num_objects: 2000                     # Number of objects in dataset (test and train)
       train_pct: 0.8                        # Percentage of objects to be designated as train
-      target_key: thingiverse~flat_lid_274162
+      target_keys: 
+        - thingiverse~flat_lid_274162
+        - thingiverse~recorder_mouth_piece_186865
+        - thingiverse~domino_226197
+        - thingiverse~mechanical_part_262891
+        - thingiverse~octagon_nut_379811
       object_keys:                          # Folders containing meshes
         thingiverse: all
         thingiverse_packaged: all
