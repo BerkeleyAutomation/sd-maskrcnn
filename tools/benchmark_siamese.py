@@ -5,6 +5,8 @@ import time
 from tqdm import tqdm
 import numpy as np
 import skimage.io as io
+import skimage.transform
+import imutils
 from sklearn.metrics import average_precision_score, precision_recall_curve
 import matplotlib as mpl
 from matplotlib import patches
@@ -99,6 +101,7 @@ def benchmark(config):
     pred_mask_dir, pred_info_dir = detect(config['output_dir'], inference_config, model, test_dataset)
 
     calculate_statistics(output_dir, test_dataset, inference_config, pred_mask_dir, pred_info_dir)
+    write_object_detections(output_dir, test_dataset, inference_config, pred_mask_dir, pred_info_dir)
     visualize_targets(output_dir, test_dataset, inference_config, pred_mask_dir, pred_info_dir)
 
     print('Saved benchmarking output to \t{}.\n'.format(config['output_dir']))
@@ -136,6 +139,7 @@ def benchmark_existing(config, pred_mask_dir, pred_info_dir):
     test_dataset.prepare()
 
     calculate_statistics(output_dir, test_dataset, inference_config, pred_mask_dir, pred_info_dir)
+    write_object_detections(output_dir, test_dataset, inference_config, pred_mask_dir, pred_info_dir)
     visualize_targets(output_dir, test_dataset, inference_config, pred_mask_dir, pred_info_dir)
     print('Saved benchmarking output to \t{}.\n'.format(config['output_dir']))
 
@@ -209,6 +213,87 @@ def detect(run_dir, inference_config, model, dataset):
     return pred_dir, pred_info_dir
 
 
+def normalize(color_im, crop_size=(512, 512)):
+    """Centers and enlarges object detection masks.
+    Taken from https://github.com/BerkeleyAutomation/perception/blob/mmatl/semantic_grasping_experiments/tools/generate_siamese_dataset.py."""
+
+    # Center object in frame
+    color_data = color_im
+
+    nonzero_px = np.where(np.sum(color_im, axis=2) > 0)
+    nonzero_px = np.c_[nonzero_px[0], nonzero_px[1]].astype(np.int32)
+
+    centroid = np.mean(nonzero_px, axis=0)
+    cx, cy = color_data.shape[1] // 2, color_data.shape[0] // 2
+    color_data = imutils.translate(color_data, cx - round(centroid[1]), cy - round(centroid[0]))
+
+    # Crop about center to 256x256
+    crop_x = crop_size[0] / 4
+    crop_y = crop_size[1] / 4
+
+
+    img = color_data
+    x1, y1, x2, y2 = cx-crop_x, cy-crop_y, cx+crop_x, cy+crop_y
+    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+    if x1 < 0 or y1 < 0 or x2 > img.shape[1] or y2 > img.shape[0]:
+            img, x1, x2, y1, y2 = cv2.copyMakeBorder(img, -min(0, y1), max(y2 - img.shape[0], 0),
+                            -min(0, x1), max(x2 - img.shape[1], 0), cv2.BORDER_CONSTANT, value=BLACK)
+    color_data = img[y1:y2, x1:x2, :]
+
+
+    # resize to 512x512 to get a 2x scale increase
+    color_data = skimage.transform.resize(color_data, (crop_size[1], crop_size[0], 3), clip=False, preserve_range=True).astype(np.uint8)
+
+    return color_data
+
+
+def write_object_detections(run_dir, dataset, inference_config, pred_mask_dir, pred_info_dir):
+    """Writes separate images for each object detection per pile, crops and centers."""
+
+    # Create subdirectory for masked predicted objects
+    pred_obj_dir = os.path.join(run_dir, 'pred_objs')
+    pred_roi_dir = os.path.join(run_dir, 'pred_obj_rois')
+
+    image_ids = dataset.example_indices
+    print('WRITING OBJECT DETECTION IMAGES')
+
+    for image_id in tqdm(image_ids):
+        (pile_img, _, _, bbox, masks), (target_imgs, target_bbs, _, target_vector) \
+            = modellib.load_inputs_gt(dataset, inference_config, image_id)
+
+        # load masks and info
+        r = np.load(os.path.join(pred_info_dir, 'example_{:06}.npy'.format(image_id))).item()
+        r_masks = np.load(os.path.join(pred_mask_dir, 'example_{:06}.npy'.format(image_id)))
+        rois = r['rois']
+
+        # Save object detection masks
+        pile_dir = os.path.join(pred_obj_dir, 'example_{:06d}'.format(image_id))
+        utils.mkdir_if_missing(pile_dir)
+        for i in range(r_masks.shape[0]):
+            pile_copy = np.array(pile_img)[:,:,:3] # RGB only, depth becomes alpha channel
+            pred_mask = np.logical_not(r_masks[i,:,:]) # all non-mask pixels are True
+            pile_copy[pred_mask] = 0
+
+            pile_copy = normalize(pile_copy)
+
+            obj_name = os.path.join(pile_dir, 'det_{:06d}.png'.format(i))
+            io.imsave(obj_name, pile_copy, check_contrast=False)
+
+        # Save object detection bounding boxes
+        pile_roi_dir = os.path.join(pred_roi_dir, 'example_{:06d}'.format(image_id))
+        utils.mkdir_if_missing(pile_roi_dir)
+        for i in range(rois.shape[0]):
+            pile_copy = np.array(pile_img)[:,:,:3] # RGB only, depth becomes alpha channel
+            y1, x1, y2, x2 = rois[i,:]
+            mask = np.zeros_like(pile_copy)
+            mask[y1:y2,x1:x2] = 1
+            pile_copy = pile_copy * mask # pointwise multiplication to keep bbox pixels only
+
+            pile_copy = normalize(pile_copy)
+            obj_name = os.path.join(pile_roi_dir, 'det_{:06d}.png'.format(i))
+            io.imsave(obj_name, pile_copy, check_contrast=False)
+
+
 def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred_info_dir):
     """Calculates statistics (mean IoU, precision & recall)"""
     print('CALCULATING STATISTICS')
@@ -223,7 +308,6 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
     max_top_n_ious = {n: np.zeros_like(dataset.example_indices, dtype=np.float) for n in n_s}
     max_top_n_indices = {n: np.zeros_like(dataset.example_indices, dtype=np.int) for n in n_s}
 
-    correct_targets_bbox = np.zeros_like(dataset.example_indices, dtype=np.int)
     correct_targets_masks = np.zeros_like(dataset.example_indices, dtype=np.int)
 
     average_precisions = np.zeros_like(dataset.example_indices, dtype=np.float)
