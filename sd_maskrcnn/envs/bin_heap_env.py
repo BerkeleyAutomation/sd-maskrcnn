@@ -24,7 +24,7 @@ Author: Mike Danielczuk
 import numpy as np
 import gym
 import trimesh
-import skimage.morphology as skm
+import matplotlib.pyplot as plt
 
 from autolab_core import Logger
 from pyrender import (Scene, IntrinsicsCamera, Mesh, DirectionalLight, Viewer,
@@ -284,14 +284,13 @@ class BinHeapEnv(gym.Env):
         return full_depth, depth, modal_mask, plane_depth
 
 
-    # @profile
     def find_target_distribution_2d(self):
 
         # Render target object and full depth image to get offset and centroid
-        full_depth, target_depth, target_mask, plane_depth = self.render_target_modal_mask()
-        nonzero_target_inds = np.stack(np.where(target_depth - plane_depth < 0))
-        target_centroid = np.mean(nonzero_target_inds, axis=1)[:,None]
-        nonzero_target_depth_offset = plane_depth[nonzero_target_inds[0], nonzero_target_inds[1]] - target_depth[nonzero_target_inds[0], nonzero_target_inds[1]] 
+        full_depth, target_depth, target_modal_mask, plane_depth = self.render_target_modal_mask()
+        target_inds = np.stack(np.where(plane_depth > target_depth))
+        target_centroid = np.mean(target_inds, axis=1)[:,None]
+        target_depth_offset = (plane_depth - target_depth)[tuple(target_inds)] 
         
         # Generate meshgrid for translations to apply
         num_x_steps = 51
@@ -303,49 +302,56 @@ class BinHeapEnv(gym.Env):
         grid -= target_centroid.astype(np.int)
 
         # Shift target depth and add offset to create new depth images
-        shifted_target_inds = np.repeat(nonzero_target_inds[None,...], grid.shape[1], axis=0) + grid[None,...].T
-        shifted_target_inds[:,0,:][shifted_target_inds[:,0,:] >= self.camera.height] = self.camera.height - 1
-        shifted_target_inds[:,1,:][shifted_target_inds[:,1,:] >= self.camera.width] = self.camera.width - 1
-        shifted_target_inds = np.array([np.repeat(np.arange(grid.shape[1]), nonzero_target_inds.shape[1]), shifted_target_inds[:,0,:].flatten(), shifted_target_inds[:,1:].flatten()])
-        shifted_target_ims = np.zeros((grid.shape[1], target_depth.shape[0], target_depth.shape[1]))
-        shifted_target_ims[shifted_target_inds[0], shifted_target_inds[1], shifted_target_inds[2]] = plane_depth[shifted_target_inds[1], shifted_target_inds[2]] - np.tile(nonzero_target_depth_offset, grid.shape[1])
+        shifted_target_inds = np.repeat(target_inds[None,...], grid.shape[1], axis=0) + grid[None,...].T
+        shifted_target_inds = shifted_target_inds.transpose(1,0,2)
 
-        modal_masks = np.logical_and(shifted_target_ims < full_depth, shifted_target_ims > 0)
-        mask_ious = np.sum(np.logical_and(modal_masks, target_mask), axis=(1,2)) / np.sum(np.logical_or(modal_masks, target_mask), axis=(1,2))
-        mask_ious[np.sum(target_mask) == 0 and np.sum(modal_masks, axis=(1,2)) == 0] = 1.0
+        # Make all indices negative so we avoid errors and make these indices easy to filter
+        over_height = shifted_target_inds[0] >= self.camera.height
+        over_width = shifted_target_inds[1] >= self.camera.width
+        shifted_target_inds[0][over_height] = self.camera.height - 1 - shifted_target_inds[0][over_height]
+        shifted_target_inds[1][over_width] = self.camera.width - 1 - shifted_target_inds[1][over_width]
+        in_bounds_mask = np.logical_and(*(shifted_target_inds >= 0))
 
-        # for i,iou in enumerate(mask_ious):
-        #     if iou > 0.9 and np.sum(target_mask) == 0:
-        #         print('AND: {}, OR: {}'.format(np.sum(np.logical_and(modal_masks[i], target_mask)), np.sum(np.logical_or(modal_masks[i], target_mask))))
-        #         import matplotlib.pyplot as plt
-        #         plt.figure()
-        #         plt.imshow(full_depth)
-        #         plt.figure()
-        #         plt.imshow(shifted_target_ims[i])
-        #         plt.figure()
-        #         plt.imshow(target_depth)
-        #         # plt.figure()
-        #         # plt.scatter(target_centroid[1], target_centroid[0])
-        #         # new_centroid = grid[:, i, None] + target_centroid
-        #         # plt.scatter(new_centroid[1], new_centroid[0])
-        #         # plt.xlim(0,512)
-        #         # plt.ylim(384,0)
-        #         import pdb; pdb.set_trace()
-        #         plt.show()
+        shifted_target_depths = plane_depth[tuple(shifted_target_inds)] - target_depth_offset
+        full_depths = full_depth[tuple(shifted_target_inds)]
+        target_inds_mask = target_modal_mask[tuple(target_inds)]
+        visible_shifted_target_mask = np.logical_and(shifted_target_depths < full_depths, in_bounds_mask)
+        dist_im, soft_dist_im = np.zeros_like(full_depth, dtype=np.bool), np.zeros_like(full_depth, dtype=np.float)
 
-        iou_centers = (target_centroid + grid[:, np.where(mask_ious > 0.9)[0]]).astype(np.int)
-        iou_centers[0,:][iou_centers[0,:] >= self.camera.height] = self.camera.height - 1
-        iou_centers[1,:][iou_centers[1,:] >= self.camera.width] = self.camera.width - 1
-        iou_centers = np.concatenate((iou_centers, target_centroid.astype(np.int)), axis=1)
+        # First, handle case where object is fully occluded
+        if not np.any(target_inds_mask):
+            match_mask = np.logical_and(~np.any(visible_shifted_target_mask, axis=1)[:,None], in_bounds_mask)
+            matching_target_inds = shifted_target_inds[:, match_mask]
 
-        dist_im = np.zeros_like(full_depth, dtype=np.bool)
-        dist_im[iou_centers[0,:], iou_centers[1,:]] = True
-        dist_im = skm.binary_dilation(dist_im, selem=np.ones((11,11))).astype(np.uint8)
+        # Next, handle case where object is not fully occluded
+        else:
+            # Append shift index to shifted_target_inds
+            shifted_target_inds = np.concatenate((np.repeat(np.arange(shifted_target_inds.shape[1])[None,:,None], 
+                                                            shifted_target_inds.shape[2], axis=-1), 
+                                                  shifted_target_inds), axis=0)
 
-        soft_dist_im = np.sum(shifted_target_ims[mask_ious > 0.9,...] > 0, axis=0) + (plane_depth-target_depth > 0).astype(np.uint8)
-        soft_dist_im = (np.iinfo(np.uint8).max * soft_dist_im / np.max(soft_dist_im)).astype(np.uint8)
+            # Mask for visible pixels and indices
+            visible_target_inds = shifted_target_inds[:, visible_shifted_target_mask]
+            
+            # Some wizardry to get iou for each shifted target
+            shifted_target_masks = np.zeros((grid.shape[1], *full_depth.shape), dtype=np.bool)
+            shifted_target_masks[tuple(visible_target_inds)] = True
+            intersection = shifted_target_masks[:, target_modal_mask].sum(axis=1)
+            union = visible_shifted_target_mask.sum(axis=1) + target_inds_mask.sum() - intersection
+            mask_ious = intersection / union
 
+            # Get matching mask indices
+            iou_thresh = min(0.9, (target_inds_mask.sum() - 2) / target_inds_mask.sum())
+            iou_mask = np.logical_and((mask_ious >= iou_thresh)[:,None], in_bounds_mask)
+            matching_target_inds = shifted_target_inds[1:, iou_mask]
+            if not np.any(matching_target_inds):
+                matching_target_inds = target_inds
+
+        dist_im[matching_target_inds[0].flatten(), matching_target_inds[1].flatten()] = True
+        np.add.at(soft_dist_im, (matching_target_inds[0].flatten(), matching_target_inds[1].flatten()), 1)
+        soft_dist_im = (np.iinfo(np.uint8).max * soft_dist_im / soft_dist_im.max()).astype(np.uint8)
         return dist_im, soft_dist_im
+
 
     def _generate_rotation_matrices(self, step=np.pi/32):
         angles = np.arange(step, 2*np.pi, step)
@@ -458,3 +464,84 @@ class BinHeapEnv(gym.Env):
     #         mn.mesh.is_visible = True
 
     #     return rand_poses, mask_ious
+
+    def find_target_distribution_3d(self):
+
+        # Render target object and full depth image to get offset and centroid
+        full_depth, target_depth, target_modal_mask, plane_depth = self.render_target_modal_mask()
+        target_inds = np.stack(np.where(plane_depth > target_depth))
+        target_centroid = np.mean(target_inds, axis=1)[:,None]
+        target_depth_offset = (plane_depth - target_depth)[tuple(target_inds)] 
+        
+        # Generate meshgrid for translations to apply
+        num_x_steps = 51
+        num_y_steps = 38
+        x = np.linspace(0, self.camera.width-1, num=num_x_steps, dtype=np.int)
+        y = np.linspace(0, self.camera.height-1, num=num_y_steps, dtype=np.int)
+        grid = np.meshgrid(y, x)
+        grid = np.array([grid[0].flatten(), grid[1].flatten()])
+        grid -= target_centroid.astype(np.int)
+
+        # Rotate target for num_rots
+        num_rots = 40
+        rot_angles = np.arange(num_rots) * 2 * np.pi / num_rots
+        rot_mats = np.array([[np.cos(rot_angles), np.sin(rot_angles)], 
+                             [-np.sin(rot_angles), np.cos(rot_angles)]])
+        rotated_target_inds = np.einsum('ijk,jl->kil', rot_mats, target_inds - target_centroid)
+        rotated_target_inds = (rotated_target_inds + target_centroid).astype(np.int)
+        import IPython; IPython.embed()
+
+        # Shift target depth and add offset to create new depth images
+        shifted_target_inds = np.repeat(rotated_target_inds, grid.shape[1], axis=0) + np.repeat(grid, num_rots, axis=1)[None,...].T
+        shifted_target_inds = shifted_target_inds.transpose(1,0,2)
+
+        # Make all indices negative so we avoid errors and make these indices easy to filter
+        over_height = shifted_target_inds[0] >= self.camera.height
+        over_width = shifted_target_inds[1] >= self.camera.width
+        shifted_target_inds[0][over_height] = self.camera.height - 1 - shifted_target_inds[0][over_height]
+        shifted_target_inds[1][over_width] = self.camera.width - 1 - shifted_target_inds[1][over_width]
+        in_bounds_mask = np.logical_and(*(shifted_target_inds >= 0))
+
+        shifted_target_depths = plane_depth[tuple(shifted_target_inds)] - target_depth_offset
+        full_depths = full_depth[tuple(shifted_target_inds)]
+        target_inds_mask = target_modal_mask[tuple(target_inds)]
+        visible_shifted_target_mask = np.logical_and(shifted_target_depths < full_depths, in_bounds_mask)
+        dist_im, soft_dist_im = np.zeros_like(full_depth, dtype=np.bool), np.zeros_like(full_depth, dtype=np.float)
+
+        # First, handle case where object is fully occluded
+        if not np.any(target_inds_mask):
+            match_mask = np.logical_and(~np.any(visible_shifted_target_mask, axis=1)[:,None], in_bounds_mask)
+            matching_target_inds = shifted_target_inds[:, match_mask]
+
+        # Next, handle case where object is not fully occluded
+        else:
+            # Append shift index to shifted_target_inds
+            shifted_target_inds = np.concatenate((np.repeat(np.arange(shifted_target_inds.shape[1])[None,:,None], 
+                                                            shifted_target_inds.shape[2], axis=-1), 
+                                                  shifted_target_inds), axis=0)
+
+            # Mask for visible pixels and indices
+            visible_target_inds = shifted_target_inds[:, visible_shifted_target_mask]
+            
+            # Some wizardry to get iou for each shifted target
+            shifted_target_masks = np.zeros((grid.shape[1] * num_rots, *full_depth.shape), dtype=np.bool)
+            shifted_target_masks[tuple(visible_target_inds)] = True
+            intersection = shifted_target_masks[:, target_modal_mask].sum(axis=1)
+            union = visible_shifted_target_mask.sum(axis=1) + target_inds_mask.sum() - intersection
+            mask_ious = intersection / union
+
+            # Get matching mask indices and whangle small visibility ious
+            iou_thresh = min(0.9, max(target_inds_mask.sum() - 2, 1) / target_inds_mask.sum())
+            iou_mask = np.logical_and((mask_ious >= iou_thresh)[:,None], in_bounds_mask)
+            matching_target_inds = shifted_target_inds[1:, iou_mask]
+            if not np.any(matching_target_inds):
+                matching_target_inds = target_inds
+
+        if (matching_target_inds.shape[1] > 0.9 * grid.shape[1] * num_rots and len(matching_target_inds.shape) == 3) \
+            or (matching_target_inds.shape[1] < 1 and len(matching_target_inds.shape) == 2):
+            import pdb; pdb.set_trace()
+
+        dist_im[matching_target_inds[0].flatten(), matching_target_inds[1].flatten()] = True
+        np.add.at(soft_dist_im, (matching_target_inds[0].flatten(), matching_target_inds[1].flatten()), 1)
+        soft_dist_im = (np.iinfo(np.uint8).max * soft_dist_im / soft_dist_im.max()).astype(np.uint8)
+        return dist_im, soft_dist_im

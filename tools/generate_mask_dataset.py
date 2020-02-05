@@ -418,7 +418,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                     if image_config['color']:
                         target_im = target_im[0]
 
-                    dist_im, soft_dist_im = env.find_target_distribution_2d()
+                    dist_im, soft_dist_im = env.find_target_distribution_3d()
                     
                     # vis obs
                     if vis_config['obs']:
@@ -442,6 +442,9 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                             plt.figure()
                             plt.imshow(soft_dist_im)
                             plt.title('Target Soft Distribution')
+                            plt.figure()
+                            plt.imshow(depth_obs)
+                            plt.imshow(soft_dist_im, alpha=0.5)
                         plt.show()
 
                     if image_config['modal'] or image_config['amodal'] or image_config['semantic']:

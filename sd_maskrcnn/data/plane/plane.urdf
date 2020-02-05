@@ -8,7 +8,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="plane_convex_piece_0.obj" scale="1.0000E+00"/>
+        <mesh filename="plane_convex_piece_0.obj" scale="1.0000E+00 1.0000E+00 1.0000E+00"/>
       </geometry>
       <material name="">
         <color rgba="7.50E-01 7.50E-01 7.50E-01 1"/>
@@ -17,7 +17,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="plane_convex_piece_0.obj" scale="1.0000E+00"/>
+        <mesh filename="plane_convex_piece_0.obj" scale="1.0000E+00 1.0000E+00 1.0000E+00"/>
       </geometry>
     </collision>
   </link>

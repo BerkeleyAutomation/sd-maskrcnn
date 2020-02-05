@@ -40,18 +40,15 @@ state_space:
     mag_w_thresh: 0.1
 
     objects:
-      mesh_dir: /nfs/diskstation/objects/meshes/    # Directory containing meshes to be dropped
+      mesh_dir: /nfs/diskstation/projects/mech_search/prob_pose/objects/meshes/    # Directory containing meshes to be dropped
       num_objects: 2000                     # Number of objects in dataset (test and train)
       train_pct: 0.8                        # Percentage of objects to be designated as train
       target_keys: 
-        - thingiverse~flat_lid_274162
-        - thingiverse~recorder_mouth_piece_186865
-        - thingiverse~domino_226197
-        - thingiverse~mechanical_part_262891
-        - thingiverse~octagon_nut_379811
+        - boxes~box_10
       object_keys:                          # Folders containing meshes
         thingiverse: all
         thingiverse_packaged: all
+        boxes: box_10
         # ycb: all                            # all -> all meshes in folder. Can also specify list of mesh names
 
       planar_translation:                   # Amount of translation around the center point to drop each object

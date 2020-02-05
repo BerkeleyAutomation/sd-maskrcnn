@@ -1,25 +1,25 @@
-num_states: 10000                                   # Total number of states in dataset
+num_states: 10                                   # Total number of states in dataset
 num_images_per_state: 5                             # Number of images per state
 states_per_flush: 10                                # Number of states before writing tensors (if saving tensors)
 states_per_garbage_collect: 10                      # Number of states before garbage collection (due to pybullet memory issues)
 log_rate: 1                                         # Rate at which to log dataset generation information
 debug: 0                                            # Debug flag to see physics simulation, set random seed
-urdf_cache_dir: /nfs/diskstation/objects/urdf/cache/        # Directory to store URDF files for meshes
+urdf_cache_dir: /nfs/diskstation/projects/mech_search/prob_pose/objects/urdf/cache/        # Directory to store URDF files for meshes
 
 !include partials/states.yaml
 !include partials/mask_dataset.yaml
 
 images:
   color: 1
-  depth: 1
-  target: 1
+  depth: 0
+  target: 0
   dist: 0
   soft_dist: 1
   modal: 0
   amodal: 0
-  semantic: 1
+  semantic: 0
 
 vis:                                                # Visualization flags for viewing each state and generated images
   state: 0
-  obs: 0
+  obs: 1
   semantic: 0
