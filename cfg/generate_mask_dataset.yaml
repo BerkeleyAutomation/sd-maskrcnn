@@ -21,5 +21,5 @@ images:
 
 vis:                                                # Visualization flags for viewing each state and generated images
   state: 0
-  obs: 1
+  obs: 0
   semantic: 0

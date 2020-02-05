@@ -483,16 +483,15 @@ class BinHeapEnv(gym.Env):
         grid -= target_centroid.astype(np.int)
 
         # Rotate target for num_rots
-        num_rots = 40
+        num_rots = 16
         rot_angles = np.arange(num_rots) * 2 * np.pi / num_rots
         rot_mats = np.array([[np.cos(rot_angles), np.sin(rot_angles)], 
                              [-np.sin(rot_angles), np.cos(rot_angles)]])
         rotated_target_inds = np.einsum('ijk,jl->kil', rot_mats, target_inds - target_centroid)
         rotated_target_inds = (rotated_target_inds + target_centroid).astype(np.int)
-        import IPython; IPython.embed()
 
         # Shift target depth and add offset to create new depth images
-        shifted_target_inds = np.repeat(rotated_target_inds, grid.shape[1], axis=0) + np.repeat(grid, num_rots, axis=1)[None,...].T
+        shifted_target_inds = np.repeat(rotated_target_inds, grid.shape[1], axis=0) + np.tile(grid, num_rots)[None, ...].T
         shifted_target_inds = shifted_target_inds.transpose(1,0,2)
 
         # Make all indices negative so we avoid errors and make these indices easy to filter
@@ -536,10 +535,6 @@ class BinHeapEnv(gym.Env):
             matching_target_inds = shifted_target_inds[1:, iou_mask]
             if not np.any(matching_target_inds):
                 matching_target_inds = target_inds
-
-        if (matching_target_inds.shape[1] > 0.9 * grid.shape[1] * num_rots and len(matching_target_inds.shape) == 3) \
-            or (matching_target_inds.shape[1] < 1 and len(matching_target_inds.shape) == 2):
-            import pdb; pdb.set_trace()
 
         dist_im[matching_target_inds[0].flatten(), matching_target_inds[1].flatten()] = True
         np.add.at(soft_dist_im, (matching_target_inds[0].flatten(), matching_target_inds[1].flatten()), 1)
