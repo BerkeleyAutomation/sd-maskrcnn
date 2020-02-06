@@ -116,7 +116,7 @@ class TargetStackDataset(utils.Dataset):
         self.augment_targets = augment_targets
         self.data_tuples = json.load(open(os.path.join(self.base_path, tuple_file)))
         self.visibility_tuples = None
-        if vis_file is not None:
+        if vis_file:
             self.visibility_tuples = json.load(open(os.path.join(self.base_path, vis_file)))
         super().__init__(config)
 
@@ -173,7 +173,8 @@ class TargetStackDataset(utils.Dataset):
         for path in info['target_stack_paths']:
             im = self._load_image(path)
             if self.augment_targets:
-                im = self._rotate(im, np.random.randint(360))
+                rotation = np.random.randint(12) * 30
+                im = self._rotate(im, rotation)
             example['target_images'].append(im)
         example['pile_image'] = self._load_image(info['pile_path'])
         example['pile_mask'], example['class_ids'] = self._load_mask(info['pile_mask_path'])
