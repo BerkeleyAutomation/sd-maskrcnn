@@ -1,5 +1,5 @@
 """
-Copyright ©2017. The Regents of the University of California (Regents). All Rights Reserved.
+Copyright ©2019. The Regents of the University of California (Regents). All Rights Reserved.
 Permission to use, copy, modify, and distribute this software and its documentation for educational,
 research, and not-for-profit purposes, without fee and without a signed licensing agreement, is
 hereby granted, provided that the above copyright notice, this paragraph and the following two
@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 
 from autolab_core import TensorDataset, YamlConfig, Logger
 import autolab_core.utils as utils
-from perception import DepthImage, GrayscaleImage, BinaryImage
+from perception import DepthImage, GrayscaleImage, BinaryImage, ColorImage
 
 from sd_maskrcnn.envs import BinHeapEnv
 from sd_maskrcnn.envs.constants import *
@@ -61,6 +61,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
     
     # read subconfigs
     dataset_config = config['dataset']
+    image_config = config['images']
     vis_config = config['vis']
 
     # debugging
@@ -90,18 +91,21 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
     image_dir = os.path.join(output_dataset_path, 'images')
     if not os.path.exists(image_dir):
         os.mkdir(image_dir)
+    color_dir = os.path.join(image_dir, 'color_ims')
+    if image_config['color'] and not os.path.exists(color_dir):
+        os.mkdir(color_dir)
     depth_dir = os.path.join(image_dir, 'depth_ims')
-    if not os.path.exists(depth_dir):
+    if image_config['depth'] and not os.path.exists(depth_dir):
         os.mkdir(depth_dir)
-    semantic_dir = os.path.join(image_dir, 'semantic_masks')
-    if not os.path.exists(semantic_dir):
-        os.mkdir(semantic_dir)
     amodal_dir = os.path.join(image_dir, 'amodal_masks')
-    if not os.path.exists(amodal_dir):
+    if image_config['amodal'] and not os.path.exists(amodal_dir):
         os.mkdir(amodal_dir)
     modal_dir = os.path.join(image_dir, 'modal_masks')
-    if not os.path.exists(modal_dir):
-        os.mkdir(modal_dir)     
+    if image_config['modal'] and not os.path.exists(modal_dir):
+        os.mkdir(modal_dir)
+    semantic_dir = os.path.join(image_dir, 'semantic_masks')
+    if image_config['semantic'] and not os.path.exists(semantic_dir):
+        os.mkdir(semantic_dir)
 
     # setup logging
     experiment_log_filename = os.path.join(output_dataset_path, 'dataset_generation.log')
@@ -127,18 +131,47 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
         state_tensor_config['fields']['obj_coms']['height'] = obj_com_dim
         state_tensor_config['fields']['obj_ids']['height'] = max_objs_per_state
 
-        image_tensor_config['fields']['depth_im']['height'] = im_height
-        image_tensor_config['fields']['depth_im']['width'] = im_width
         image_tensor_config['fields']['camera_pose']['height'] = POSE_DIM
 
-        image_tensor_config['fields']['modal_segmasks']['height'] = im_height
-        image_tensor_config['fields']['modal_segmasks']['width'] = im_width
-        image_tensor_config['fields']['modal_segmasks']['channels'] = segmask_channels
-        image_tensor_config['fields']['amodal_segmasks']['height'] = im_height
-        image_tensor_config['fields']['amodal_segmasks']['width'] = im_width
-        image_tensor_config['fields']['amodal_segmasks']['channels'] = segmask_channels
-        image_tensor_config['fields']['stacked_segmasks']['height'] = im_height
-        image_tensor_config['fields']['stacked_segmasks']['width'] = im_width
+        if image_config['color']:
+            image_tensor_config['fields']['color_im'] = {
+                'dtype': 'uint8',
+                'channels': 3,
+                'height': im_height,
+                'width': im_width
+            }
+        
+        if image_config['depth']:
+            image_tensor_config['fields']['depth_im'] = {
+                'dtype': 'float32',
+                'channels': 1,
+                'height': im_height,
+                'width': im_width
+            }
+        
+        if image_config['modal']:
+            image_tensor_config['fields']['modal_segmasks'] = {
+                'dtype': 'uint8',
+                'channels': segmask_channels,
+                'height': im_height,
+                'width': im_width
+            }
+
+        if image_config['amodal']:
+            image_tensor_config['fields']['amodal_segmasks'] = {
+                'dtype': 'uint8',
+                'channels': segmask_channels,
+                'height': im_height,
+                'width': im_width
+            }
+        
+        if image_config['semantic']:
+            image_tensor_config['fields']['semantic_segmasks'] = {
+                'dtype': 'uint8',
+                'channels': 1,
+                'height': im_height,
+                'width': im_width
+            }
 
         # create dataset filenames
         state_dataset_path = os.path.join(output_dataset_path, 'state_tensors')
@@ -206,7 +239,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
         mesh_filenames = metadata['meshes']
 
         # Get list of images generated so far
-        generated_images = sorted(os.listdir(depth_dir))
+        generated_images = sorted(os.listdir(color_dir)) if image_config['color'] else sorted(os.listdir(depth_dir))
         num_total_images = len(generated_images)
 
         # Do our own calculation if no saved tensors
@@ -220,7 +253,10 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
             im_name = generated_images[-(k+1)]
             im_basename = os.path.splitext(im_name)[0]
             im_ind = int(im_basename.split('_')[1])
-            os.remove(os.path.join(depth_dir, im_name))
+            if os.path.exists(os.path.join(depth_dir, im_name)):
+                os.remove(os.path.join(depth_dir, im_name))
+            if os.path.exists(os.path.join(color_dir, im_name)):
+                os.remove(os.path.join(color_dir, im_name))
             if os.path.exists(os.path.join(semantic_dir, im_name)):
                 os.remove(os.path.join(semantic_dir, im_name))
             if os.path.exists(os.path.join(modal_dir, im_basename)):
@@ -325,46 +361,67 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                     if num_images_per_state > 1:
                         env.reset_camera()
                     
+                    obs = env.render_camera_image(color=image_config['color'])
+                    if image_config['color']:
+                        color_obs, depth_obs = obs
+                    else:
+                        depth_obs = obs
+                                        
                     # vis obs
                     if vis_config['obs']:
-                        plt.figure()
-                        plt.imshow(env.observation)
-                        plt.title('Observation')
+                        if image_config['depth']:
+                            plt.figure()
+                            plt.imshow(depth_obs)
+                            plt.title('Depth Observation')
+                        if image_config['color']:
+                            plt.figure()
+                            plt.imshow(color_obs)
+                            plt.title('Color Observation')
                         plt.show()
 
-                    # render segmasks
-                    amodal_segmasks, modal_segmasks = env.render_segmentation_images()
+                    if image_config['modal'] or image_config['amodal'] or image_config['semantic']:
+                                            
+                        # render segmasks
+                        amodal_segmasks, modal_segmasks = env.render_segmentation_images()
 
-                    # retrieve segmask data
-                    modal_segmask_arr = np.iinfo(np.uint8).max * np.ones([im_height,
-                                                                          im_width,
-                                                                          segmask_channels], dtype=np.uint8)
-                    amodal_segmask_arr = np.iinfo(np.uint8).max * np.ones([im_height,
-                                                                           im_width,
-                                                                           segmask_channels], dtype=np.uint8)
-                    stacked_segmask_arr = np.zeros([im_height,
-                                                    im_width,
-                                                    1], dtype=np.uint8)
-                    
-                    modal_segmask_arr[:,:,:env.num_objects] = modal_segmasks
-                    amodal_segmask_arr[:,:,:env.num_objects] = amodal_segmasks
+                        # retrieve segmask data
+                        modal_segmask_arr = np.iinfo(np.uint8).max * np.ones([im_height,
+                                                                            im_width,
+                                                                            segmask_channels], dtype=np.uint8)
+                        amodal_segmask_arr = np.iinfo(np.uint8).max * np.ones([im_height,
+                                                                            im_width,
+                                                                            segmask_channels], dtype=np.uint8)
+                        stacked_segmask_arr = np.zeros([im_height,
+                                                        im_width,
+                                                        1], dtype=np.uint8)
+                        
+                        modal_segmask_arr[:,:,:env.num_objects] = modal_segmasks
+                        amodal_segmask_arr[:,:,:env.num_objects] = amodal_segmasks
 
-                    for j in range(env.num_objects):
-                        this_obj_px = np.where(modal_segmasks[:,:,j] > 0)
-                        stacked_segmask_arr[this_obj_px[0], this_obj_px[1],0] = j+1
+                        if image_config['semantic']:
+                            for j in range(env.num_objects):
+                                this_obj_px = np.where(modal_segmasks[:,:,j] > 0)
+                                stacked_segmask_arr[this_obj_px[0], this_obj_px[1],0] = j+1
 
                     # visualize
-                    if vis_config['stacked_seg']:
+                    if vis_config['semantic']:
                         plt.figure()
                         plt.imshow(stacked_segmask_arr.squeeze())
                         plt.show()
 
                     if save_tensors:    
                         # save image data as tensors
-                        image_datapoint['modal_segmasks'] = modal_segmask_arr
-                        image_datapoint['amodal_segmasks'] = amodal_segmask_arr
-                        image_datapoint['stacked_segmasks'] = stacked_segmask_arr
-                        image_datapoint['depth_im'] = env.observation[:,:,None]
+                        if image_config['color']:
+                            image_datapoint['color_im'] = color_obs
+                        if image_config['depth']:
+                            image_datapoint['depth_im'] = depth_obs[:,:,None]
+                        if image_config['modal']:
+                            image_datapoint['modal_segmasks'] = modal_segmask_arr
+                        if image_config['amodal']:
+                            image_datapoint['amodal_segmasks'] = amodal_segmask_arr
+                        if image_config['semantic']:
+                            image_datapoint['semantic_segmasks'] = stacked_segmask_arr
+                            
                         image_datapoint['camera_pose'] = env.camera.pose.vec
                         image_datapoint['camera_intrs'] = env.camera.intrinsics.vec
                         image_datapoint['state_ind'] = state_id
@@ -374,20 +431,25 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                         image_dataset.add(image_datapoint)
 
                     # Save depth image and semantic masks
-                    DepthImage(env.observation).save(os.path.join(depth_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))
-                    GrayscaleImage(stacked_segmask_arr.squeeze()).save(os.path.join(semantic_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))
+                    if image_config['color']:
+                        ColorImage(color_obs).save(os.path.join(color_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))
+                    if image_config['depth']:
+                        DepthImage(depth_obs).save(os.path.join(depth_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))
+                    if image_config['modal']:
+                        modal_id_dir = os.path.join(modal_dir, 'image_{:06d}'.format(num_images_per_state*state_id + k))
+                        if not os.path.exists(modal_id_dir):
+                            os.mkdir(modal_id_dir)
+                        for i in range(env.num_objects):
+                            BinaryImage(modal_segmask_arr[:,:,i]).save(os.path.join(modal_id_dir, 'channel_{:03d}.png'.format(i)))
+                    if image_config['amodal']:
+                        amodal_id_dir = os.path.join(amodal_dir, 'image_{:06d}'.format(num_images_per_state*state_id + k))
+                        if not os.path.exists(amodal_id_dir):
+                            os.mkdir(amodal_id_dir)
+                        for i in range(env.num_objects):
+                            BinaryImage(amodal_segmask_arr[:,:,i]).save(os.path.join(amodal_id_dir, 'channel_{:03d}.png'.format(i)))
+                    if image_config['semantic']:
+                        GrayscaleImage(stacked_segmask_arr.squeeze()).save(os.path.join(semantic_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))
                     
-                    # Save modal and amodal masks
-                    amodal_id_dir = os.path.join(amodal_dir, 'image_{:06d}'.format(num_images_per_state*state_id + k))
-                    if not os.path.exists(amodal_id_dir):
-                        os.mkdir(amodal_id_dir)
-                    modal_id_dir = os.path.join(modal_dir, 'image_{:06d}'.format(num_images_per_state*state_id + k))
-                    if not os.path.exists(modal_id_dir):
-                        os.mkdir(modal_id_dir)
-                    for i in range(env.num_objects):
-                        BinaryImage(modal_segmask_arr[:,:,i]).save(os.path.join(modal_id_dir, 'channel_{:03d}.png'.format(i)))
-                        BinaryImage(amodal_segmask_arr[:,:,i]).save(os.path.join(amodal_id_dir, 'channel_{:03d}.png'.format(i)))
-
                     # Save split
                     if split == TRAIN_ID:
                         train_inds.append(num_images_per_state*state_id + k)
@@ -447,6 +509,7 @@ if __name__ == '__main__':
     parser.add_argument('--config_filename', type=str, default=None, help='configuration file to use')
     parser.add_argument('--save_tensors', action='store_true', help='whether to save raw tensors to recreate the state')
     parser.add_argument('--warm_start', action='store_true', help='warm start system after crash')
+    
     args = parser.parse_args()
     output_dataset_path = args.output_dataset_path
     config_filename = args.config_filename
@@ -468,8 +531,7 @@ if __name__ == '__main__':
 
     # generate dataset
     generation_start = time.time()
-    generate_segmask_dataset(output_dataset_path, config, 
-                             save_tensors=save_tensors, warm_start=warm_start)
+    generate_segmask_dataset(output_dataset_path, config, save_tensors=save_tensors, warm_start=warm_start)
 
     # log time
     generation_stop = time.time()

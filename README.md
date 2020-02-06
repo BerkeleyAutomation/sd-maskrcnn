@@ -122,10 +122,10 @@ More benchmarking outputs (plots, missed images) can be found in `results_supple
 ## Citation
 If you use this code for your research, please consider citing:
 ```
-@article{danielczuk2018segmenting,
+@inproceedings{danielczuk2019segmenting,
   title={Segmenting Unknown 3D Objects from Real Depth Images using Mask R-CNN Trained on Synthetic Data},
   author={Danielczuk, Michael and Matl, Matthew and Gupta, Saurabh and Li, Andrew and Lee, Andrew and Mahler, Jeffrey and Goldberg, Ken},
-  journal={arXiv preprint arXiv:1809.05825},
-  year={2018}
+  booktitle={Proc. IEEE Int. Conf. Robotics and Automation (ICRA)},
+  year={2019}
 }
 ```
