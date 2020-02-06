@@ -101,7 +101,7 @@ def benchmark(config):
     pred_mask_dir, pred_info_dir = detect(config['output_dir'], inference_config, model, test_dataset)
 
     calculate_statistics(output_dir, test_dataset, inference_config, pred_mask_dir, pred_info_dir)
-    write_object_detections(output_dir, test_dataset, inference_config, pred_mask_dir, pred_info_dir)
+    # write_object_detections(output_dir, test_dataset, inference_config, pred_mask_dir, pred_info_dir)
     visualize_targets(output_dir, test_dataset, inference_config, pred_mask_dir, pred_info_dir)
 
     print('Saved benchmarking output to \t{}.\n'.format(config['output_dir']))
@@ -139,7 +139,7 @@ def benchmark_existing(config, pred_mask_dir, pred_info_dir):
     test_dataset.prepare()
 
     calculate_statistics(output_dir, test_dataset, inference_config, pred_mask_dir, pred_info_dir)
-    write_object_detections(output_dir, test_dataset, inference_config, pred_mask_dir, pred_info_dir)
+    # write_object_detections(output_dir, test_dataset, inference_config, pred_mask_dir, pred_info_dir)
     visualize_targets(output_dir, test_dataset, inference_config, pred_mask_dir, pred_info_dir)
     print('Saved benchmarking output to \t{}.\n'.format(config['output_dir']))
 
@@ -351,7 +351,6 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
 
         pred_index = np.argmax(target_probs)
         gt_index = np.argmax(target_vector)
-
         ###### Precision, Recall ######
         ap = average_precision(retrievals, target_probs, gt_index)
         average_precisions[image_id] = ap
@@ -361,7 +360,6 @@ def calculate_statistics(run_dir, dataset, inference_config, pred_mask_dir, pred
 
         # mask_ious = np.squeeze(utilslib.compute_overlaps_masks(gt_masks, pred_target_mask))
         target_mask_ious = iou_matrix[pred_index,:]
-
         if np.argmax(target_mask_ious) == gt_index:
             correct_targets_masks[image_id] = 1
 
@@ -416,6 +414,10 @@ def plot_detailed_predictions(file_name, pile_img, target_img, gt_masks, gt_bbs,
     gt_target_mask = gt_masks[:,:,np.argmax(target_vector):np.argmax(target_vector)+1]
 
     pred_mask_ious = np.squeeze(utilslib.compute_overlaps_masks(pred_masks, gt_target_mask))
+    if len(pred_mask_ious.shape) == 0: # if scalar
+        pred_mask_ious = pred_mask_ious[np.newaxis]
+
+    print('pred_mask_ious.shape', pred_mask_ious.shape)
 
     fig, ax = plt.subplots(num_preds + 2, 2, figsize=(12, 6 * (num_preds + 2)))
 
@@ -564,13 +566,19 @@ def visualize_targets(run_dir, dataset, inference_config, pred_mask_dir, pred_in
 
         file_name = os.path.join(vis_dir, 'vis_{:06d}'.format(image_id))
 
+        if 'obj_visibility' in example_meta:
+            obj_vis = example_meta['obj_visibility']
+        else:
+            obj_vis = 0
+
         # if we have a stack, display first image in stack
         if len(target_img.shape) == 4:
             target_img = target_img[3,:,:,:]
+
         plot_detailed_predictions(file_name, pile_img, target_img, masks, bbox, target_vector,
                                   r_masks, r['rois'], r['target_probs'],
                                   obj_class=example_meta['obj_class'],
-                                  obj_vis=example_meta['obj_visibility'])
+                                  obj_vis=obj_vis)
 
     print('Saved prediction visualizations to:\t {}'.format(vis_dir))
 
