@@ -9,9 +9,14 @@ urdf_cache_dir: datasets/objects/urdf/cache/        # Directory to store URDF fi
 !include partials/states.yaml
 !include partials/mask_dataset.yaml
 
+images:
+  color: 1
+  depth: 1
+  modal: 1
+  amodal: 1
+  semantic: 1
+
 vis:                                                # Visualization flags for viewing each state and generated images
   state: 0
   obs: 0
-  modal_seg: 0
-  amodal_seg: 0
-  stacked_seg: 0
+  semantic: 0

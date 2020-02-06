@@ -1,5 +1,5 @@
 """
-Copyright ©2017. The Regents of the University of California (Regents). All Rights Reserved.
+Copyright ©2019. The Regents of the University of California (Regents). All Rights Reserved.
 Permission to use, copy, modify, and distribute this software and its documentation for educational,
 research, and not-for-profit purposes, without fee and without a signed licensing agreement, is
 hereby granted, provided that the above copyright notice, this paragraph and the following two
@@ -27,6 +27,8 @@ import time
 import trimesh
 import pybullet
 import numpy as np
+import shutil
+import pkg_resources
 
 from autolab_core import RigidTransform, Logger
 from pyrender import Scene, Viewer, Mesh, Node, PerspectiveCamera
@@ -65,8 +67,13 @@ class PybulletPhysicsEngine(PhysicsEngine):
         self._urdf_cache_dir = urdf_cache_dir
         if not os.path.isabs(self._urdf_cache_dir):
             self._urdf_cache_dir = os.path.join(os.getcwd(), self._urdf_cache_dir)
-        if not os.path.exists(self._urdf_cache_dir):
-            os.makedirs(self._urdf_cache_dir)
+        if not os.path.exists(os.path.join(self._urdf_cache_dir, 'plane')):
+            os.makedirs(os.path.join(self._urdf_cache_dir, 'plane'))
+        shutil.copy(pkg_resources.resource_filename('sd_maskrcnn', 'data/plane/plane.urdf'), 
+                    os.path.join(self._urdf_cache_dir, 'plane', 'plane.urdf'))
+        shutil.copy(pkg_resources.resource_filename('sd_maskrcnn', 'data/plane/plane_convex_piece_0.obj'), 
+                    os.path.join(self._urdf_cache_dir, 'plane', 'plane_convex_piece_0.obj'))
+
 
     def add(self, obj, static=False):
 
@@ -97,7 +104,7 @@ class PybulletPhysicsEngine(PhysicsEngine):
                                        useFixedBase=static,
                                        physicsClientId=self._physics_client)
         except:
-            raise Exception('Failed to load %s' %(filename))
+            raise Exception('Failed to load %s' %(urdf_filename))
         
         if self._debug:
             self._add_to_scene(obj)

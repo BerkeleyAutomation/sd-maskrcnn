@@ -30,7 +30,7 @@ requirements = [
     'matplotlib',               # For visualization of results
     'autolab_core>=0.0.9',      # For core utilities
     'autolab-perception',       # For image wrapping
-    'tensorflow-gpu>=1.10'      # For training
+    'tensorflow-gpu<1.13>=1.10'      # For training
 ]
 
 generation_requirements = [

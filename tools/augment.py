@@ -1,5 +1,5 @@
 """ 
-Copyright ©2017. The Regents of the University of California (Regents). All Rights Reserved.
+Copyright ©2019. The Regents of the University of California (Regents). All Rights Reserved.
 Permission to use, copy, modify, and distribute this software and its documentation for educational,
 research, and not-for-profit purposes, without fee and without a signed licensing agreement, is
 hereby granted, provided that the above copyright notice, this paragraph and the following two
