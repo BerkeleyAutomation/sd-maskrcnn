@@ -38,3 +38,8 @@ TEST_ID = 1
 
 # Physical Constants
 GRAVITY_ACCEL = 9.81
+
+# Exceptions
+class TargetMissingError(Exception):
+    '''Raised when the target falls out of the heap workspace'''
+    pass

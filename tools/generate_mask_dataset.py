@@ -336,6 +336,8 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
     
     # generate states and images
     state_id = num_prev_states
+    gen_start = time.time()
+    flush_start = time.time()
     while state_id < num_states:
 
         # create env and set objects
@@ -346,7 +348,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
         env.state_space.set_splits(obj_splits)
         env.state_space.mesh_filenames = mesh_filenames
         create_stop = time.time()
-        logger.info('Creating env took %.3f sec' %(create_stop-create_start))            
+        logger.debug('Creating env took {:.3f} sec'.format(create_stop-create_start))           
 
         # sample states
         states_remaining = num_states - state_id
@@ -358,7 +360,9 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
 
             try:    
                 # reset env
+                sample_start = time.time()
                 env.reset()
+                logger.info('Sampling heap took {:.3f} sec'.format(time.time()-sample_start))
                 state = env.state
                 split = state.metadata['split']
                 
@@ -402,6 +406,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                     state_dataset.add(state_datapoint)
                 
                 # render images
+                render_start = time.time()
                 for k in range(num_images_per_state):
                     
                     # reset the camera
@@ -418,8 +423,10 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                     if image_config['color']:
                         target_im = target_im[0]
 
+                    dist_start = time.time()
                     dist_im, soft_dist_im = env.find_target_distribution_3d()
-                    
+                    logger.debug('Computing distribution took {:.3f} sec'.format(time.time()-dist_start))
+
                     # vis obs
                     if vis_config['obs']:
                         if image_config['depth']:
@@ -539,8 +546,14 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                     else:
                         test_inds.append(num_images_per_state*state_id + k)
 
+                logger.info('Rendering and saving images took {:.3f} sec'.format(time.time()-render_start))
+                
                 # auto-flush after every so many timesteps
-                if state_id % states_per_flush == 0:
+                if state_id > 0 and state_id % states_per_flush == 0:
+                    logger.info('Last {} state(s) took {:.3f} sec'.format(states_per_flush, time.time()-flush_start))
+                    flush_start = time.time()
+                    expected_finish = (time.time() - gen_start) * (num_states - num_prev_states) / (state_id - num_prev_states + 1) + gen_start
+                    logger.info('Expected finish time: {}'.format(time.strftime("%b %d %H:%M:%S", time.localtime(expected_finish))))
                     np.save(os.path.join(image_dir, 'train_indices.npy'), train_inds)
                     np.save(os.path.join(image_dir, 'test_indices.npy'), test_inds)
                     if save_tensors:
@@ -555,14 +568,15 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
 
                 # update state id
                 state_id += 1
-                
+            
             except Exception as e:
                 # log an error
                 logger.warning('Heap failed!')
-                logger.warning('%s' %(str(e)))
-                logger.warning(traceback.print_exc())
-                if debug:
-                    raise
+                logger.warning('{}'.format(str(e)))
+                if not isinstance(e, TargetMissingError):
+                    logger.warning(traceback.print_exc())
+                    if debug:
+                        raise
                 
                 del env
                 gc.collect()

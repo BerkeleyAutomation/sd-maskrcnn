@@ -32,7 +32,7 @@ from autolab_core import Logger, RigidTransform
 
 from .random_variables import CameraRandomVariable
 from .states import ObjectState, HeapState, CameraState, HeapAndCameraState
-from .constants import KEY_SEP_TOKEN, TRAIN_ID, TEST_ID
+from .constants import KEY_SEP_TOKEN, TRAIN_ID, TEST_ID, TargetMissingError
 
 class CameraStateSpace(gym.Space):
     """ State space for a camera. """
@@ -348,7 +348,9 @@ class HeapStateSpace(gym.Space):
             for o in objs_to_remove:
                 self._physics_engine.remove(o.key)
                 objs_in_heap.remove(o)
-
+            
+            if heap_target is not None and not heap_target in [o.key for o in objs_in_heap]:
+                raise TargetMissingError('Target object {} was removed from heap'.format(heap_target))
             total_drops += 1
             self._logger.debug('Waiting for zero velocity took %.3f sec' %(time.time()-wait))
         
