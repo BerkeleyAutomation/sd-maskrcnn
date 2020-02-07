@@ -212,8 +212,16 @@ class BinHeapEnv(gym.Env):
         # Show all meshes
         for mn in self._scene.mesh_nodes:
             mn.mesh.is_visible = True
-            
-        return image
+
+        crops = []
+        for im in list(image):
+            mask = ~im[:,:,1] if im.ndim == 3 else im
+            mean_px = np.mean(np.nonzero(mask), axis=1).astype(np.int)
+            im = np.pad(im, ((64,), (64,), (0,)), 'constant', constant_values=np.iinfo('uint8').max) \
+                if im.ndim == 3 else np.pad(im, 64, 'constant', constant_values=np.iinfo('uint8').max)
+            crop = im[mean_px[0]:mean_px[0]+128, mean_px[1]:mean_px[1]+128]
+            crops.append(crop)
+        return crops if len(crops) > 1 else crops[0]
     
     def render_segmentation_images(self):
         """Renders segmentation masks (modal and amodal) for each object in the state.
