@@ -105,6 +105,9 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
     depth_dir = os.path.join(image_dir, 'depth_ims')
     if image_config['depth'] and not os.path.exists(depth_dir):
         os.mkdir(depth_dir)
+    combo_dir = os.path.join(image_dir, 'combo_ims')
+    if image_config['combo'] and not os.path.exists(combo_dir):
+        os.mkdir(combo_dir)
     target_dir = os.path.join(image_dir, 'target_ims')
     if image_config['target'] and not os.path.exists(target_dir):
         os.mkdir(target_dir)
@@ -162,6 +165,14 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
             image_tensor_config['fields']['depth_im'] = {
                 'dtype': 'float32',
                 'channels': 1,
+                'height': im_height,
+                'width': im_width
+            }
+
+        if image_config['combo']:
+            image_tensor_config['fields']['combo_im'] = {
+                'dtype': 'uint8',
+                'channels': 3,
                 'height': im_height,
                 'width': im_width
             }
@@ -298,6 +309,8 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                 os.remove(os.path.join(depth_dir, im_name))
             if os.path.exists(os.path.join(color_dir, im_name)):
                 os.remove(os.path.join(color_dir, im_name))
+            if os.path.exists(os.path.join(combo_dir, im_name)):
+                os.remove(os.path.join(combo_dir, im_name))
             if os.path.exists(os.path.join(target_dir, im_name)):
                 os.remove(os.path.join(target_dir, im_name))
             if os.path.exists(os.path.join(dist_dir, im_name)):
@@ -413,19 +426,23 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                     if num_images_per_state > 1:
                         env.reset_camera()
                     
-                    obs = env.render_camera_image(color=image_config['color'])
-                    if image_config['color']:
-                        color_obs, depth_obs = obs
-                    else:
-                        depth_obs = obs
+                    color_obs, depth_obs, combo_obs = env.render_camera_image(color=image_config['color'], render_bin=False)
                     
-                    target_im = env.render_target_image(color=image_config['color'])
-                    if image_config['color']:
-                        target_im = target_im[0]
-
-                    dist_start = time.time()
-                    dist_im, soft_dist_im = env.find_target_distribution_3d()
-                    logger.debug('Computing distribution took {:.3f} sec'.format(time.time()-dist_start))
+                    if image_config['target']:
+                        target_im = env.render_target_image(color=image_config['color'])
+                        if image_config['color']:
+                            target_im = target_im[0]
+                    
+                    if image_config['dist'] or image_config['soft_dist']:
+                        dist_start = time.time()
+                        dist_config = config['distributions'] if 'distributions' in config else None
+                        if dist_config:
+                            stride = dist_config['stride'] if 'stride' in dist_config else 8
+                            rotations = dist_config['rotations'] if 'rotations' in dist_config else 16
+                            dist_im, soft_dist_im = env.find_target_distribution_3d(stride=stride, rotations=rotations)
+                        else:
+                            dist_im, soft_dist_im = env.find_target_distribution_trans_only()
+                        logger.debug('Computing distribution took {:.3f} sec'.format(time.time()-dist_start))
 
                     # vis obs
                     if vis_config['obs']:
@@ -437,6 +454,10 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                             plt.figure()
                             plt.imshow(color_obs)
                             plt.title('Color Observation')
+                        if image_config['combo']:
+                            plt.figure()
+                            plt.imshow(combo_obs)
+                            plt.title('Combo Observation')
                         if image_config['target']:
                             plt.figure()
                             plt.imshow(target_im)
@@ -493,6 +514,8 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                             image_datapoint['color_im'] = color_obs
                         if image_config['depth']:
                             image_datapoint['depth_im'] = depth_obs[:,:,None]
+                        if image_config['combo']:
+                            image_datapoint['combo_im'] = combo_obs
                         if image_config['target']:
                             image_datapoint['target_im'] = target_im
                         if image_config['dist']:
@@ -519,6 +542,8 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                         ColorImage(color_obs).save(os.path.join(color_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))
                     if image_config['depth']:
                         DepthImage(depth_obs).save(os.path.join(depth_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))
+                    if image_config['combo']:
+                        ColorImage(combo_obs).save(os.path.join(combo_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))
                     if image_config['target']:
                         ColorImage(target_im).save(os.path.join(target_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))                    
                     if image_config['dist']:

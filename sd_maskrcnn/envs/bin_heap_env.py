@@ -25,12 +25,14 @@ import numpy as np
 import gym
 import trimesh
 import matplotlib.pyplot as plt
+import cv2
 
 from pyrender import (Scene, IntrinsicsCamera, Mesh, DirectionalLight, Viewer,
                       MetallicRoughnessMaterial, Node, OffscreenRenderer, RenderFlags)
 
 from .physics_engine import PybulletPhysicsEngine
 from .state_spaces import HeapAndCameraStateSpace
+from .constants import MIN_DEPTH, MAX_DEPTH
 
 class BinHeapEnv(gym.Env):
     """ OpenAI Gym-style environment for creating object heaps in a bin. """
@@ -185,14 +187,33 @@ class BinHeapEnv(gym.Env):
 
         Viewer(self.scene, use_raymond_lighting=True)
 
-    def render_camera_image(self, color=True):
+    def render_camera_image(self, color=True, render_bin=True):
         """ Render the camera image for the current scene. """
         renderer = OffscreenRenderer(self.camera.width, self.camera.height)
         flags = RenderFlags.NONE if color else RenderFlags.DEPTH_ONLY
+        bin_node = next(iter(self._scene.get_nodes(name='bin')))
+        if not render_bin:
+            bin_node.mesh.is_visible = False
         image = renderer.render(self._scene, flags=flags)
+        bin_node.mesh.is_visible = True
         renderer.delete()
-        return image
-    
+
+        if color: 
+            color_im, depth_im = image
+            # converting from BGR to HSV color space
+            color_hsv = cv2.cvtColor(np.flip(color_im, axis=-1), cv2.COLOR_BGR2HSV)
+            mask1 = cv2.inRange(color_hsv,  np.array([0,120,70]), np.array([10,255,255]))
+            mask2 = cv2.inRange(color_hsv, np.array([170,120,70]), np.array([180,255,255]))
+            color_mask = (mask1 + mask2).astype(np.bool)
+            combo_im = np.iinfo(np.uint8).max * (depth_im - MIN_DEPTH) / (MAX_DEPTH - MIN_DEPTH)
+            combo_im = np.repeat(combo_im[...,None], 3, axis=-1).astype(np.uint8)
+            combo_im[color_mask, 0] = 255
+            combo_im[~color_mask, 0] = 0
+            return color_im, depth_im, combo_im
+        else: 
+            return None, image, None
+
+
     def render_target_image(self, color=True):
         """ Render the target image for the current scene. """
         renderer = OffscreenRenderer(self.camera.width, self.camera.height)
@@ -291,7 +312,7 @@ class BinHeapEnv(gym.Env):
         return full_depth, depth, modal_mask, plane_depth
 
 
-    def find_target_distribution_3d(self):
+    def find_target_distribution_3d(self, stride=8, rotations=16):
 
         # Render target object and full depth image to get offset and centroid
         full_depth, target_depth, target_modal_mask, plane_depth = self.render_target_modal_mask()
@@ -300,22 +321,21 @@ class BinHeapEnv(gym.Env):
         target_depth_offset = (plane_depth - target_depth)[tuple(target_inds)] 
         
         # Generate meshgrid for translations to apply
-        num_x_steps = 64
-        num_y_steps = 48
-        x = np.linspace(0, self.camera.width-1, num=num_x_steps)
-        y = np.linspace(0, self.camera.height-1, num=num_y_steps)
+        num_x_steps = int(self.camera.width / stride) + 1
+        num_y_steps = int(self.camera.height / stride) + 1
+        x = np.linspace(0, self.camera.width, num=num_x_steps)
+        y = np.linspace(0, self.camera.height, num=num_y_steps)
         grid = np.meshgrid(y, x)
         grid = np.array([grid[0].flatten(), grid[1].flatten()])
 
         # Rotate target for num_rots
-        num_rots = 16
-        rot_angles = np.arange(num_rots) * 2 * np.pi / num_rots
+        rot_angles = np.arange(rotations) * 2 * np.pi / rotations
         rot_mats = np.array([[np.cos(rot_angles), np.sin(rot_angles)], 
                              [-np.sin(rot_angles), np.cos(rot_angles)]])
         rotated_target_inds = np.einsum('ijk,jl->kil', rot_mats, target_inds - target_centroid)
 
         # Shift target depth and add offset to create new depth images
-        shifted_target_inds = np.repeat(rotated_target_inds, grid.shape[1], axis=0) + np.tile(grid, num_rots)[None, ...].T
+        shifted_target_inds = np.repeat(rotated_target_inds, grid.shape[1], axis=0) + np.tile(grid, rotations)[None, ...].T
         shifted_target_inds = shifted_target_inds.transpose(1,0,2)
 
         # Make all indices negative so we avoid errors and make these indices easy to filter
@@ -326,10 +346,11 @@ class BinHeapEnv(gym.Env):
         in_bounds_mask = np.logical_and(*(shifted_target_inds >= 0))
         shifted_target_inds = shifted_target_inds.astype(np.int)
 
+        # Get depths for all shifted indices for target and for image
         shifted_target_depths = plane_depth[tuple(shifted_target_inds)] - target_depth_offset
         full_depths = full_depth[tuple(shifted_target_inds)]
-        target_inds_mask = target_modal_mask[tuple(target_inds)]
         visible_shifted_target_mask = np.logical_and(shifted_target_depths < full_depths, in_bounds_mask)
+        target_inds_mask = target_modal_mask[tuple(target_inds)]
         dist_im, soft_dist_im = np.zeros_like(full_depth, dtype=np.bool), np.zeros_like(full_depth, dtype=np.float)
 
         # First, handle case where object is fully occluded
@@ -404,6 +425,86 @@ class BinHeapEnv(gym.Env):
             ))
 
         return nodes
+
+    def find_target_distribution_trans_only(self, stride=8):
+
+        # Render target object and full depth image to get offset and centroid
+        full_depth, target_depth, target_modal_mask, plane_depth = self.render_target_modal_mask()
+        target_inds = np.stack(np.where(plane_depth > target_depth))
+        target_centroid = np.mean(target_inds, axis=1)[:,None]
+        target_depth_offset = (plane_depth - target_depth)[tuple(target_inds)] 
+        
+        # Generate meshgrid for translations to apply
+        num_x_steps = int(self.camera.width / stride) + 1
+        num_y_steps = int(self.camera.height / stride) + 1
+        x = np.linspace(0, self.camera.width, num=num_x_steps)
+        y = np.linspace(0, self.camera.height, num=num_y_steps)
+        grid = np.meshgrid(y, x)
+        grid = np.array([grid[0].flatten(), grid[1].flatten()])
+
+        # Rotate target for many rotations
+        num_rots = 256
+        rot_angles = np.arange(num_rots) * 2 * np.pi / num_rots
+        rot_mats = np.array([[np.cos(rot_angles), np.sin(rot_angles)], 
+                             [-np.sin(rot_angles), np.cos(rot_angles)]])
+        rotated_target_inds = np.einsum('ijk,jl->kil', rot_mats, target_inds - target_centroid)
+
+        best_ind = 0
+        max_x_len = 0
+        min_y_len = np.inf
+        for i in range(num_rots):
+            rti = (rotated_target_inds[i] + target_centroid).astype(np.int)
+            rot_x_len = len(np.unique(rti[1]))
+            rot_y_len = len(np.unique(rti[0]))
+            if rot_x_len > max_x_len or (rot_x_len == max_x_len and rot_y_len < min_y_len):
+                best_ind = i
+                max_x_len = rot_x_len
+                min_y_len = rot_y_len
+        rotated_target_inds = rotated_target_inds[best_ind][None,...]
+
+        # Shift target depth and add offset to create new depth images
+        shifted_target_inds = np.repeat(rotated_target_inds, grid.shape[1], axis=0) + np.tile(grid, 1)[None, ...].T
+        shifted_target_inds = shifted_target_inds.transpose(1,0,2)
+
+        # Make all indices negative so we avoid errors and make these indices easy to filter
+        over_height = (shifted_target_inds[0] >= self.camera.height)
+        over_width = (shifted_target_inds[1] >= self.camera.width)
+        shifted_target_inds[0, over_height] = -1
+        shifted_target_inds[1, over_width] = -1
+        in_bounds_mask = np.logical_and(*(shifted_target_inds >= 0))
+        shifted_target_inds = shifted_target_inds.astype(np.int)
+
+        # Get depths for all shifted indices for target and for image
+        shifted_target_depths = plane_depth[tuple(shifted_target_inds)] - target_depth_offset
+        full_depths = full_depth[tuple(shifted_target_inds)]
+        visible_shifted_target_mask = np.logical_and(shifted_target_depths < full_depths, in_bounds_mask)
+        target_inds_mask = target_modal_mask[tuple(target_inds)]
+        dist_im, soft_dist_im = np.zeros_like(full_depth, dtype=np.bool), np.zeros_like(full_depth, dtype=np.float)
+
+        # First, handle case where object is fully occluded
+        if not np.any(target_inds_mask):
+            match_mask = np.logical_and(~np.any(visible_shifted_target_mask, axis=1)[:,None], in_bounds_mask)
+
+        # Next, handle case where object is not fully occluded
+        else:
+            # Get pixels in modal mask for shifted indices and compare to visible shifted indices
+            modal_mask_visible = target_modal_mask[tuple(shifted_target_inds)]
+            intersection = np.logical_and(modal_mask_visible, visible_shifted_target_mask).sum(axis=1)
+            union = visible_shifted_target_mask.sum(axis=1) + target_inds_mask.sum() - intersection
+            mask_ious = intersection / union
+
+            # Get matching mask indices and whangle small visibility ious
+            iou_thresh = min(0.9, max(target_inds_mask.sum() - 2, 1) / target_inds_mask.sum())
+            match_mask = np.logical_and(in_bounds_mask, (mask_ious >= iou_thresh)[:,None])
+        
+        matching_target_inds = shifted_target_inds[:, match_mask]
+        # if not np.any(matching_target_inds):
+        #     matching_target_inds = target_inds
+
+        dist_im[tuple(matching_target_inds)] = True
+        np.add.at(soft_dist_im, tuple(matching_target_inds), 1)
+        soft_dist_im = (np.iinfo(np.uint8).max * soft_dist_im / soft_dist_im.max()).astype(np.uint8)
+        return dist_im, soft_dist_im
 
     # def find_target_distribution(self, num=100):
 

@@ -1,4 +1,4 @@
-num_states: 10                                   # Total number of states in dataset
+num_states: 2000                                   # Total number of states in dataset
 num_images_per_state: 5                             # Number of images per state
 states_per_flush: 10                                # Number of states before writing tensors (if saving tensors)
 states_per_garbage_collect: 10                      # Number of states before garbage collection (due to pybullet memory issues)
@@ -11,13 +11,18 @@ urdf_cache_dir: /nfs/diskstation/projects/mech_search/prob_pose/objects/urdf/cac
 
 images:
   color: 1
-  depth: 0
+  depth: 1
+  combo: 1
   target: 0
   dist: 0
   soft_dist: 1
   modal: 0
   amodal: 0
   semantic: 0
+
+distributions:
+  stride: 8
+  rotations: 16
 
 vis:                                                # Visualization flags for viewing each state and generated images
   state: 0

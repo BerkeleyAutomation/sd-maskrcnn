@@ -39,6 +39,10 @@ TEST_ID = 1
 # Physical Constants
 GRAVITY_ACCEL = 9.81
 
+# Depths
+MIN_DEPTH = 0.25
+MAX_DEPTH = 1.0
+
 # Exceptions
 class TargetMissingError(Exception):
     '''Raised when the target falls out of the heap workspace'''
