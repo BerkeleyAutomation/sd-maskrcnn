@@ -38,7 +38,7 @@ generation_requirements = [
     'pyglet==1.4.0b1',       # For pyrender  
     'pyrender>=0.1.23',      # For rendering images
     'pybullet',              # For dynamic sim
-    'trimesh[easy]',         # For mesh loading/exporting
+    'trimesh',               # For mesh loading/exporting
     'scipy'                  # For random vars
 ]
 

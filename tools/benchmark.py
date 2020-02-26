@@ -240,12 +240,17 @@ def visualize_predictions(run_dir, dataset, inference_config, pred_mask_dir, pre
         image, _, _, _, _ = modellib.load_image_gt(dataset, inference_config, image_id, use_mini_mask=False)
         if inference_config.IMAGE_CHANNEL_COUNT == 1:
             image = np.repeat(image, 3, axis=2)
+        elif inference_config.IMAGE_CHANNEL_COUNT > 3:
+            image = image[:,:,:3]
 
         # load mask and info
         r = np.load(os.path.join(pred_info_dir, 'image_{:06}.npy'.format(image_id))).item()
         r_masks = np.load(os.path.join(pred_mask_dir, 'image_{:06}.npy'.format(image_id)))
         # Must transpose from (n, h, w) to (h, w, n)
-        r['masks'] = np.transpose(r_masks, (1, 2, 0))      
+        if r_masks.ndim == 3:
+            r['masks'] = np.transpose(r_masks, (1, 2, 0))
+        else:
+            r['masks'] = r_masks
         # Visualize
         scores = r['scores'] if show_scores else None
         fig = plt.figure(figsize=(1.7067, 1.7067), dpi=300, frameon=False)
