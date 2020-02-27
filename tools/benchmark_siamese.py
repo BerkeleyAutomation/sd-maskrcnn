@@ -90,7 +90,9 @@ def benchmark(config):
                                       images=config['test']['images'],
                                       masks=config['test']['masks'],
                                       targets=config['test']['targets'],
-                                      vis_file=config['test']['visibilities'])
+                                      vis_file=config['test']['visibilities'],
+                                      augment_targets=False,
+                                      bbs_on_disk=config['test']['bbs_on_disk'])
 
     if config['test']['indices']:
         test_dataset.load(imset=config['test']['indices'])
@@ -416,8 +418,6 @@ def plot_detailed_predictions(file_name, pile_img, target_img, gt_masks, gt_bbs,
     pred_mask_ious = np.squeeze(utilslib.compute_overlaps_masks(pred_masks, gt_target_mask))
     if len(pred_mask_ious.shape) == 0: # if scalar
         pred_mask_ious = pred_mask_ious[np.newaxis]
-
-    print('pred_mask_ious.shape', pred_mask_ious.shape)
 
     fig, ax = plt.subplots(num_preds + 2, 2, figsize=(12, 6 * (num_preds + 2)))
 
