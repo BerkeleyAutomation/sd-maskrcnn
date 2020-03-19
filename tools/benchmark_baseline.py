@@ -116,7 +116,7 @@ def visualize_predictions(run_dir, test_config, pred_mask_dir, pred_info_dir, sh
         else:
             r['masks'] = r_masks     
         # Visualize
-        fig = plt.figure(figsize=(1.7067, 1.7067), dpi=300, frameon=False)
+        fig = plt.figure(figsize=(1.70666, 1.70666), dpi=300, frameon=False)
         ax = plt.Axes(fig, [0.,0.,1.,1.])
         fig.add_axes(ax)
         visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], ['bg', 'obj'], 
