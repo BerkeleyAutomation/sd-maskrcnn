@@ -248,7 +248,7 @@ class BinHeapEnv(gym.Env):
         """Renders segmentation masks (modal and amodal) for each object in the state.
         """
 
-        full_depth = self.render_camera_image(color=False)
+        _, full_depth, _ = self.render_camera_image(color=False)
         modal_data = np.zeros((full_depth.shape[0], full_depth.shape[1], len(self.obj_keys)), dtype=np.uint8)
         amodal_data = np.zeros((full_depth.shape[0], full_depth.shape[1], len(self.obj_keys)), dtype=np.uint8)
         renderer = OffscreenRenderer(self.camera.width, self.camera.height)

@@ -248,7 +248,7 @@ def visualize_predictions(run_dir, dataset, inference_config, pred_mask_dir, pre
         r['masks'] = np.transpose(r_masks, (1, 2, 0))      
         # Visualize
         scores = r['scores'] if show_scores else None
-        fig = plt.figure(figsize=(1.7067, 1.7067), dpi=300, frameon=False)
+        fig = plt.figure(figsize=(1.70666, 1.70666), dpi=300, frameon=False)
         ax = plt.Axes(fig, [0.,0.,1.,1.])
         fig.add_axes(ax)
         visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], ['bg', 'obj'], 
@@ -277,7 +277,7 @@ def visualize_gts(run_dir, dataset, inference_config, show_bbox=True, show_score
 
         # Visualize
         scores = np.ones(gt_class_id.size) if show_scores else None
-        fig = plt.figure(figsize=(1.7067, 1.7067), dpi=300, frameon=False)
+        fig = plt.figure(figsize=(1.70666, 1.70666), dpi=300, frameon=False)
         ax = plt.Axes(fig, [0.,0.,1.,1.])
         fig.add_axes(ax)
         visualize.display_instances(image, gt_bbox, gt_mask, gt_class_id, ['bg', 'obj'], 

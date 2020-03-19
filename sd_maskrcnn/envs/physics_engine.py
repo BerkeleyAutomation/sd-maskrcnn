@@ -31,7 +31,7 @@ import shutil
 import pkg_resources
 
 from autolab_core import RigidTransform, Logger
-from pyrender import Scene, Viewer, Mesh, Node, PerspectiveCamera
+from pyrender import Scene, Viewer, Mesh, Node, PerspectiveCamera, MetallicRoughnessMaterial
 
 from .constants import GRAVITY_ACCEL
 
@@ -106,7 +106,7 @@ class PybulletPhysicsEngine(PhysicsEngine):
         except:
             raise Exception('Failed to load %s' %(urdf_filename))
         
-        if self._debug:
+        if self._debug and 'bin' not in obj.key:
             self._add_to_scene(obj)
 
         self._key_to_id[obj.key] = obj_id
@@ -196,8 +196,14 @@ class PybulletPhysicsEngine(PhysicsEngine):
         self._scene.main_camera_node = cn
     
     def _add_to_scene(self, obj):
+        material = MetallicRoughnessMaterial(
+            baseColorFactor=np.array([1, 1, 1, 1.0]),
+            metallicFactor=0.2,
+            roughnessFactor=0.8
+        )
         self._viewer.render_lock.acquire()
-        n = Node(mesh=Mesh.from_trimesh(obj.mesh), matrix=obj.pose.matrix, name=obj.key)
+        n = Node(mesh=Mesh.from_trimesh(obj.mesh, material=material),
+                 matrix=obj.pose.matrix, name=obj.key)
         self._scene.add_node(n)
         self._viewer.render_lock.release()
 
