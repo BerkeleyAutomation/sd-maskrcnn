@@ -43,15 +43,9 @@ state_space:
       mesh_dir: /home/mjd3/working/pose/objects/meshes/    # Directory containing meshes to be dropped
       num_objects: 2000                     # Number of objects in dataset (test and train)
       train_pct: 0.8                        # Percentage of objects to be designated as train
-      target_keys: 
-        - boxes~box_4
-        # - thingiverse~flat_lid_274162
-        # - thingiverse~recorder_mouth_piece_186865
       object_keys:                          # Folders containing meshes
         thingiverse: all
         thingiverse_packaged: all
-        boxes:
-          - box_4
         # ycb: all                            # all -> all meshes in folder. Can also specify list of mesh names
 
       planar_translation:                   # Amount of translation around the center point to drop each object

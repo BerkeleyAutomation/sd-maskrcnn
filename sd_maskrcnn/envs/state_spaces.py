@@ -118,7 +118,8 @@ class HeapStateSpace(gym.Space):
                 for f in files:
                     filename, ext = os.path.splitext(f)
                     if ext.split('.')[1] in trimesh.exchange.load.mesh_formats() \
-                        and (filename in obj_config['object_keys'][dataset_name] or obj_config['object_keys'][dataset_name] == 'all'):
+                        and (filename in obj_config['object_keys'][dataset_name] 
+                             or obj_config['object_keys'][dataset_name] == 'all'):
                         obj_key = '{}{}{}'.format(dataset_name,KEY_SEP_TOKEN,filename)
                         object_keys.append(obj_key)
                         mesh_filenames.append(os.path.join(root,f))
@@ -391,6 +392,14 @@ class HeapAndCameraStateSpace(gym.Space):
     @obj_keys.setter
     def obj_keys(self, keys):
         self.heap.all_object_keys = keys
+    
+    @property
+    def target_keys(self):
+        return self.heap.target_keys
+    
+    @target_keys.setter
+    def target_keys(self, keys):
+        self.heap.target_keys = keys
     
     @property 
     def obj_splits(self):

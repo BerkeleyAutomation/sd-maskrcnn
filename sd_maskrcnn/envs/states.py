@@ -23,6 +23,8 @@ Author: Mike Danielczuk
 
 import numpy as np
 
+from autolab_core import Logger
+
 class State(object):
     """ Abstract class for states """
     pass
@@ -49,6 +51,9 @@ class ObjectState(State):
         self.mesh = mesh
         self.pose = pose
         self.sim_id = sim_id
+
+        # set up logger
+        self._logger = Logger.get_logger(self.__class__.__name__)
 
     @property
     def center_of_mass(self):
@@ -109,7 +114,7 @@ class HeapState(State):
             try:
                 return self.workspace_states[self.workspace_keys.index(key)]
             except:
-                logging.warning('Object %s not in pile!')
+                self._logger.warning('Object %s not in pile!')
         return None
 
 class CameraState(State):

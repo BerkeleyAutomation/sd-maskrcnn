@@ -6,25 +6,19 @@ log_rate: 1                                         # Rate at which to log datas
 debug: 0                                            # Debug flag to see physics simulation, set random seed
 urdf_cache_dir: /home/mjd3/working/pose/objects/urdf/cache/        # Directory to store URDF files for meshes
 
-!include partials/states.yaml
-!include partials/mask_dataset.yaml
+!include partials/states_dist.yaml
 
 images:
   color: 1
   depth: 1
   combo: 1
-  target: 0
-  dist: 0
-  soft_dist: 1
-  modal: 0
-  amodal: 0
-  semantic: 0
+  dist: 1
 
 distributions:
+  ratios: [1, 2]
   stride: 8
   rotations: 16
 
 vis:                                                # Visualization flags for viewing each state and generated images
   state: 0
   obs: 0
-  semantic: 0
