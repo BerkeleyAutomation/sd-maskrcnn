@@ -183,7 +183,7 @@ class PybulletPhysicsEngine(PhysicsEngine):
     def _create_scene(self):
         self._scene = Scene()
         camera = PerspectiveCamera(yfov=0.833, znear=0.05,
-                                    zfar=3.0, aspectRatio=1.0)
+                                   zfar=3.0, aspectRatio=1.0)
         cn = Node()
         cn.camera = camera
         pose_m = np.array([[0.0,1.0,0.0,0.0],
@@ -202,8 +202,8 @@ class PybulletPhysicsEngine(PhysicsEngine):
             roughnessFactor=0.8
         )
         self._viewer.render_lock.acquire()
-        n = Node(mesh=Mesh.from_trimesh(obj.mesh, material=material),
-                 matrix=obj.pose.matrix, name=obj.key)
+        n = Node(mesh=Mesh.from_trimesh(obj.mesh), matrix=obj.pose.matrix, name=obj.key)
+        # if 'bin' not in obj.key:
         self._scene.add_node(n)
         self._viewer.render_lock.release()
 

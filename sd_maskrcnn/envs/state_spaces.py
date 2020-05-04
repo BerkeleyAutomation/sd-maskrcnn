@@ -253,6 +253,8 @@ class HeapStateSpace(gym.Space):
             obj_mesh = trimesh.load_mesh(self.mesh_filenames[obj_key])
             obj_mesh.visual = trimesh.visual.ColorVisuals(obj_mesh, vertex_colors=(0.7,0.7,0.7,1.0)) if obj_key != heap_target or total_drops > 0 else trimesh.visual.ColorVisuals(obj_mesh, vertex_colors=(1.0,0.0,0.0,1.0))
             obj_mesh.density = self.obj_density
+            if obj_key == heap_target:
+                obj_key = 'target'
             obj = ObjectState(obj_key, obj_mesh)
             _, radius = trimesh.nsphere.minimum_nsphere(obj.mesh)
             if 2*radius > self.max_obj_diam:
@@ -350,7 +352,7 @@ class HeapStateSpace(gym.Space):
                 self._physics_engine.remove(o.key)
                 objs_in_heap.remove(o)
             
-            if heap_target is not None and not heap_target in [o.key for o in objs_in_heap]:
+            if heap_target is not None and not 'target' in [o.key for o in objs_in_heap]:
                 raise TargetMissingError('Target object {} was removed from heap'.format(heap_target))
             total_drops += 1
             self._logger.debug('Waiting for zero velocity took %.3f sec' %(time.time()-wait))

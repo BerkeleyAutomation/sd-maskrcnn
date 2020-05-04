@@ -283,7 +283,10 @@ class BinHeapEnv(gym.Env):
     def render_target_modal_mask(self):
         """Renders segmentation masks (modal and amodal) for target object. """
 
-        target_node = next(iter(self._scene.get_nodes(name=self.target_key)))
+        try:
+            target_node = next(iter(self._scene.get_nodes(name=self.target_key)))
+        except StopIteration:
+            target_node = next(iter(self._scene.get_nodes(name='target')))
         target_node.mesh.is_visible = False
         bin_node = next(iter(self._scene.get_nodes(name='bin')))
         bin_node.mesh.is_visible = False
