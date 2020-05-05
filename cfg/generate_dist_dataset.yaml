@@ -1,4 +1,4 @@
-num_states: 10                                   # Total number of states in dataset
+num_states: 10000                                   # Total number of states in dataset
 num_images_per_state: 5                             # Number of images per state
 states_per_flush: 10                                # Number of states before writing tensors (if saving tensors)
 states_per_garbage_collect: 10                      # Number of states before garbage collection (due to pybullet memory issues)
@@ -10,12 +10,12 @@ urdf_cache_dir: /home/mjd3/working/pose/objects/urdf/cache/        # Directory t
 
 images:
   color: 1
-  depth: 1
+  depth: 0
   combo: 1
   dist: 1
 
 distributions:
-  ratios: [1, 2]
+  ratios: [1, 2, 3, 5, 10]
   stride: 8
   rotations: 16
 

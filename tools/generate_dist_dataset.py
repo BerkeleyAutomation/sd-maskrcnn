@@ -25,6 +25,7 @@ Authors: Jeff Mahler, Mike Danielczuk
 import argparse
 import gc
 import numpy as np
+import trimesh
 import os
 import json
 import shutil
@@ -32,6 +33,7 @@ import time
 import traceback
 import matplotlib.pyplot as plt
 
+from pyrender import Mesh
 from autolab_core import YamlConfig, Logger
 import autolab_core.utils as utils
 from perception import DepthImage, GrayscaleImage, BinaryImage, ColorImage
@@ -44,7 +46,7 @@ SEED = 744
 # set up logger
 logger = Logger.get_logger('tools/generate_distribution_dataset.py')
 
-def generate_distribution_dataset(output_dataset_path, 
+def generate_distribution_dataset(output_dataset_path,
                                   config, warm_start=False):
     """ Generate a distribution training dataset
 
@@ -53,12 +55,12 @@ def generate_distribution_dataset(output_dataset_path,
     dataset_path : str
         path to store the dataset
     config : dict
-        dictionary-like objects containing parameters of the 
+        dictionary-like objects containing parameters of the
         simulator and visualization
     warm_start : bool
         restart dataset generation from a previous state
     """
-    
+
     # read subconfigs
     image_config = config['images']
     vis_config = config['vis']
@@ -67,7 +69,7 @@ def generate_distribution_dataset(output_dataset_path,
     debug = config['debug']
     if debug:
         np.random.seed(SEED)
-    
+
     # read general parameters
     num_states = config['num_states']
     num_images_per_state = config['num_images_per_state']
@@ -85,7 +87,7 @@ def generate_distribution_dataset(output_dataset_path,
         box_keys.append('box_{}'.format(ratio))
     config['state_space']['heap']['objects']['target_keys'] = target_keys
     config['state_space']['heap']['objects']['object_keys']['boxes'] = box_keys
-    
+
     # create the dataset path and all subfolders if they don't exist
     if not os.path.exists(output_dataset_path):
         os.mkdir(output_dataset_path)
@@ -140,7 +142,7 @@ def generate_distribution_dataset(output_dataset_path,
         # Do our own calculation if no saved tensors
         if num_prev_states == 0:
             num_prev_states = num_total_images // num_images_per_state
-        
+
         # Find images to remove and remove them from all relevant places if they exist
         num_images_to_remove = num_total_images - (num_prev_states * num_images_per_state)
         logger.info('Deleting last {} invalid images'.format(num_images_to_remove))
@@ -160,7 +162,7 @@ def generate_distribution_dataset(output_dataset_path,
                 train_inds.remove(im_ind)
             elif im_ind in test_inds:
                 test_inds.remove(im_ind)
-   
+
     else:
 
         # Create initial env to generate metadata
@@ -179,7 +181,7 @@ def generate_distribution_dataset(output_dataset_path,
                   indent=JSON_INDENT, sort_keys=True)
         train_inds = []
         test_inds = []
-    
+
     # generate states and images
     state_id = num_prev_states
     gen_start = time.time()
@@ -194,25 +196,25 @@ def generate_distribution_dataset(output_dataset_path,
         env.state_space.set_splits(obj_splits)
         env.state_space.mesh_filenames = mesh_filenames
         create_stop = time.time()
-        logger.debug('Creating env took {:.3f} sec'.format(create_stop-create_start))           
+        logger.debug('Creating env took {:.3f} sec'.format(create_stop-create_start))
 
         # sample states
         states_remaining = num_states - state_id
         for i in range(min(states_per_garbage_collect, states_remaining)):
-            
+
             # log current rollout
             if state_id % config['log_rate'] == 0:
                 logger.info('State: {:06d}'.format(state_id))
 
-            try:    
+            try:
                 # reset env
                 sample_start = time.time()
                 env.reset()
-                logger.info('Sampling heap took {:.3f} sec'.format(time.time() - 
+                logger.info('Sampling heap took {:.3f} sec'.format(time.time() -
                                                                    sample_start))
                 state = env.state
                 split = state.metadata['split']
-                
+
                 # render state
                 if vis_config['state']:
                     env.view_3d_scene()
@@ -220,70 +222,73 @@ def generate_distribution_dataset(output_dataset_path,
                 # render images
                 render_start = time.time()
                 for k in range(num_images_per_state):
-                    
+
                     # reset the camera
                     if k > 0:
                         env.reset_camera()
-                    
-                    obs = env.render_camera_image(color=image_config['color'], 
-                                                  render_bin=False)
-                    color_obs, depth_obs, combo_obs = obs
-                    
-                    dist_start = time.time()
-                    dist_im = env.find_target_ar_distribution(stride=config['distributions']['stride'], 
-                                                              rotations=config['distributions']['rotations'])
-                    logger.debug('Computing distribution took {:.3f} sec'.format(time.time() - 
-                                                                                 dist_start))
 
-                    # vis obs
-                    if vis_config['obs']:
-                        if image_config['depth']:
-                            plt.figure()
-                            plt.imshow(depth_obs)
-                            plt.title('Depth Observation')
+                    for ratio in config['distributions']['ratios']:
+                        target_node = next(iter(env.scene.get_nodes(name='target')))
+                        box_mesh = trimesh.load(env.state_space.mesh_filenames['boxes~box_{}'.format(ratio)])
+                        box_mesh.visual.vertex_colors = (1.0, 0.0, 0.0, 1.0)
+                        target_node.mesh = Mesh.from_trimesh(box_mesh)
+
+                        obs = env.render_camera_image(color=image_config['color'],
+                                                      render_bin=False)
+                        color_obs, depth_obs, combo_obs = obs
+
+                        _, dist_im = env.find_target_distribution_3d(stride=config['distributions']['stride'],
+                                                                     rotations=config['distributions']['rotations'])
+
+                        # vis obs
+                        if vis_config['obs']:
+                            if image_config['depth']:
+                                plt.figure()
+                                plt.imshow(depth_obs)
+                                plt.title('Depth Observation')
+                            if image_config['color']:
+                                plt.figure()
+                                plt.imshow(color_obs)
+                                plt.title('Color Observation')
+                            if image_config['combo']:
+                                plt.figure()
+                                plt.imshow(combo_obs)
+                                plt.title('Combo Observation')
+                            if image_config['dist']:
+                                plt.figure()
+                                plt.imshow(dist_im)
+                                plt.title('Target Distribution')
+                                plt.figure()
+                                plt.imshow(depth_obs)
+                                plt.imshow(dist_im, alpha=0.5)
+                            plt.show()
+
+                        # Save depth image and semantic masks
                         if image_config['color']:
-                            plt.figure()
-                            plt.imshow(color_obs)
-                            plt.title('Color Observation')
+                            ColorImage(color_obs).save(os.path.join(color_dir,
+                                                                    'image_{:06d}_{:02d}.png'.format(num_images_per_state *
+                                                                                                     state_id + k, ratio)))
+                        if image_config['depth']:
+                            DepthImage(depth_obs).save(os.path.join(depth_dir,
+                                                                    'image_{:06d}_{:02d}.png'.format(num_images_per_state *
+                                                                                                     state_id + k, ratio)))
                         if image_config['combo']:
-                            plt.figure()
-                            plt.imshow(combo_obs)
-                            plt.title('Combo Observation')
+                            ColorImage(combo_obs).save(os.path.join(combo_dir,
+                                                                    'image_{:06d}_{:02d}.png'.format(num_images_per_state *
+                                                                                                     state_id + k, ratio)))
                         if image_config['dist']:
-                            plt.figure()
-                            plt.imshow(dist_im)
-                            plt.title('Target Soft Distribution')
-                            plt.figure()
-                            plt.imshow(depth_obs)
-                            plt.imshow(dist_im, alpha=0.5)
-                        plt.show()
+                            GrayscaleImage(dist_im).save(os.path.join(dist_dir,
+                                                                      'image_{:06d}_{:02d}.png'.format(num_images_per_state *
+                                                                                                       state_id + k, ratio)))
 
-                    # Save depth image and semantic masks
-                    if image_config['color']:
-                        ColorImage(color_obs).save(os.path.join(color_dir, 
-                                                                'image_{:06d}.png'.format(num_images_per_state * 
-                                                                                          state_id + k)))
-                    if image_config['depth']:
-                        DepthImage(depth_obs).save(os.path.join(depth_dir, 
-                                                                'image_{:06d}.png'.format(num_images_per_state * 
-                                                                                          state_id + k)))
-                    if image_config['combo']:
-                        ColorImage(combo_obs).save(os.path.join(combo_dir, 
-                                                                'image_{:06d}.png'.format(num_images_per_state * 
-                                                                                          state_id + k)))
-                    if image_config['dist']:
-                        GrayscaleImage(dist_im).save(os.path.join(dist_dir, 
-                                                                  'image_{:06d}.png'.format(num_images_per_state * 
-                                                                                            state_id + k)))
-                    
                     # Save split
                     if split == TRAIN_ID:
-                        train_inds.append(num_images_per_state*state_id + k)
+                        train_inds.append(num_images_per_state * state_id + k)
                     else:
-                        test_inds.append(num_images_per_state*state_id + k)
+                        test_inds.append(num_images_per_state * state_id + k)
 
                 logger.info('Rendering and saving images took {:.3f} sec'.format(time.time()-render_start))
-                
+
                 # auto-flush after every so many timesteps
                 if state_id > 0 and state_id % states_per_flush == 0:
                     logger.info('Last {} state(s) took {:.3f} sec'.format(states_per_flush, time.time()-flush_start))
@@ -292,10 +297,7 @@ def generate_distribution_dataset(output_dataset_path,
                     logger.info('Expected finish time: {}'.format(time.strftime("%b %d %H:%M:%S", time.localtime(expected_finish))))
                     np.save(os.path.join(image_dir, 'train_indices.npy'), train_inds)
                     np.save(os.path.join(image_dir, 'test_indices.npy'), test_inds)
-                    if save_tensors:
-                        state_dataset.flush()
-                        image_dataset.flush()
-                
+
                 # delete action objects
                 for obj_state in state.obj_states:
                     del obj_state
@@ -304,7 +306,7 @@ def generate_distribution_dataset(output_dataset_path,
 
                 # update state id
                 state_id += 1
-            
+
             except Exception as e:
                 # log an error
                 logger.warning('Heap failed!')
@@ -313,7 +315,7 @@ def generate_distribution_dataset(output_dataset_path,
                     logger.warning(traceback.print_exc())
                     if debug:
                         raise
-                
+
                 del env
                 gc.collect()
                 env = BinHeapEnv(config)
@@ -321,11 +323,11 @@ def generate_distribution_dataset(output_dataset_path,
                 env.state_space.obj_keys = obj_keys
                 env.state_space.set_splits(obj_splits)
                 env.state_space.mesh_filenames = mesh_filenames
-                
+
         # garbage collect
         del env
         gc.collect()
-        
+
     # write all datasets to file, save indices
     np.save(os.path.join(image_dir, 'train_indices.npy'), train_inds)
     np.save(os.path.join(image_dir, 'test_indices.npy'), test_inds)
@@ -338,12 +340,12 @@ if __name__ == '__main__':
     parser.add_argument('output_dataset_path', type=str, default=None, help='directory to store a dataset containing the images')
     parser.add_argument('--config_filename', type=str, default=None, help='configuration file to use')
     parser.add_argument('--warm_start', action='store_true', help='warm start system after crash')
-    
+
     args = parser.parse_args()
     output_dataset_path = args.output_dataset_path
     config_filename = args.config_filename
     warm_start = args.warm_start
-    
+
     # handle config filename
     if config_filename is None:
         config_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -363,5 +365,5 @@ if __name__ == '__main__':
 
     # log time
     generation_stop = time.time()
-    logger.info('Distribution dataset generation took {:.3f} sec'.format(generation_stop - 
+    logger.info('Distribution dataset generation took {:.3f} sec'.format(generation_stop -
                                                                          generation_start))
