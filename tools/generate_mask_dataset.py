@@ -22,6 +22,8 @@ Generates a dataset for training SD Mask R-CNN
 Authors: Jeff Mahler, Mike Danielczuk
 """
 
+import os
+
 import argparse
 import gc
 import numpy as np
@@ -311,7 +313,17 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
 
             try:    
                 # reset env
-                env.reset()
+                if env._scene and len(env.state.obj_keys) > 1:
+                    # remove object
+                    #removed_obj_key = env.obj_keys[0]
+                    #env.state.obj_states = [x for x in env.state.obj_states if x.key != removed_obj_key]
+                    print(len(env.state.obj_keys))
+                    obj_key = env.state.obj_keys[0]
+                    env.state.obj_states = [x for x in env.state.obj_states if x.key != obj_key]
+                    node = list(env._scene.get_nodes(name=obj_key))[0]
+                    env._scene.remove_node(node)
+                else:    
+                    env.reset()
                 state = env.state
                 split = state.metadata['split']
                 
