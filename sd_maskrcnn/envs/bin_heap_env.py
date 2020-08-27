@@ -35,7 +35,7 @@ class BinHeapEnv(gym.Env):
     """ OpenAI Gym-style environment for creating object heaps in a bin. """
 
     def __init__(self, config):
-        
+
         self._config = config
 
         # read subconfigs
@@ -53,7 +53,7 @@ class BinHeapEnv(gym.Env):
 
     @property
     def state(self):
-        return self._state  
+        return self._state
 
     @property
     def camera(self):
@@ -84,10 +84,10 @@ class BinHeapEnv(gym.Env):
         state = self._state_space.sample()
         self._state = state.heap
         self._camera = state.camera
-    
+
     def _update_scene(self):
         # update camera
-        camera = IntrinsicsCamera(self.camera.intrinsics.fx, self.camera.intrinsics.fy, 
+        camera = IntrinsicsCamera(self.camera.intrinsics.fx, self.camera.intrinsics.fy,
                                   self.camera.intrinsics.cx, self.camera.intrinsics.cy)
         cn = next(iter(self._scene.get_nodes(name=self.camera.frame)))
         cn.camera = camera
@@ -121,7 +121,7 @@ class BinHeapEnv(gym.Env):
         scene = Scene()
 
         # setup camera
-        camera = IntrinsicsCamera(self.camera.intrinsics.fx, self.camera.intrinsics.fy, 
+        camera = IntrinsicsCamera(self.camera.intrinsics.fx, self.camera.intrinsics.fy,
                                   self.camera.intrinsics.cx, self.camera.intrinsics.cy)
         pose_m = self.camera.pose.matrix.copy()
         pose_m[:,1:3] *= -1.0
@@ -161,7 +161,7 @@ class BinHeapEnv(gym.Env):
         Useful for generating image data for multiple camera views
         """
         self._camera = self.state_space.camera.sample()
-        self._update_scene()     
+        self._update_scene()
 
     def reset(self):
         """ Reset the environment. """
@@ -187,9 +187,11 @@ class BinHeapEnv(gym.Env):
         image = renderer.render(self._scene, flags=flags)
         renderer.delete()
         return image
-    
+
     def render_segmentation_images(self):
         """Renders segmentation masks (modal and amodal) for each object in the state.
+        Also returns a list of object keys, where the i-th key corresponds with the i-th
+        returned amodal and modal mask.
         """
 
         full_depth = self.render_camera_image(color=False)
@@ -216,12 +218,12 @@ class BinHeapEnv(gym.Env):
             node.mesh.is_visible = False
 
         renderer.delete()
-        
+
         # Show all meshes
         for mn in self._scene.mesh_nodes:
             mn.mesh.is_visible = True
 
-        return amodal_data, modal_data
+        return amodal_data, modal_data, self.obj_keys
 
     def _create_raymond_lights(self):
         thetas = np.pi * np.array([1.0 / 6.0, 1.0 / 6.0, 1.0 / 6.0])
