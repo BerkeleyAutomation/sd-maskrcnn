@@ -58,7 +58,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
     warm_start : bool
         restart dataset generation from a previous state
     """
-    
+
     # read subconfigs
     dataset_config = config['dataset']
     image_config = config['images']
@@ -68,7 +68,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
     debug = config['debug']
     if debug:
         np.random.seed(SEED)
-    
+
     # read general parameters
     num_states = config['num_states']
     num_images_per_state = config['num_images_per_state']
@@ -107,6 +107,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
     if image_config['semantic'] and not os.path.exists(semantic_dir):
         os.mkdir(semantic_dir)
 
+
     # setup logging
     experiment_log_filename = os.path.join(output_dataset_path, 'dataset_generation.log')
     if os.path.exists(experiment_log_filename) and not warm_start:
@@ -114,6 +115,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
     Logger.add_log_file(logger, experiment_log_filename, global_log_file=True)
     config.save(os.path.join(output_dataset_path, 'dataset_generation_params.yaml'))
     metadata = {}
+    heap_obj_keys_dict = {}
     num_prev_states = 0
 
     # set dataset params
@@ -140,7 +142,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                 'height': im_height,
                 'width': im_width
             }
-        
+
         if image_config['depth']:
             image_tensor_config['fields']['depth_im'] = {
                 'dtype': 'float32',
@@ -148,7 +150,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                 'height': im_height,
                 'width': im_width
             }
-        
+
         if image_config['modal']:
             image_tensor_config['fields']['modal_segmasks'] = {
                 'dtype': 'uint8',
@@ -164,7 +166,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                 'height': im_height,
                 'width': im_width
             }
-        
+
         if image_config['semantic']:
             image_tensor_config['fields']['semantic_segmasks'] = {
                 'dtype': 'uint8',
@@ -178,7 +180,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
         image_dataset_path = os.path.join(output_dataset_path, 'image_tensors')
 
         if warm_start:
-            
+
             if not os.path.exists(state_dataset_path) or not os.path.exists(image_dataset_path):
                 logger.error('Attempting to warm start without saved tensor dataset')
                 exit(1)
@@ -192,12 +194,12 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
             # read configs
             state_tensor_config = state_dataset.config
             image_tensor_config = image_dataset.config
-                    
+
             # clean up datasets (there may be datapoints with indices corresponding to non-existent data)
             num_state_datapoints = state_dataset.num_datapoints
             num_image_datapoints = image_dataset.num_datapoints
             num_prev_states = num_state_datapoints
-            
+
             # clean up images
             image_ind = num_image_datapoints - 1
             image_datapoint = image_dataset[image_ind]
@@ -209,7 +211,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
             if images_to_remove > 0:
                 image_dataset.delete_last(images_to_remove)
                 num_image_datapoints = image_dataset.num_datapoints
-        else:    
+        else:
             # create datasets from scratch
             logger.info('Creating datasets')
 
@@ -219,7 +221,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
         # read templates
         state_datapoint = state_dataset.datapoint_template
         image_datapoint = image_dataset.datapoint_template
-    
+
     if warm_start:
 
         if not os.path.exists(os.path.join(output_dataset_path, 'metadata.json')):
@@ -245,7 +247,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
         # Do our own calculation if no saved tensors
         if num_prev_states == 0:
             num_prev_states = num_total_images // num_images_per_state
-        
+
         # Find images to remove and remove them from all relevant places if they exist
         num_images_to_remove = num_total_images - (num_prev_states * num_images_per_state)
         logger.info('Deleting last {} invalid images'.format(num_images_to_remove))
@@ -267,7 +269,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                 train_inds.remove(im_ind)
             elif im_ind in test_inds:
                 test_inds.remove(im_ind)
-   
+
     else:
 
         # Create initial env to generate metadata
@@ -286,7 +288,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                   indent=JSON_INDENT, sort_keys=True)
         train_inds = []
         test_inds = []
-    
+
     # generate states and images
     state_id = num_prev_states
     while state_id < num_states:
@@ -299,29 +301,29 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
         env.state_space.set_splits(obj_splits)
         env.state_space.mesh_filenames = mesh_filenames
         create_stop = time.time()
-        logger.info('Creating env took %.3f sec' %(create_stop-create_start))            
+        logger.info('Creating env took %.3f sec' %(create_stop-create_start))
 
         # sample states
         states_remaining = num_states - state_id
         for i in range(min(states_per_garbage_collect, states_remaining)):
-            
+
             # log current rollout
             if state_id % config['log_rate'] == 0:
                 logger.info('State: %06d' %(state_id))
 
-            try:    
+            try:
                 # reset env
                 env.reset()
                 state = env.state
                 split = state.metadata['split']
-                
+
                 # render state
                 if vis_config['state']:
                     env.view_3d_scene()
 
                 # Save state if desired
-                if save_tensors: 
-                    
+                if save_tensors:
+
                     # set obj state variables
                     obj_pose_vec = np.zeros(obj_pose_dim)
                     obj_com_vec = np.zeros(obj_com_dim)
@@ -332,7 +334,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                         obj_com_vec[j*POINT_DIM:(j+1)*POINT_DIM] = obj_state.center_of_mass
                         obj_id_vec[j] = int(obj_id_map[obj_state.key])
                         j += 1
-                    
+
                     # store datapoint env params
                     state_datapoint['state_id'] = state_id
                     state_datapoint['obj_poses'] = obj_pose_vec
@@ -350,23 +352,23 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                     del obj_pose_vec
                     del obj_com_vec
                     del obj_id_vec
-                        
+
                     # add state
                     state_dataset.add(state_datapoint)
-                
+
                 # render images
                 for k in range(num_images_per_state):
-                    
+
                     # reset the camera
                     if num_images_per_state > 1:
                         env.reset_camera()
-                    
+
                     obs = env.render_camera_image(color=image_config['color'])
                     if image_config['color']:
                         color_obs, depth_obs = obs
                     else:
                         depth_obs = obs
-                                        
+
                     # vis obs
                     if vis_config['obs']:
                         if image_config['depth']:
@@ -380,9 +382,8 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                         plt.show()
 
                     if image_config['modal'] or image_config['amodal'] or image_config['semantic']:
-                                            
                         # render segmasks
-                        amodal_segmasks, modal_segmasks = env.render_segmentation_images()
+                        amodal_segmasks, modal_segmasks, heap_obj_keys = env.render_segmentation_images()
 
                         # retrieve segmask data
                         modal_segmask_arr = np.iinfo(np.uint8).max * np.ones([im_height,
@@ -394,7 +395,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                         stacked_segmask_arr = np.zeros([im_height,
                                                         im_width,
                                                         1], dtype=np.uint8)
-                        
+
                         modal_segmask_arr[:,:,:env.num_objects] = modal_segmasks
                         amodal_segmask_arr[:,:,:env.num_objects] = amodal_segmasks
 
@@ -409,7 +410,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                         plt.imshow(stacked_segmask_arr.squeeze())
                         plt.show()
 
-                    if save_tensors:    
+                    if save_tensors:
                         # save image data as tensors
                         if image_config['color']:
                             image_datapoint['color_im'] = color_obs
@@ -421,7 +422,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                             image_datapoint['amodal_segmasks'] = amodal_segmask_arr
                         if image_config['semantic']:
                             image_datapoint['semantic_segmasks'] = stacked_segmask_arr
-                            
+
                         image_datapoint['camera_pose'] = env.camera.pose.vec
                         image_datapoint['camera_intrs'] = env.camera.intrinsics.vec
                         image_datapoint['state_ind'] = state_id
@@ -432,24 +433,43 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
 
                     # Save depth image and semantic masks
                     if image_config['color']:
-                        ColorImage(color_obs).save(os.path.join(color_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))
+                        ColorImage(color_obs).save(
+                            os.path.join(color_dir,
+                                         'image_{:06d}.png'.format(
+                                             num_images_per_state*state_id + k)))
                     if image_config['depth']:
-                        DepthImage(depth_obs).save(os.path.join(depth_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))
+                        DepthImage(depth_obs).save(
+                            os.path.join(depth_dir,
+                                         'image_{:06d}.png'.format(
+                                             num_images_per_state*state_id + k)))
                     if image_config['modal']:
-                        modal_id_dir = os.path.join(modal_dir, 'image_{:06d}'.format(num_images_per_state*state_id + k))
+                        modal_id_dir = os.path.join(modal_dir,
+                                                    'image_{:06d}'.format(
+                                                        num_images_per_state*state_id + k))
                         if not os.path.exists(modal_id_dir):
                             os.mkdir(modal_id_dir)
                         for i in range(env.num_objects):
-                            BinaryImage(modal_segmask_arr[:,:,i]).save(os.path.join(modal_id_dir, 'channel_{:03d}.png'.format(i)))
+                            BinaryImage(modal_segmask_arr[:,:,i]).save(
+                                os.path.join(modal_id_dir, 'channel_{:03d}.png'.format(i)))
                     if image_config['amodal']:
-                        amodal_id_dir = os.path.join(amodal_dir, 'image_{:06d}'.format(num_images_per_state*state_id + k))
+                        amodal_id_dir = os.path.join(amodal_dir,
+                                                     'image_{:06d}'.format(
+                                                         num_images_per_state*state_id + k))
                         if not os.path.exists(amodal_id_dir):
                             os.mkdir(amodal_id_dir)
                         for i in range(env.num_objects):
-                            BinaryImage(amodal_segmask_arr[:,:,i]).save(os.path.join(amodal_id_dir, 'channel_{:03d}.png'.format(i)))
+                            BinaryImage(amodal_segmask_arr[:,:,i]).save(
+                                os.path.join(amodal_id_dir, 'channel_{:03d}.png'.format(i)))
                     if image_config['semantic']:
-                        GrayscaleImage(stacked_segmask_arr.squeeze()).save(os.path.join(semantic_dir, 'image_{:06d}.png'.format(num_images_per_state*state_id + k)))
-                    
+                        GrayscaleImage(stacked_segmask_arr.squeeze()).save(
+                            os.path.join(semantic_dir,
+                                         'image_{:06d}.png'.format(
+                                             num_images_per_state*state_id + k)))
+
+                    # record heap object keys
+                    heap_obj_keys_dict['image_{:06d}.png'.format(
+                        num_images_per_state*state_id + k)] = heap_obj_keys
+
                     # Save split
                     if split == TRAIN_ID:
                         train_inds.append(num_images_per_state*state_id + k)
@@ -459,11 +479,11 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                 # auto-flush after every so many timesteps
                 if state_id % states_per_flush == 0:
                     np.save(os.path.join(image_dir, 'train_indices.npy'), train_inds)
-                    np.save(os.path.join(image_dir, 'test_indices.npy'), test_inds)                    
+                    np.save(os.path.join(image_dir, 'test_indices.npy'), test_inds)
                     if save_tensors:
                         state_dataset.flush()
                         image_dataset.flush()
-                
+
                 # delete action objects
                 for obj_state in state.obj_states:
                     del obj_state
@@ -472,7 +492,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
 
                 # update state id
                 state_id += 1
-                
+
             except Exception as e:
                 # log an error
                 logger.warning('Heap failed!')
@@ -480,7 +500,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                 logger.warning(traceback.print_exc())
                 if debug:
                     raise
-                
+
                 del env
                 gc.collect()
                 env = BinHeapEnv(config)
@@ -488,15 +508,17 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                 env.state_space.obj_keys = obj_keys
                 env.state_space.set_splits(obj_splits)
                 env.state_space.mesh_filenames = mesh_filenames
-                
+
         # garbage collect
         del env
         gc.collect()
-        
+
     # write all datasets to file, save indices
     np.save(os.path.join(image_dir, 'train_indices.npy'), train_inds)
-    np.save(os.path.join(image_dir, 'test_indices.npy'), test_inds)        
-    if save_tensors: 
+    np.save(os.path.join(image_dir, 'test_indices.npy'), test_inds)
+    json.dump(heap_obj_keys_dict,
+              open(os.path.join(image_dir, 'heap_obj_keys.json'), 'w'))
+    if save_tensors:
         state_dataset.flush()
         image_dataset.flush()
 
@@ -509,13 +531,13 @@ if __name__ == '__main__':
     parser.add_argument('--config_filename', type=str, default=None, help='configuration file to use')
     parser.add_argument('--save_tensors', action='store_true', help='whether to save raw tensors to recreate the state')
     parser.add_argument('--warm_start', action='store_true', help='warm start system after crash')
-    
+
     args = parser.parse_args()
     output_dataset_path = args.output_dataset_path
     config_filename = args.config_filename
     save_tensors = args.save_tensors
     warm_start = args.warm_start
-    
+
     # handle config filename
     if config_filename is None:
         config_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)),
