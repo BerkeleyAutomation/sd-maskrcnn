@@ -190,8 +190,6 @@ class BinHeapEnv(gym.Env):
 
     def render_segmentation_images(self):
         """Renders segmentation masks (modal and amodal) for each object in the state.
-        Also returns a list of object keys, where the i-th key corresponds with the i-th
-        returned amodal and modal mask.
         """
 
         full_depth = self.render_camera_image(color=False)
@@ -223,7 +221,7 @@ class BinHeapEnv(gym.Env):
         for mn in self._scene.mesh_nodes:
             mn.mesh.is_visible = True
 
-        return amodal_data, modal_data, self.obj_keys
+        return amodal_data, modal_data
 
     def _create_raymond_lights(self):
         thetas = np.pi * np.array([1.0 / 6.0, 1.0 / 6.0, 1.0 / 6.0])
