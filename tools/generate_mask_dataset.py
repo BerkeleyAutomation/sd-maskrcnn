@@ -324,7 +324,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                     env.state.obj_states = [x for x in env.state.obj_states if x.key != obj_key]
                     node = list(env._scene.get_nodes(name=obj_key))[0]
                     env._scene.remove_node(node)
-                else:    
+                else:
                     env.reset()
                 state = env.state
                 split = state.metadata['split']
@@ -395,7 +395,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
 
                     if image_config['modal'] or image_config['amodal'] or image_config['semantic']:
                         # render segmasks
-                        amodal_segmasks, modal_segmasks, heap_obj_keys = env.render_segmentation_images()
+                        amodal_segmasks, modal_segmasks = env.render_segmentation_images()
 
                         # retrieve segmask data
                         modal_segmask_arr = np.iinfo(np.uint8).max * np.ones([im_height,
@@ -480,7 +480,7 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
 
                     # record heap object keys
                     heap_obj_keys_dict['image_{:06d}.png'.format(
-                        num_images_per_state*state_id + k)] = heap_obj_keys
+                        num_images_per_state*state_id + k)] = env.state.obj_keys
 
                     # Save split
                     if split == TRAIN_ID:
