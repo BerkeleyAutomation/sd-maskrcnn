@@ -46,6 +46,66 @@ SEED = 744
 # set up logger
 logger = Logger.get_logger('tools/generate_segmask_dataset.py')
 
+
+def add_state_to_dataset(state_dataset, state_id, split, image_dataset,
+                         image_start_ind, image_end_ind, num_images_per_state):
+     # set obj state variables
+    obj_pose_vec = np.zeros(obj_pose_dim)
+    obj_com_vec = np.zeros(obj_com_dim)
+    obj_id_vec = np.iinfo(np.uint32).max * np.ones(max_objs_per_state)
+    j = 0
+    for obj_state in state.obj_states:
+        obj_pose_vec[j*POSE_DIM:(j+1)*POSE_DIM] = obj_state.pose.vec
+        obj_com_vec[j*POINT_DIM:(j+1)*POINT_DIM] = obj_state.center_of_mass
+        obj_id_vec[j] = int(obj_id_map[obj_state.key])
+        j += 1
+
+    # store datapoint env params
+    state_datapoint['state_id'] = state_id
+    state_datapoint['obj_poses'] = obj_pose_vec
+    state_datapoint['obj_coms'] = obj_com_vec
+    state_datapoint['obj_ids'] = obj_id_vec
+    state_datapoint['split'] = split
+
+    # store state datapoint
+    image_start_ind = image_dataset.num_datapoints
+    image_end_ind = image_start_ind + num_images_per_state
+    state_datapoint['image_start_ind'] = image_start_ind
+    state_datapoint['image_end_ind'] = image_end_ind
+
+    # clean up
+    del obj_pose_vec
+    del obj_com_vec
+    del obj_id_vec
+
+    # add state
+    state_dataset.add(state_datapoint)
+
+
+def add_image_to_dataset(image_dataset, image_config, color_obs, depth_obs,
+                         modal_segmask_arr, amodal_segmask_arr, stacked_segmask_arr,
+                         env, state_id, split):
+    # save image data as tensors
+    if image_config['color']:
+        image_datapoint['color_im'] = color_obs
+    if image_config['depth']:
+        image_datapoint['depth_im'] = depth_obs[:,:,None]
+    if image_config['modal']:
+        image_datapoint['modal_segmasks'] = modal_segmask_arr
+    if image_config['amodal']:
+        image_datapoint['amodal_segmasks'] = amodal_segmask_arr
+    if image_config['semantic']:
+        image_datapoint['semantic_segmasks'] = stacked_segmask_arr
+
+    image_datapoint['camera_pose'] = env.camera.pose.vec
+    image_datapoint['camera_intrs'] = env.camera.intrinsics.vec
+    image_datapoint['state_ind'] = state_id
+    image_datapoint['split'] = split
+
+    # add image
+    image_dataset.add(image_datapoint)
+
+
 def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, warm_start=False):
     """ Generate a segmentation training dataset
 
@@ -315,178 +375,127 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
 
             try:
                 # reset env
-                if env._scene and len(env.state.obj_keys) > 1:
-                    # remove object
-                    #removed_obj_key = env.obj_keys[0]
-                    #env.state.obj_states = [x for x in env.state.obj_states if x.key != removed_obj_key]
+                env.reset()
+                heap_sequence_ind = 0 # index of sequence of actions taken on the current heap env
+
+                while len(env.state.obj_keys) > 1:
                     print(len(env.state.obj_keys))
                     obj_key = env.state.obj_keys[0]
                     env.state.obj_states = [x for x in env.state.obj_states if x.key != obj_key]
                     node = list(env._scene.get_nodes(name=obj_key))[0]
                     env._scene.remove_node(node)
-                else:
-                    env.reset()
-                state = env.state
-                split = state.metadata['split']
+                    state = env.state
+                    split = state.metadata['split']
 
-                # render state
-                if vis_config['state']:
-                    env.view_3d_scene()
+                    # render state
+                    if vis_config['state']:
+                        env.view_3d_scene()
 
-                # Save state if desired
-                if save_tensors:
-
-                    # set obj state variables
-                    obj_pose_vec = np.zeros(obj_pose_dim)
-                    obj_com_vec = np.zeros(obj_com_dim)
-                    obj_id_vec = np.iinfo(np.uint32).max * np.ones(max_objs_per_state)
-                    j = 0
-                    for obj_state in state.obj_states:
-                        obj_pose_vec[j*POSE_DIM:(j+1)*POSE_DIM] = obj_state.pose.vec
-                        obj_com_vec[j*POINT_DIM:(j+1)*POINT_DIM] = obj_state.center_of_mass
-                        obj_id_vec[j] = int(obj_id_map[obj_state.key])
-                        j += 1
-
-                    # store datapoint env params
-                    state_datapoint['state_id'] = state_id
-                    state_datapoint['obj_poses'] = obj_pose_vec
-                    state_datapoint['obj_coms'] = obj_com_vec
-                    state_datapoint['obj_ids'] = obj_id_vec
-                    state_datapoint['split'] = split
-
-                    # store state datapoint
-                    image_start_ind = image_dataset.num_datapoints
-                    image_end_ind = image_start_ind + num_images_per_state
-                    state_datapoint['image_start_ind'] = image_start_ind
-                    state_datapoint['image_end_ind'] = image_end_ind
-
-                    # clean up
-                    del obj_pose_vec
-                    del obj_com_vec
-                    del obj_id_vec
-
-                    # add state
-                    state_dataset.add(state_datapoint)
-
-                # render images
-                for k in range(num_images_per_state):
-
-                    # reset the camera
-                    if num_images_per_state > 1:
-                        env.reset_camera()
-
-                    obs = env.render_camera_image(color=image_config['color'])
-                    if image_config['color']:
-                        color_obs, depth_obs = obs
-                    else:
-                        depth_obs = obs
-
-                    # vis obs
-                    if vis_config['obs']:
-                        if image_config['depth']:
-                            plt.figure()
-                            plt.imshow(depth_obs)
-                            plt.title('Depth Observation')
-                        if image_config['color']:
-                            plt.figure()
-                            plt.imshow(color_obs)
-                            plt.title('Color Observation')
-                        plt.show()
-
-                    if image_config['modal'] or image_config['amodal'] or image_config['semantic']:
-                        # render segmasks
-                        amodal_segmasks, modal_segmasks = env.render_segmentation_images()
-
-                        # retrieve segmask data
-                        modal_segmask_arr = np.iinfo(np.uint8).max * np.ones([im_height,
-                                                                            im_width,
-                                                                            segmask_channels], dtype=np.uint8)
-                        amodal_segmask_arr = np.iinfo(np.uint8).max * np.ones([im_height,
-                                                                            im_width,
-                                                                            segmask_channels], dtype=np.uint8)
-                        stacked_segmask_arr = np.zeros([im_height,
-                                                        im_width,
-                                                        1], dtype=np.uint8)
-
-                        modal_segmask_arr[:,:,:env.num_objects] = modal_segmasks
-                        amodal_segmask_arr[:,:,:env.num_objects] = amodal_segmasks
-
-                        if image_config['semantic']:
-                            for j in range(env.num_objects):
-                                this_obj_px = np.where(modal_segmasks[:,:,j] > 0)
-                                stacked_segmask_arr[this_obj_px[0], this_obj_px[1],0] = j+1
-
-                    # visualize
-                    if vis_config['semantic']:
-                        plt.figure()
-                        plt.imshow(stacked_segmask_arr.squeeze())
-                        plt.show()
-
+                    # Save state if desired
                     if save_tensors:
-                        # save image data as tensors
+                        add_state_to_dataset(state_dataset, state_id, split, image_dataset,
+                                             image_start_ind, image_end_ind, num_images_per_state)
+
+                    # render images
+                    for k in range(num_images_per_state):
+
+                        # reset the camera
+                        if num_images_per_state > 1:
+                            env.reset_camera()
+
+                        obs = env.render_camera_image(color=image_config['color'])
                         if image_config['color']:
-                            image_datapoint['color_im'] = color_obs
+                            color_obs, depth_obs = obs
+                        else:
+                            depth_obs = obs
+
+                        # vis obs
+                        if vis_config['obs']:
+                            if image_config['depth']:
+                                plt.figure()
+                                plt.imshow(depth_obs)
+                                plt.title('Depth Observation')
+                            if image_config['color']:
+                                plt.figure()
+                                plt.imshow(color_obs)
+                                plt.title('Color Observation')
+                            plt.show()
+
+                        if image_config['modal'] or image_config['amodal'] or image_config['semantic']:
+                            # render segmasks
+                            amodal_segmasks, modal_segmasks = env.render_segmentation_images()
+
+                            # retrieve segmask data
+                            modal_segmask_arr = np.iinfo(np.uint8).max * np.ones([im_height,
+                                                                                im_width,
+                                                                                segmask_channels], dtype=np.uint8)
+                            amodal_segmask_arr = np.iinfo(np.uint8).max * np.ones([im_height,
+                                                                                im_width,
+                                                                                segmask_channels], dtype=np.uint8)
+                            stacked_segmask_arr = np.zeros([im_height,
+                                                            im_width,
+                                                            1], dtype=np.uint8)
+
+                            modal_segmask_arr[:,:,:env.num_objects] = modal_segmasks
+                            amodal_segmask_arr[:,:,:env.num_objects] = amodal_segmasks
+
+                            if image_config['semantic']:
+                                for j in range(env.num_objects):
+                                    this_obj_px = np.where(modal_segmasks[:,:,j] > 0)
+                                    stacked_segmask_arr[this_obj_px[0], this_obj_px[1],0] = j+1
+
+                        # visualize
+                        if vis_config['semantic']:
+                            plt.figure()
+                            plt.imshow(stacked_segmask_arr.squeeze())
+                            plt.show()
+
+                        if save_tensors:
+                            # save image data as tensors
+                            add_image_to_dataset(image_dataset, image_config, color_obs, depth_obs,
+                                                 modal_segmask_arr, amodal_segmask_arr, stacked_segmask_arr,
+                                                 env, state_id, split)
+
+                        im_index = num_images_per_state*state_id + k
+                        im_string = 'image_{:06d}_{:02d}.png'.format(im_index, heap_sequence_ind)
+                        im_dir_string = 'image_{:06d}_{:02d}'.format(im_index, heap_sequence_ind)
+
+                        # Save depth image and semantic masks
+                        if image_config['color']:
+                            ColorImage(color_obs).save(
+                                os.path.join(color_dir, im_string))
                         if image_config['depth']:
-                            image_datapoint['depth_im'] = depth_obs[:,:,None]
+                            DepthImage(depth_obs).save(
+                                os.path.join(depth_dir, im_string))
                         if image_config['modal']:
-                            image_datapoint['modal_segmasks'] = modal_segmask_arr
+                            modal_id_dir = os.path.join(modal_dir, im_dir_string)
+                            if not os.path.exists(modal_id_dir):
+                                os.mkdir(modal_id_dir)
+                            for i in range(env.num_objects):
+                                BinaryImage(modal_segmask_arr[:,:,i]).save(
+                                    os.path.join(modal_id_dir, 'channel_{:03d}.png'.format(i)))
                         if image_config['amodal']:
-                            image_datapoint['amodal_segmasks'] = amodal_segmask_arr
+                            amodal_id_dir = os.path.join(amodal_dir, im_dir_string)
+                            if not os.path.exists(amodal_id_dir):
+                                os.mkdir(amodal_id_dir)
+                            for i in range(env.num_objects):
+                                BinaryImage(amodal_segmask_arr[:,:,i]).save(
+                                    os.path.join(amodal_id_dir, 'channel_{:03d}.png'.format(i)))
                         if image_config['semantic']:
-                            image_datapoint['semantic_segmasks'] = stacked_segmask_arr
+                            GrayscaleImage(stacked_segmask_arr.squeeze()).save(
+                                os.path.join(semantic_dir, im_string.format(im_index)))
 
-                        image_datapoint['camera_pose'] = env.camera.pose.vec
-                        image_datapoint['camera_intrs'] = env.camera.intrinsics.vec
-                        image_datapoint['state_ind'] = state_id
-                        image_datapoint['split'] = split
+                        # record heap object keys
+                        heap_obj_keys_dict[im_string] = env.state.obj_keys
 
-                        # add image
-                        image_dataset.add(image_datapoint)
+                        # Save split
+                        if split == TRAIN_ID:
+                            train_inds.append(im_index)
+                        else:
+                            test_inds.append(im_index)
 
-                    # Save depth image and semantic masks
-                    if image_config['color']:
-                        ColorImage(color_obs).save(
-                            os.path.join(color_dir,
-                                         'image_{:06d}.png'.format(
-                                             num_images_per_state*state_id + k)))
-                    if image_config['depth']:
-                        DepthImage(depth_obs).save(
-                            os.path.join(depth_dir,
-                                         'image_{:06d}.png'.format(
-                                             num_images_per_state*state_id + k)))
-                    if image_config['modal']:
-                        modal_id_dir = os.path.join(modal_dir,
-                                                    'image_{:06d}'.format(
-                                                        num_images_per_state*state_id + k))
-                        if not os.path.exists(modal_id_dir):
-                            os.mkdir(modal_id_dir)
-                        for i in range(env.num_objects):
-                            BinaryImage(modal_segmask_arr[:,:,i]).save(
-                                os.path.join(modal_id_dir, 'channel_{:03d}.png'.format(i)))
-                    if image_config['amodal']:
-                        amodal_id_dir = os.path.join(amodal_dir,
-                                                     'image_{:06d}'.format(
-                                                         num_images_per_state*state_id + k))
-                        if not os.path.exists(amodal_id_dir):
-                            os.mkdir(amodal_id_dir)
-                        for i in range(env.num_objects):
-                            BinaryImage(amodal_segmask_arr[:,:,i]).save(
-                                os.path.join(amodal_id_dir, 'channel_{:03d}.png'.format(i)))
-                    if image_config['semantic']:
-                        GrayscaleImage(stacked_segmask_arr.squeeze()).save(
-                            os.path.join(semantic_dir,
-                                         'image_{:06d}.png'.format(
-                                             num_images_per_state*state_id + k)))
-
-                    # record heap object keys
-                    heap_obj_keys_dict['image_{:06d}.png'.format(
-                        num_images_per_state*state_id + k)] = env.state.obj_keys
-
-                    # Save split
-                    if split == TRAIN_ID:
-                        train_inds.append(num_images_per_state*state_id + k)
-                    else:
-                        test_inds.append(num_images_per_state*state_id + k)
+                    # increment heap sequence index
+                    heap_sequence_ind += 1
 
                 # auto-flush after every so many timesteps
                 if state_id % states_per_flush == 0:
