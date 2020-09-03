@@ -47,6 +47,47 @@ SEED = 744
 logger = Logger.get_logger('tools/generate_segmask_dataset.py')
 
 
+class HeapInteractor(object):
+    """General-purpose class that executes actions on heap state and tracks exit
+    conditions.
+
+    Action and condition methods should be added as static methods and adhere to the
+    signatures described below.
+    """
+    def __init__(self, action, condition):
+        """
+        action: a function accepting an env that executes an action on the heap
+        condition: a function accepting an env and the number of actions that returns
+            a boolean signalling when heap interaction is complete
+        """
+        self.num_actions = 0
+        self.action = action
+        self.condition = condition
+
+    def reset(self):
+        self.num_actions = 0
+
+    def execute(self, env):
+        self.action(env)
+        self.num_actions += 1
+
+    def valid(self, env):
+        return self.condition(env, self.num_actions)
+
+    @staticmethod
+    def remove_object(env):
+        """Removes an object from the heap."""
+        obj_key = env.state.obj_keys[0]
+        env.state.obj_states = [x for x in env.state.obj_states if x.key != obj_key]
+        node = list(env._scene.get_nodes(name=obj_key))[0]
+        env._scene.remove_node(node)
+
+    @staticmethod
+    def not_empty(env, num_actions):
+        """Checks if the heap is not empty."""
+        return len(env.state.obj_keys) > 1
+
+
 def add_state_to_dataset(state_dataset, state_id, split, image_dataset,
                          image_start_ind, image_end_ind, num_images_per_state):
      # set obj state variables
@@ -351,6 +392,11 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
         train_inds = []
         test_inds = []
 
+
+    # initialize HeapInteractor
+    heap_interactor = HeapInteractor(HeapInteractor.remove_object,
+                                     HeapInteractor.not_empty)
+
     # generate states and images
     state_id = num_prev_states
     while state_id < num_states:
@@ -376,14 +422,13 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
             try:
                 # reset env
                 env.reset()
-                heap_sequence_ind = 0 # index of sequence of actions taken on the current heap env
+                heap_interactor.reset()
 
-                while len(env.state.obj_keys) > 1:
+                while heap_interactor.valid(env):
                     print(len(env.state.obj_keys))
-                    obj_key = env.state.obj_keys[0]
-                    env.state.obj_states = [x for x in env.state.obj_states if x.key != obj_key]
-                    node = list(env._scene.get_nodes(name=obj_key))[0]
-                    env._scene.remove_node(node)
+
+                    heap_interactor.execute(env)
+
                     state = env.state
                     split = state.metadata['split']
 
@@ -457,8 +502,9 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                                                  env, state_id, split)
 
                         im_index = num_images_per_state*state_id + k
-                        im_string = 'image_{:06d}_{:02d}.png'.format(im_index, heap_sequence_ind)
-                        im_dir_string = 'image_{:06d}_{:02d}'.format(im_index, heap_sequence_ind)
+                        seq_ind = heap_interactor.num_actions
+                        im_string = 'image_{:06d}_{:02d}.png'.format(im_index, seq_ind)
+                        im_dir_string = 'image_{:06d}_{:02d}'.format(im_index, seq_ind)
 
                         # Save depth image and semantic masks
                         if image_config['color']:
@@ -494,8 +540,6 @@ def generate_segmask_dataset(output_dataset_path, config, save_tensors=True, war
                         else:
                             test_inds.append(im_index)
 
-                    # increment heap sequence index
-                    heap_sequence_ind += 1
 
                 # auto-flush after every so many timesteps
                 if state_id % states_per_flush == 0:
