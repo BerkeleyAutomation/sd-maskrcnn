@@ -25,11 +25,8 @@ Author: Mike Danielczuk
 Installs sd_maskrcnn repo and other dependencies, as well as optional models and datasets.
 """
 
-# Install maskrcnn submodule
+# Download maskrcnn submodule
 git submodule update --init
-cd maskrcnn 
-python3 setup.py install
-cd ..
 
 # Install main module, with generation if requested
 if [ "$#" == "1" ] && [ "$1" == "generation" ]

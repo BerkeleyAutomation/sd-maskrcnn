@@ -23,29 +23,31 @@ Author: Mike Danielczuk
 
 import abc
 import os
-import time
-import trimesh
-import pybullet
-import numpy as np
 import shutil
-import pkg_resources
+import time
 
-from autolab_core import RigidTransform, Logger
-from pyrender import Scene, Viewer, Mesh, Node, PerspectiveCamera
+import numpy as np
+import pkg_resources
+import pybullet
+import trimesh
+from autolab_core import Logger, RigidTransform
+from pyrender import Mesh, Node, PerspectiveCamera, Scene, Viewer
 
 from .constants import GRAVITY_ACCEL
 
+
 class PhysicsEngine(metaclass=abc.ABCMeta):
-    """ Abstract Physics Engine class """
+    """Abstract Physics Engine class"""
+
     def __init__(self):
-        
+
         # set up logger
         self._logger = Logger.get_logger(self.__class__.__name__)
 
     @abc.abstractmethod
     def reset(self):
         pass
-    
+
     @abc.abstractmethod
     def step(self):
         pass
@@ -53,59 +55,79 @@ class PhysicsEngine(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def start(self):
         pass
-    
+
     @abc.abstractmethod
     def stop(self):
         pass
 
+
 class PybulletPhysicsEngine(PhysicsEngine):
-    """ Wrapper for pybullet physics engine that is tied to a single ID """
+    """Wrapper for pybullet physics engine that is tied to a single ID"""
+
     def __init__(self, urdf_cache_dir, debug=False):
         PhysicsEngine.__init__(self)
         self._physics_client = None
         self._debug = debug
         self._urdf_cache_dir = urdf_cache_dir
         if not os.path.isabs(self._urdf_cache_dir):
-            self._urdf_cache_dir = os.path.join(os.getcwd(), self._urdf_cache_dir)
-        if not os.path.exists(os.path.join(self._urdf_cache_dir, 'plane')):
-            os.makedirs(os.path.join(self._urdf_cache_dir, 'plane'))
-        shutil.copy(pkg_resources.resource_filename('sd_maskrcnn', 'data/plane/plane.urdf'), 
-                    os.path.join(self._urdf_cache_dir, 'plane', 'plane.urdf'))
-        shutil.copy(pkg_resources.resource_filename('sd_maskrcnn', 'data/plane/plane_convex_piece_0.obj'), 
-                    os.path.join(self._urdf_cache_dir, 'plane', 'plane_convex_piece_0.obj'))
-
+            self._urdf_cache_dir = os.path.join(
+                os.getcwd(), self._urdf_cache_dir
+            )
+        if not os.path.exists(os.path.join(self._urdf_cache_dir, "plane")):
+            os.makedirs(os.path.join(self._urdf_cache_dir, "plane"))
+        shutil.copy(
+            pkg_resources.resource_filename(
+                "sd_maskrcnn", "data/plane/plane.urdf"
+            ),
+            os.path.join(self._urdf_cache_dir, "plane", "plane.urdf"),
+        )
+        shutil.copy(
+            pkg_resources.resource_filename(
+                "sd_maskrcnn", "data/plane/plane_convex_piece_0.obj"
+            ),
+            os.path.join(
+                self._urdf_cache_dir, "plane", "plane_convex_piece_0.obj"
+            ),
+        )
 
     def add(self, obj, static=False):
 
         # create URDF
-        urdf_filename = os.path.join(self._urdf_cache_dir, obj.key, '{}.urdf'.format(obj.key))
+        urdf_filename = os.path.join(
+            self._urdf_cache_dir, obj.key, "{}.urdf".format(obj.key)
+        )
         urdf_dir = os.path.dirname(urdf_filename)
         if not os.path.exists(urdf_filename):
             try:
                 os.makedirs(urdf_dir)
             except:
-                self._logger.warning('Failed to create dir %s. The object may have been created simultaneously by another process' %(urdf_dir))
-            self._logger.info('Exporting URDF for object %s' %(obj.key))
-            
+                self._logger.warning(
+                    "Failed to create dir %s. The object may have been created simultaneously by another process"
+                    % (urdf_dir)
+                )
+            self._logger.info("Exporting URDF for object %s" % (obj.key))
+
             # Fix center of mass (for rendering) and density and export
             geometry = obj.mesh.copy()
             geometry.apply_translation(-obj.mesh.center_mass)
             trimesh.exchange.export.export_urdf(geometry, urdf_dir)
-       
+
         com = obj.mesh.center_mass
         pose = self._convert_pose(obj.pose, com)
         obj_t = pose.translation
         obj_q_wxyz = pose.quaternion
         obj_q_xyzw = np.roll(obj_q_wxyz, -1)
         try:
-            obj_id = pybullet.loadURDF(urdf_filename,
-                                       obj_t,
-                                       obj_q_xyzw,
-                                       useFixedBase=static,
-                                       physicsClientId=self._physics_client)
+            obj_id = pybullet.loadURDF(
+                urdf_filename,
+                obj_t,
+                obj_q_xyzw,
+                useFixedBase=static,
+                physicsClientId=self._physics_client,
+            )
         except:
-            raise Exception('Failed to load %s' %(urdf_filename))
-        
+            raise Exception("Failed to load %s" % (urdf_filename))
+
         if self._debug:
             self._add_to_scene(obj)
 
@@ -114,16 +136,22 @@ class PybulletPhysicsEngine(PhysicsEngine):
 
     def get_velocity(self, key):
         obj_id = self._key_to_id[key]
-        return pybullet.getBaseVelocity(obj_id, physicsClientId=self._physics_client)
+        return pybullet.getBaseVelocity(
+            obj_id, physicsClientId=self._physics_client
+        )
 
     def get_pose(self, key):
         obj_id = self._key_to_id[key]
-        obj_t, obj_q_xyzw = pybullet.getBasePositionAndOrientation(obj_id, physicsClientId=self._physics_client)
+        obj_t, obj_q_xyzw = pybullet.getBasePositionAndOrientation(
+            obj_id, physicsClientId=self._physics_client
+        )
         obj_q_wxyz = np.roll(obj_q_xyzw, 1)
-        pose = RigidTransform(rotation=obj_q_wxyz,
-                              translation=obj_t,
-                              from_frame='obj',
-                              to_frame='world')
+        pose = RigidTransform(
+            rotation=obj_q_wxyz,
+            translation=obj_t,
+            from_frame="obj",
+            to_frame="world",
+        )
         pose = self._deconvert_pose(pose, self._key_to_com[key])
         return pose
 
@@ -149,12 +177,16 @@ class PybulletPhysicsEngine(PhysicsEngine):
     def start(self):
         if self._physics_client is None:
             self._physics_client = pybullet.connect(pybullet.DIRECT)
-            pybullet.setGravity(0, 0, -GRAVITY_ACCEL, physicsClientId=self._physics_client)
+            pybullet.setGravity(
+                0, 0, -GRAVITY_ACCEL, physicsClientId=self._physics_client
+            )
             self._key_to_id = {}
             self._key_to_com = {}
             if self._debug:
                 self._create_scene()
-                self._viewer = Viewer(self._scene, use_raymond_lighting=True, run_in_thread=True)
+                self._viewer = Viewer(
+                    self._scene, use_raymond_lighting=True, run_in_thread=True
+                )
 
     def stop(self):
         if self._physics_client is not None:
@@ -182,31 +214,42 @@ class PybulletPhysicsEngine(PhysicsEngine):
 
     def _create_scene(self):
         self._scene = Scene()
-        camera = PerspectiveCamera(yfov=0.833, znear=0.05,
-                                    zfar=3.0, aspectRatio=1.0)
+        camera = PerspectiveCamera(
+            yfov=0.833, znear=0.05, zfar=3.0, aspectRatio=1.0
+        )
         cn = Node()
         cn.camera = camera
-        pose_m = np.array([[0.0,1.0,0.0,0.0],
-                        [1.0,0.0,0.0,0.0],
-                        [0.0,0.0,-1.0,0.88],
-                        [0.0,0.0,0.0,1.0]])
-        pose_m[:,1:3] *= -1.0
+        pose_m = np.array(
+            [
+                [0.0, 1.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, -1.0, 0.88],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        )
+        pose_m[:, 1:3] *= -1.0
         cn.matrix = pose_m
         self._scene.add_node(cn)
         self._scene.main_camera_node = cn
-    
+
     def _add_to_scene(self, obj):
         self._viewer.render_lock.acquire()
-        n = Node(mesh=Mesh.from_trimesh(obj.mesh), matrix=obj.pose.matrix, name=obj.key)
+        n = Node(
+            mesh=Mesh.from_trimesh(obj.mesh),
+            matrix=obj.pose.matrix,
+            name=obj.key,
+        )
         self._scene.add_node(n)
         self._viewer.render_lock.release()
 
     def _remove_from_scene(self, key):
         self._viewer.render_lock.acquire()
         if self._scene.get_nodes(name=key):
-            self._scene.remove_node(next(iter(self._scene.get_nodes(name=key))))
+            self._scene.remove_node(
+                next(iter(self._scene.get_nodes(name=key)))
+            )
         self._viewer.render_lock.release()
-    
+
     def _update_scene(self):
         self._viewer.render_lock.acquire()
         for key in self._key_to_id.keys():

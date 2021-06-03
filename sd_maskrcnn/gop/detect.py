@@ -2,10 +2,11 @@
 """
 import cv2
 import numpy as np
-import os, sys, time, scipy.io as scio
+import os
+import scipy.io as scio
 from tqdm import tqdm
 
-from perception import BinaryImage
+from autolab_core import BinaryImage
 
 from .src.gop import segmentation, proposals, contour, imgproc
 from .src.util import setupLearned
@@ -237,11 +238,9 @@ class GOP(object):
         mask : (h,w,N) binary
             mask for the N object proposals
         """
-        t0 = time.time()
         s = segmentation.geodesicKMeans(imgproc.imread(rgb_fn), self.detector, 1000)
-        t1 = time.time()
         b = self.prop.propose( s )
-        t2 = time.time()
+        
         # If you just want the boxes use
         boxes = s.maskToBox( b )
 

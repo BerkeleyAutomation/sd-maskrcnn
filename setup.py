@@ -7,6 +7,8 @@ Author: Mike Danielczuk
 import os
 from setuptools import setup
 
+root_dir = os.path.dirname(os.path.realpath(__file__))
+
 # load __version__
 version_file = 'sd_maskrcnn/version.py'
 exec(open(version_file).read())
@@ -25,12 +27,14 @@ setup_requirements = [
 requirements = [
     'pycocotools>=2.0',         # For benchmarking
     'scikit-image>=0.14.2',     # For image loading
-    'keras>=2.2',               # For training
+    'keras>=2.2<2.3',           # For training
     'tqdm',                     # For pretty progress bars
     'matplotlib',               # For visualization of results
-    'autolab_core>=0.0.9',      # For core utilities
-    'autolab-perception',       # For image wrapping
-    'tensorflow-gpu<1.13>=1.10'      # For training
+    'h5py<3.0.0',               # Loading pretrained models
+    'autolab_core>=1.1.0',      # For core utilities
+    'nvidia-tensorflow',        # For training - need TF 1.15 so use nvidia
+    f'mask-rcnn @ file://localhost{root_dir}/maskrcnn' 
+                                # Underlying Mask RCNN model
 ]
 
 generation_requirements = [
@@ -38,7 +42,7 @@ generation_requirements = [
     'pyglet==1.4.0b1',       # For pyrender  
     'pyrender>=0.1.23',      # For rendering images
     'pybullet',              # For dynamic sim
-    'trimesh',               # For mesh loading/exporting
+    'trimesh[easy]',         # For mesh loading/exporting
     'scipy'                  # For random vars
 ]
 
