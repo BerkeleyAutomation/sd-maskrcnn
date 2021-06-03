@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Copyright ©2019. The Regents of the University of California (Regents). All Rights Reserved.
 Permission to use, copy, modify, and distribute this software and its documentation for educational,
@@ -22,9 +23,9 @@ Author: Mike Danielczuk
 """
 
 import os
-import skimage
-import numpy as np
 
+import numpy as np
+import skimage
 from mrcnn.utils import Dataset
 
 """
@@ -45,70 +46,79 @@ $base_path/
         ...
 """
 
+
 class ImageDataset(Dataset):
     def __init__(self, config):
-        assert config['dataset']['path'] != "", "You must provide the path to a dataset!"
+        assert (
+            config["dataset"]["path"] != ""
+        ), "You must provide the path to a dataset!"
 
-        self.dataset_config = config['dataset']
-        self.base_path = config['dataset']['path']
-        self.images = config['dataset']['images']
-        self.masks = config['dataset']['masks']
+        self.dataset_config = config["dataset"]
+        self.base_path = config["dataset"]["path"]
+        self.images = config["dataset"]["images"]
+        self.masks = config["dataset"]["masks"]
 
-        self._channels = config['model']['settings']['image_channel_count']
-        super().__init__()
+        self._channels = config["model"]["settings"]["image_channel_count"]
+        super(ImageDataset, self).__init__()
 
     def load(self, indices_file, augment=False):
 
         # Load the indices for imset.
-        split_file = os.path.join(self.base_path, '{:s}'.format(indices_file))
+        split_file = os.path.join(self.base_path, "{:s}".format(indices_file))
         self.image_id = np.load(split_file)
-        self.add_class('clutter', 1, 'fg')
+        self.add_class("clutter", 1, "fg")
 
         flips = [1, 2, 3]
         for i in self.image_id:
-            if 'numpy' in self.images:
-                p = os.path.join(self.base_path, self.images,
-                                'image_{:06d}.npy'.format(i))
+            if "numpy" in self.images:
+                p = os.path.join(
+                    self.base_path, self.images, "image_{:06d}.npy".format(i)
+                )
             else:
-                p = os.path.join(self.base_path, self.images,
-                                'image_{:06d}.png'.format(i))
-            self.add_image('clutter', image_id=i, path=p)
+                p = os.path.join(
+                    self.base_path, self.images, "image_{:06d}.png".format(i)
+                )
+            self.add_image("clutter", image_id=i, path=p)
 
             if augment:
                 for flip in flips:
-                    self.add_image('clutter', image_id=i, path=p, flip=flip)
+                    self.add_image("clutter", image_id=i, path=p, flip=flip)
 
     def flip(self, image, flip):
         # flips during training for augmentation
 
         if flip == 1:
-            image = image[::-1,:,:]
+            image = image[::-1, :, :]
         elif flip == 2:
-            image = image[:,::-1,:]
+            image = image[:, ::-1, :]
         elif flip == 3:
-            image = image[::-1,::-1,:]
+            image = image[::-1, ::-1, :]
         return image
 
     def load_image(self, image_id):
         # loads image from path
-        if 'numpy' in self.images:
-            image = np.load(self.image_info[image_id]['path']).squeeze()
+        if "numpy" in self.images:
+            image = np.load(self.image_info[image_id]["path"]).squeeze()
         else:
-            image = skimage.io.imread(self.image_info[image_id]['path'])
-        
+            image = skimage.io.imread(self.image_info[image_id]["path"])
+
         if self._channels < 4 and image.shape[-1] == 4 and image.ndim == 3:
-            image = image[...,:3]
+            image = image[..., :3]
         if self._channels == 1 and image.ndim == 2:
-            image = image[:,:,np.newaxis]
+            image = image[:, :, np.newaxis]
         elif self._channels == 1 and image.ndim == 3:
-            image = image[:,:,0,np.newaxis]
+            image = image[:, :, 0, np.newaxis]
         elif self._channels == 3 and image.ndim == 3 and image.shape[-1] == 1:
             image = skimage.color.gray2rgb(image)
         elif self._channels == 4 and image.shape[-1] == 3:
-            concat_image = np.concatenate([image, image[:,:,0:1]], axis=2)
-            assert concat_image.shape == (image.shape[0], image.shape[1], image.shape[2] + 1), concat_image.shape
+            concat_image = np.concatenate([image, image[:, :, 0:1]], axis=2)
+            assert concat_image.shape == (
+                image.shape[0],
+                image.shape[1],
+                image.shape[2] + 1,
+            ), concat_image.shape
             image = concat_image
-            
+
         return image
 
     def image_reference(self, image_id):
@@ -121,21 +131,24 @@ class ImageDataset(Dataset):
     def load_mask(self, image_id):
         # loads mask from path
         info = self.image_info[image_id]
-        _image_id = info['id']
+        _image_id = info["id"]
         Is = []
-        file_name = os.path.join(self.base_path, self.masks,
-          'image_{:06d}.png'.format(_image_id))
+        file_name = os.path.join(
+            self.base_path, self.masks, "image_{:06d}.png".format(_image_id)
+        )
 
         all_masks = skimage.io.imread(file_name)
-        for i in np.arange(1,np.max(all_masks)+1):
-            I = all_masks == i # We ignore the background, so the first instance is 0-indexed.
+        for i in np.arange(1, np.max(all_masks) + 1):
+            I = (
+                all_masks == i
+            )  # We ignore the background, so the first instance is 0-indexed.
             if np.any(I):
-                I = I[:,:,np.newaxis]
+                I = I[:, :, np.newaxis]
                 Is.append(I)
         if len(Is) > 0:
             mask = np.concatenate(Is, 2)
         else:
-            mask = np.zeros([info['height'], info['width'], 0], dtype=np.bool)
+            mask = np.zeros([info["height"], info["width"], 0], dtype=np.bool)
 
         class_ids = np.array([1 for _ in range(mask.shape[2])])
         return mask, class_ids.astype(np.int32)

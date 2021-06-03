@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Copyright ©2019. The Regents of the University of California (Regents). All Rights Reserved.
 Permission to use, copy, modify, and distribute this software and its documentation for educational,
@@ -22,11 +23,13 @@ Author: Mike Danielczuk
 """
 
 import os
-import numpy as np
+
 import matplotlib
-matplotlib.use('Agg')
+import numpy as np
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from perception import DepthImage
+from autolab_core import DepthImage
 
 base_path = "images/"
 out_path = "histograms/"
@@ -39,13 +42,15 @@ images = ["depth_0.npy"]
 # boxes_list = [[[325, 450, 365, 490], [340, 460, 360, 480], [345, 455, 355, 465], [390, 560, 430, 600], [400, 570, 420, 590], [405, 575, 415, 585], [470, 420, 510, 460], [480, 430, 500, 450], [485, 435, 495, 445]]]
 
 # some background squares
-boxes_list = [[[330, 800, 350, 820], [550, 800, 570, 820], [400, 150, 420, 170]]]
+boxes_list = [
+    [[330, 800, 350, 820], [550, 800, 570, 820], [400, 150, 420, 170]]
+]
 
 
-def reject_outliers(data, m = 2.):
+def reject_outliers(data, m=2.0):
     d = np.abs(data - np.median(data))
     mdev = np.median(d)
-    s = d / mdev if mdev else 0.
+    s = d / mdev if mdev else 0.0
     return data[s < m]
 
 
@@ -55,13 +60,17 @@ def analyze_image_depths(path, bbox, out_name):
     """
     img = np.load(path)
     img = np.reshape(img, img.shape[:2])
-    img_slice = img[bbox[0] : bbox[2], bbox[1]: bbox[3]]
+    img_slice = img[bbox[0] : bbox[2], bbox[1] : bbox[3]]
     vec = np.ndarray.flatten(img_slice)
     # vec = reject_outliers(vec)
 
     var = np.var(vec)
     mean = np.mean(vec)
-    print("State for {}: Mean: {}, Standard Deviation: {}\n".format(out_name, mean, np.sqrt(var)))
+    print(
+        "State for {}: Mean: {}, Standard Deviation: {}\n".format(
+            out_name, mean, np.sqrt(var)
+        )
+    )
 
     n, bins, patches = plt.hist(vec, vec.size // 10, facecolor="blue")
 
@@ -71,7 +80,9 @@ def analyze_image_depths(path, bbox, out_name):
     plt.grid(True)
     plt.show()
 
-    plt.savefig(os.path.join(out_path, "graph_" + out_name), bbox_inches="tight")
+    plt.savefig(
+        os.path.join(out_path, "graph_" + out_name), bbox_inches="tight"
+    )
     plt.close()
     depth_img = DepthImage(img_slice)
     depth_img.save(os.path.join(out_path, out_name))
@@ -87,6 +98,7 @@ if __name__ == "__main__":
     for img_name, boxes in zip(images, boxes_list):
         img_path = os.path.join(base_path, img_name)
         for box in boxes:
-            out_name = "img_{}_box_{}_{}_{}_{}.png" \
-                       .format(img_name, box[0], box[1], box[2], box[3])
+            out_name = "img_{}_box_{}_{}_{}_{}.png".format(
+                img_name, box[0], box[1], box[2], box[3]
+            )
             analyze_image_depths(img_path, box, out_name)

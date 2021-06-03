@@ -2,12 +2,12 @@ output_dir: benchmark_results
 save_conf_name: config.yaml
 
 model:
-  path: models/sd_maskrcnn.h5
-  mode: inference
+  path: models/
+  weights: sd_maskrcnn.h5
   settings:
     image_shape: [512, 512]
     image_channel_count: 3
-    mean_pixel: [128,128,128]
+    mean_pixel: [128, 128, 128]
     backbone: resnet35
     post_nms_rois_inference: 2000
     rpn_nms_threshold: 1.0

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Copyright ©2019. The Regents of the University of California (Regents). All Rights Reserved.
 Permission to use, copy, modify, and distribute this software and its documentation for educational,
@@ -21,12 +22,15 @@ MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 Author: Mike Danielczuk
 """
 
-import os 
+import os
+
 
 def mkdir_if_missing(output_dir):
     if not os.path.exists(output_dir):
         try:
             os.makedirs(output_dir)
         except:
-            print("Something went wrong in mkdir_if_missing. "
-                  "Probably some other process created the directory already.")
+            print(
+                "Something went wrong in mkdir_if_missing. "
+                "Probably some other process created the directory already."
+            )
