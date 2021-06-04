@@ -73,6 +73,7 @@ class HeapStateSpace(gym.Space):
         self.min_objs = 1
         if "min_objs" in config.keys():
             self.min_objs = config["min_objs"]
+        self.replace = config["replace"]
 
         self.max_obj_diam = config["max_obj_diam"]
         self.drop_height = config["drop_height"]
@@ -128,7 +129,7 @@ class HeapStateSpace(gym.Space):
         self._mesh_dir = obj_config["mesh_dir"]
         if not os.path.isabs(self._mesh_dir):
             self._mesh_dir = os.path.join(os.getcwd(), self._mesh_dir)
-        for root, dirs, files in os.walk(self._mesh_dir):
+        for root, _, files in os.walk(self._mesh_dir):
             dataset_name = os.path.basename(root)
             if dataset_name in obj_config["object_keys"].keys():
                 for f in files:
@@ -163,6 +164,11 @@ class HeapStateSpace(gym.Space):
             self.mesh_filenames.update({k: v})
             for k, v in zip(self.all_object_keys, all_mesh_filenames)
         ]
+
+        if (len(self.test_keys) == 0 and self._train_pct < 1.0) or (
+            len(self.train_keys) == 0 and self._train_pct > 0.0
+        ):
+            raise ValueError("Not enough objects for train/test split!")
 
     @property
     def obj_keys(self):
@@ -244,7 +250,9 @@ class HeapStateSpace(gym.Space):
             mesh = trimesh.load_mesh(mesh_filename)
             mesh.density = self.obj_density
             pose = RigidTransform.load(pose_filename)
-            workspace_obj = ObjectState(work_key, mesh, pose)
+            workspace_obj = ObjectState(
+                "{}{}0".format(work_key, KEY_SEP_TOKEN), mesh, pose
+            )
             self._physics_engine.add(workspace_obj, static=True)
             workspace_obj_states.append(workspace_obj)
 
@@ -261,12 +269,12 @@ class HeapStateSpace(gym.Space):
         total_num_objs = len(sample_keys)
 
         # sample object ids
-        num_objs = min(self.num_objs_rv.rvs(size=1)[0], total_num_objs - 1) + 1
+        num_objs = self.num_objs_rv.rvs(size=1)[0]
         num_objs = min(num_objs, self.max_objs)
         num_objs = max(num_objs, self.min_objs)
-        obj_inds = np.random.permutation(np.arange(total_num_objs))
-
-        # log
+        obj_inds = np.random.choice(
+            np.arange(total_num_objs), size=2 * num_objs, replace=self.replace
+        )
         self._logger.info("Sampling %d objects" % (num_objs))
 
         # sample pile center
@@ -280,14 +288,18 @@ class HeapStateSpace(gym.Space):
         # sample object, center of mass, pose
         objs_in_heap = []
         total_drops = 0
-        while total_drops < total_num_objs and len(objs_in_heap) < num_objs:
+        while total_drops < 2 * num_objs and len(objs_in_heap) < num_objs:
             obj_key = sample_keys[obj_inds[total_drops]]
             obj_mesh = trimesh.load_mesh(self.mesh_filenames[obj_key])
             obj_mesh.visual = trimesh.visual.ColorVisuals(
                 obj_mesh, vertex_colors=(0.7, 0.7, 0.7, 1.0)
             )
             obj_mesh.density = self.obj_density
-            obj = ObjectState(obj_key, obj_mesh)
+            obj_state_key = "{}{}{}".format(
+                obj_key, KEY_SEP_TOKEN, total_drops
+            )
+            obj = ObjectState(obj_state_key, obj_mesh)
+            self._logger.info(obj_state_key)
             _, radius = trimesh.nsphere.minimum_nsphere(obj.mesh)
             if 2 * radius > self.max_obj_diam:
                 self._logger.warning("Obj too big, skipping .....")
@@ -329,7 +341,7 @@ class HeapStateSpace(gym.Space):
             except:
                 self._logger.warning(
                     "Could not get base velocity for object %s. Skipping ..."
-                    % (obj_key)
+                    % (obj.key)
                 )
                 self._physics_engine.remove(obj.key)
                 total_drops += 1

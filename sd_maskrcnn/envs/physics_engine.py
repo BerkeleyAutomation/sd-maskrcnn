@@ -33,7 +33,7 @@ import trimesh
 from autolab_core import Logger, RigidTransform
 from pyrender import Mesh, Node, PerspectiveCamera, Scene, Viewer
 
-from .constants import GRAVITY_ACCEL
+from .constants import GRAVITY_ACCEL, KEY_SEP_TOKEN
 
 
 class PhysicsEngine(metaclass=abc.ABCMeta):
@@ -94,7 +94,11 @@ class PybulletPhysicsEngine(PhysicsEngine):
 
         # create URDF
         urdf_filename = os.path.join(
-            self._urdf_cache_dir, obj.key, "{}.urdf".format(obj.key)
+            self._urdf_cache_dir,
+            KEY_SEP_TOKEN.join(obj.key.split(KEY_SEP_TOKEN)[:-1]),
+            "{}.urdf".format(
+                KEY_SEP_TOKEN.join(obj.key.split(KEY_SEP_TOKEN)[:-1])
+            ),
         )
         urdf_dir = os.path.dirname(urdf_filename)
         if not os.path.exists(urdf_filename):
@@ -105,7 +109,11 @@ class PybulletPhysicsEngine(PhysicsEngine):
                     "Failed to create dir %s. The object may have been created simultaneously by another process"
                     % (urdf_dir)
                 )
-            self._logger.info("Exporting URDF for object %s" % (obj.key))
+            self._logger.info(
+                "Exporting URDF for object {}".format(
+                    KEY_SEP_TOKEN.join(obj.key.split(KEY_SEP_TOKEN)[:-1])
+                )
+            )
 
             # Fix center of mass (for rendering) and density and export
             geometry = obj.mesh.copy()
