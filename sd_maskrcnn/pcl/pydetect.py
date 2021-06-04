@@ -36,8 +36,7 @@ except ImportError:
     logging.info('python-pcl can be installed from https://github.com/strawlab/python-pcl')
     sys.exit()
 
-from perception import DepthImage, BinaryImage, CameraIntrinsics
-from autolab_core import PointCloud, YamlConfig
+from autolab_core import DepthImage, BinaryImage, CameraIntrinsics, PointCloud
 
 from sd_maskrcnn.utils import mkdir_if_missing
 
