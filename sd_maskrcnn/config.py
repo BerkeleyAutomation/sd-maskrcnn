@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Copyright ©2019. The Regents of the University of California (Regents). All Rights Reserved.
 Permission to use, copy, modify, and distribute this software and its documentation for educational,
@@ -23,22 +24,24 @@ Author: Mike Danielczuk
 
 from mrcnn.config import Config
 
+
 class MaskConfig(Config):
-  """Configuration for training SD Mask RCNN.
-  Derives from the base Config class and overrides values specific
-  to SD Mask RCNN.
-  """
-  NAME = 'my_sdmaskrcnn'
+    """Configuration for training SD Mask RCNN.
+    Derives from the base Config class and overrides values specific
+    to SD Mask RCNN.
+    """
 
-  # Number of classes (including background)
-  NUM_CLASSES = 1 + 1  # background + object
-  USE_MINI_MASK = False
+    NAME = "my_sdmaskrcnn"
 
-  # Use smaller anchors because our image and objects are small
-  # RPN_ANCHOR_SCALES = (8, 16, 32, 64, 128)  # anchor side in pixels
+    # Number of classes (including background)
+    NUM_CLASSES = 1 + 1  # background + object
+    USE_MINI_MASK = False
 
-  def __init__(self, config):
-    # Overriding things here.
-    for x in config:
-      setattr(self, x.upper(), config[x])
-    super(MaskConfig, self).__init__()
+    # Use smaller anchors because our image and objects are small
+    # RPN_ANCHOR_SCALES = (8, 16, 32, 64, 128)  # anchor side in pixels
+
+    def __init__(self, config):
+        # Overriding things here.
+        for x in config:
+            setattr(self, x.upper(), config[x])
+        super(MaskConfig, self).__init__()

@@ -1,4 +1,4 @@
-""" 
+"""
 Copyright ©2019. The Regents of the University of California (Regents). All Rights Reserved.
 Permission to use, copy, modify, and distribute this software and its documentation for educational,
 research, and not-for-profit purposes, without fee and without a signed licensing agreement, is
@@ -24,16 +24,16 @@ Defines data augmentation functions and provides a
 method of composing them to operate upon lists of images.
 """
 
-import os
-import numpy as np
 import argparse
-from tqdm import tqdm
-import skimage
+import os
 
-from perception import DepthImage
-from autolab_core import YamlConfig
+import numpy as np
+import skimage
+from autolab_core import DepthImage, YamlConfig
+from tqdm import tqdm
 
 from sd_maskrcnn.utils import mkdir_if_missing
+
 
 def inject_noise(img, noise_level=0.0005):
     """
@@ -46,6 +46,7 @@ def inject_noise(img, noise_level=0.0005):
     # don't apply noise to some pixels
     # noise[img <= noise_threshold] = 0.0
     return img + noise
+
 
 def inpaint(img):
     """
@@ -60,6 +61,7 @@ def inpaint(img):
     inpaint_img = thresh_img.inpaint()
     return inpaint_img.data
 
+
 def augment_img(img, config):
     """
     Compose augmentations.
@@ -70,6 +72,7 @@ def augment_img(img, config):
         noise_level = config["noise_level"]
         img = inject_noise(img, noise_level)
     return img
+
 
 def augment(config):
     """
@@ -96,12 +99,21 @@ def augment(config):
 
     print("Augmentation complete; files saved in {}.\n".format(out_dir))
 
+
 if __name__ == "__main__":
 
     # parse the provided configuration file and augment
-    conf_parser = argparse.ArgumentParser(description="Augment images for SD Mask RCNN")
-    conf_parser.add_argument("--config", action="store", default="cfg/augment.yaml",
-                               dest="conf_file", type=str, help="path to the configuration file")
+    conf_parser = argparse.ArgumentParser(
+        description="Augment images for SD Mask RCNN"
+    )
+    conf_parser.add_argument(
+        "--config",
+        action="store",
+        default="cfg/augment.yaml",
+        dest="conf_file",
+        type=str,
+        help="path to the configuration file",
+    )
     conf_args = conf_parser.parse_args()
 
     # read in config file information from proper section

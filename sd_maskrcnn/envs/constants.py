@@ -29,8 +29,8 @@ POINT_DIM = 3
 JSON_INDENT = 2
 
 # Keys
-KEY_SEP_TOKEN = '~'
-ENVIRONMENT_KEY = 'environment'
+KEY_SEP_TOKEN = "~"
+ENVIRONMENT_KEY = "environment"
 
 # IDs
 TRAIN_ID = 0
