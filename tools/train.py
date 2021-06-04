@@ -47,7 +47,7 @@ def train(config):
     # Load config
     config["model"]["settings"][
         "steps_per_epoch"
-    ] = dataset_train.indices.size / (
+    ] = dataset_train.num_images / (
         config["model"]["settings"]["images_per_gpu"]
         * config["model"]["settings"]["gpu_count"]
     )

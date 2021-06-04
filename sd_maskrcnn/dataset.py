@@ -65,11 +65,10 @@ class ImageDataset(Dataset):
 
         # Load the indices for imset.
         split_file = os.path.join(self.base_path, "{:s}".format(indices_file))
-        self.image_id = np.load(split_file)
+        self.image_id_list = np.load(split_file)
         self.add_class("clutter", 1, "fg")
 
-        flips = [1, 2, 3]
-        for i in self.image_id:
+        for i in self.image_id_list:
             if "numpy" in self.images:
                 p = os.path.join(
                     self.base_path, self.images, "image_{:06d}.npy".format(i)
@@ -81,12 +80,11 @@ class ImageDataset(Dataset):
             self.add_image("clutter", image_id=i, path=p)
 
             if augment:
-                for flip in flips:
+                for flip in [1, 2, 3]:
                     self.add_image("clutter", image_id=i, path=p, flip=flip)
 
     def flip(self, image, flip):
         # flips during training for augmentation
-
         if flip == 1:
             image = image[::-1, :, :]
         elif flip == 2:
@@ -95,12 +93,13 @@ class ImageDataset(Dataset):
             image = image[::-1, ::-1, :]
         return image
 
-    def load_image(self, image_id):
+    def load_image(self, image_ind):
         # loads image from path
+        info = self.image_info[image_ind]
         if "numpy" in self.images:
-            image = np.load(self.image_info[image_id]["path"]).squeeze()
+            image = np.load(info["path"]).squeeze()
         else:
-            image = skimage.io.imread(self.image_info[image_id]["path"])
+            image = skimage.io.imread(info["path"])
 
         if self._channels < 4 and image.shape[-1] == 4 and image.ndim == 3:
             image = image[..., :3]
@@ -119,22 +118,24 @@ class ImageDataset(Dataset):
             ), concat_image.shape
             image = concat_image
 
+        if "flip" in info:
+            image = self.flip(image, info["flip"])
+
         return image
 
-    def image_reference(self, image_id):
-        info = self.image_info[image_id]
-        if info["source"] == "clutter":
+    def image_reference(self, image_ind):
+        info = self.image_info[image_ind]
+        if info["source"] == "clutter" and "flip" in info:
             return info["path"] + "-{:d}".format(info["flip"])
         else:
-            super(self.__class__).image_reference(self, image_id)
+            super(self.__class__).image_reference(self, image_ind)
 
-    def load_mask(self, image_id):
+    def load_mask(self, image_ind):
         # loads mask from path
-        info = self.image_info[image_id]
-        _image_id = info["id"]
+        info = self.image_info[image_ind]
         Is = []
         file_name = os.path.join(
-            self.base_path, self.masks, "image_{:06d}.png".format(_image_id)
+            self.base_path, self.masks, "image_{:06d}.png".format(info["id"])
         )
 
         all_masks = skimage.io.imread(file_name)
@@ -150,9 +151,8 @@ class ImageDataset(Dataset):
         else:
             mask = np.zeros([info["height"], info["width"], 0], dtype=np.bool)
 
+        if "flip" in info:
+            mask = self.flip(mask, info["flip"])
+
         class_ids = np.array([1 for _ in range(mask.shape[2])])
         return mask, class_ids.astype(np.int32)
-
-    @property
-    def indices(self):
-        return self.image_id

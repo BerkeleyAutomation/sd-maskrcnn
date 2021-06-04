@@ -199,12 +199,9 @@ class SDMaskRCNNModel(object):
         utils.mkdir_if_missing(resized_segmask_dir)
 
         # Feed images into model one by one. For each image, predict and save.
-        image_ids = dataset.image_ids
-        indices = dataset.indices
-
         print("MAKING PREDICTIONS")
         times = []
-        for image_id in tqdm(image_ids):
+        for image_id in tqdm(dataset.image_ids):
             # Load image and ground truth data and resize for net
             image, _, _, _, gt_mask = modellib.load_image_gt(
                 dataset, self.mask_config, image_id, use_mini_mask=False
@@ -212,7 +209,9 @@ class SDMaskRCNNModel(object):
 
             bin_mask = None
             if bin_mask_dir is not None:
-                name = "image_{:06d}.png".format(indices[image_id])
+                name = "image_{:06d}.png".format(
+                    dataset.image_info[image_id]["id"]
+                )
                 bin_mask = skimage.io.imread(os.path.join(bin_mask_dir, name))[
                     ..., np.newaxis
                 ]
