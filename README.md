@@ -59,6 +59,12 @@ An example for getting started with dataset generation can be found in this [Dat
 ```
 The modal and amodal masks directories give binary amodal and modal segmentation masks for each of the objects in the heap. Semantic masks are the single-channel stacked modal masks, and depth_ims contains depth images.
 
+## Dataset Generation using Docker
+A Dockerfile is also provided for containerized dataset generation and training. To run using Docker, first run `docker build -t sdmaskrcnn:gen .` from the root directory of the project, then:
+```shell
+docker run --rm -it --gpus all -v <path/to/meshes>:/meshes:ro -v <path/to/dataset>:/dataset:rw -v <path/to/cfg>:/cfg:ro sdmaskrcnn:gen
+```
+
 ## Other Available Tools
 Typically, one sets the yaml file associated with the task to perform (e.g., train, benchmark, augment) and then runs the associated script. Benchmarking code for PCL and GOP baselines is also included. 
 
