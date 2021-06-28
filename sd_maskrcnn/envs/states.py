@@ -119,18 +119,20 @@ class CameraState(State):
     """State of a camera.
     Attributes
     ----------
-    mesh : Trimesh
-        triangular mesh representation of object geometry
+    frame : str
+        name of camera frame
     pose : RigidTransform
         pose of camera with respect to the world
     intrinsics : CameraIntrinsics
         intrinsics of the camera in the perspective projection model.
     """
 
-    def __init__(self, frame, pose, intrinsics):
+    def __init__(self, frame, pose, intrinsics, stereo, baseline):
         self.frame = frame
         self.pose = pose
         self.intrinsics = intrinsics
+        self.stereo = stereo
+        self.baseline = baseline
 
     @property
     def height(self):

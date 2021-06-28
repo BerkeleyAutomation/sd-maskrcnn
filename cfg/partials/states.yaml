@@ -33,14 +33,14 @@ state_space:
     replace: 0          # Sample objects with replacement?
     max_obj_diam: 0.3   # Max diameter of object to be dropped (otherwise it will be skipped)
     drop_height: 0.2
-    
+
     # Dynamic sim parameters
     max_settle_steps: 500
     mag_v_thresh: 0.005
     mag_w_thresh: 0.1
 
     objects:
-      mesh_dir: datasets/objects/meshes/    # Directory containing meshes to be dropped
+      mesh_dir: /meshes/    # Directory containing meshes to be dropped
       num_objects: 50                       # Number of objects in dataset (test and train)
       train_pct: 0.8                        # Percentage of objects to be designated as train
       object_keys:                          # Folders containing meshes
@@ -61,6 +61,8 @@ state_space:
 
   camera:
     name: camera
+    type: stereo                              # either "mono" or "stereo"
+    baseline: 0.01                             # baseline btw cameras in m (ignored if mono type)
 
     # Image size
     im_width: 512

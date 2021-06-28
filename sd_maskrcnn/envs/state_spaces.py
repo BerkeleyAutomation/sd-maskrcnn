@@ -44,13 +44,18 @@ class CameraStateSpace(gym.Space):
         # read params
         self.frame = config["name"]
 
+        self.stereo = config["type"] == "stereo"
+        self.baseline = config["baseline"]
+
         # random variable for pose of camera
         self.camera_rv = CameraRandomVariable(config)
 
     def sample(self):
         """Sample a camera state."""
         pose, intrinsics = self.camera_rv.sample(size=1)
-        return CameraState(self.frame, pose, intrinsics)
+        return CameraState(
+            self.frame, pose, intrinsics, self.stereo, self.baseline
+        )
 
 
 class HeapStateSpace(gym.Space):
@@ -273,7 +278,9 @@ class HeapStateSpace(gym.Space):
         num_objs = min(num_objs, self.max_objs)
         num_objs = max(num_objs, self.min_objs)
         obj_inds = np.random.choice(
-            np.arange(total_num_objs), size=2 * num_objs, replace=self.replace
+            np.arange(total_num_objs),
+            size=min(2 * num_objs, total_num_objs),
+            replace=self.replace,
         )
         self._logger.info("Sampling %d objects" % (num_objs))
 
@@ -288,11 +295,12 @@ class HeapStateSpace(gym.Space):
         # sample object, center of mass, pose
         objs_in_heap = []
         total_drops = 0
-        while total_drops < 2 * num_objs and len(objs_in_heap) < num_objs:
+        while total_drops < len(obj_inds) and len(objs_in_heap) < num_objs:
             obj_key = sample_keys[obj_inds[total_drops]]
             obj_mesh = trimesh.load_mesh(self.mesh_filenames[obj_key])
             obj_mesh.visual = trimesh.visual.ColorVisuals(
-                obj_mesh, vertex_colors=(0.7, 0.7, 0.7, 1.0)
+                obj_mesh,
+                vertex_colors=np.random.rand(3),
             )
             obj_mesh.density = self.obj_density
             obj_state_key = "{}{}{}".format(

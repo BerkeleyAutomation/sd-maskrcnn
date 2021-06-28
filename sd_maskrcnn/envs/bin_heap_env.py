@@ -34,6 +34,7 @@ from pyrender import (
     Scene,
     Viewer,
 )
+import trimesh
 
 from .physics_engine import PybulletPhysicsEngine
 from .state_spaces import HeapAndCameraStateSpace
@@ -107,7 +108,10 @@ class BinHeapEnv(gym.Env):
         )
         cn = next(iter(self._scene.get_nodes(name=self.camera.frame)))
         cn.camera = camera
-        pose_m = self.camera.pose.matrix.copy()
+        pose_m = trimesh.transformations.translation_matrix(
+            [-self.camera.baseline / 2, 0, 0]
+        )
+        pose_m = self.camera.pose.matrix.copy() @ pose_m
         pose_m[:, 1:3] *= -1.0
         cn.matrix = pose_m
         self._scene.main_camera_node = cn
@@ -124,14 +128,9 @@ class BinHeapEnv(gym.Env):
                 iter(self._scene.get_nodes(name=obj_key))
             ).matrix = self.state[obj_key].pose.matrix
 
-    def _reset_scene(self, scale_factor=1.0):
-        """Resets the scene.
+    def _reset_scene(self):
+        """Resets the scene."""
 
-        Parameters
-        ----------
-        scale_factor : float
-            optional scale factor to apply to the image dimensions
-        """
         # delete scene
         if self._scene is not None:
             self._scene.clear()
@@ -147,12 +146,13 @@ class BinHeapEnv(gym.Env):
             self.camera.intrinsics.cx,
             self.camera.intrinsics.cy,
         )
-        pose_m = self.camera.pose.matrix.copy()
-        pose_m[:, 1:3] *= -1.0
-        scene.add(camera, pose=pose_m, name=self.camera.frame)
-        scene.main_camera_node = next(
-            iter(scene.get_nodes(name=self.camera.frame))
+        pose_m = trimesh.transformations.translation_matrix(
+            [-self.camera.baseline / 2, 0, 0]
         )
+        pose_m = self.camera.pose.matrix.copy() @ pose_m
+        pose_m[:, 1:3] *= -1.0
+        cn = scene.add(camera, pose=pose_m, name=self.camera.frame)
+        scene.main_camera_node = cn
 
         material = MetallicRoughnessMaterial(
             baseColorFactor=np.array([1, 1, 1, 1.0]),
@@ -170,16 +170,20 @@ class BinHeapEnv(gym.Env):
         # add scene objects
         for obj_key in self.state.obj_keys:
             obj_state = self.state[obj_key]
-            obj_mesh = Mesh.from_trimesh(obj_state.mesh, material=material)
+            obj_mesh = Mesh.from_trimesh(obj_state.mesh)
             T_obj_world = obj_state.pose.matrix
             scene.add(obj_mesh, pose=T_obj_world, name=obj_key)
 
         # add light (for color rendering)
-        light = DirectionalLight(color=np.ones(3), intensity=1.0)
-        scene.add(light, pose=np.eye(4))
-        ray_light_nodes = self._create_raymond_lights()
-        [scene.add_node(rln) for rln in ray_light_nodes]
-
+        for ln in self._create_raymond_lights():
+            scene.add_node(ln, parent_node=cn)
+        scene.add(
+            DirectionalLight(color=np.ones(3), intensity=1.0),
+            parent_node=cn,
+            pose=trimesh.transformations.translation_matrix(
+                [self.camera.baseline / 2, 0, 0]
+            ),
+        )
         self._scene = scene
 
     def reset_camera(self):
@@ -212,21 +216,49 @@ class BinHeapEnv(gym.Env):
         renderer = OffscreenRenderer(self.camera.width, self.camera.height)
         flags = RenderFlags.NONE if color else RenderFlags.DEPTH_ONLY
         image = renderer.render(self._scene, flags=flags)
+        if self.camera.stereo:
+            pose_m = trimesh.transformations.translation_matrix(
+                [self.camera.baseline / 2, 0, 0]
+            )
+            pose_m = self.camera.pose.matrix.copy() @ pose_m
+            pose_m[:, 1:3] *= -1.0
+            self.scene.main_camera_node.matrix = pose_m
+            image2 = renderer.render(self._scene, flags=flags)
+            if color:
+                image = (
+                    np.stack((image[0], image2[0]), axis=-1),
+                    np.stack((image[1], image2[1]), axis=-1),
+                )
+            else:
+                image = np.stack((image, image2), axis=-1)
+
+            pose_m = trimesh.transformations.translation_matrix(
+                [-self.camera.baseline / 2, 0, 0]
+            )
+            pose_m = self.camera.pose.matrix.copy() @ pose_m
+            pose_m[:, 1:3] *= -1.0
+            self.scene.main_camera_node.matrix = pose_m
         renderer.delete()
         return image
 
     def render_segmentation_images(self):
         """Renders segmentation masks (modal and amodal) for each object in the state."""
 
-        full_depth = self.render_camera_image(color=False)
+        full_depth = (
+            self.render_camera_image(color=False)
+            .reshape(self.camera.height, self.camera.width, -1)
+            .transpose(2, 0, 1)
+        )
         modal_data = np.zeros(
-            (full_depth.shape[0], full_depth.shape[1], len(self.obj_keys)),
+            (
+                1 + self.camera.stereo,
+                self.camera.height,
+                self.camera.width,
+                len(self.obj_keys),
+            ),
             dtype=np.uint8,
         )
-        amodal_data = np.zeros(
-            (full_depth.shape[0], full_depth.shape[1], len(self.obj_keys)),
-            dtype=np.uint8,
-        )
+        amodal_data = np.zeros_like(modal_data)
         renderer = OffscreenRenderer(self.camera.width, self.camera.height)
         flags = RenderFlags.DEPTH_ONLY
 
@@ -241,6 +273,23 @@ class BinHeapEnv(gym.Env):
             node.mesh.is_visible = True
 
             depth = renderer.render(self._scene, flags=flags)
+            if self.camera.stereo:
+                pose_m = trimesh.transformations.translation_matrix(
+                    [self.camera.baseline / 2, 0, 0]
+                )
+                pose_m = self.camera.pose.matrix.copy() @ pose_m
+                pose_m[:, 1:3] *= -1.0
+                self.scene.main_camera_node.matrix = pose_m
+                depth2 = renderer.render(self._scene, flags=flags)
+                depth = np.stack((depth, depth2), axis=0)
+
+                pose_m = trimesh.transformations.translation_matrix(
+                    [-self.camera.baseline / 2, 0, 0]
+                )
+                pose_m = self.camera.pose.matrix.copy() @ pose_m
+                pose_m[:, 1:3] *= -1.0
+                self.scene.main_camera_node.matrix = pose_m
+            depth = depth.reshape(*modal_data.shape[:-1])
             amodal_mask = depth > 0.0
             modal_mask = np.logical_and(
                 (np.abs(depth - full_depth) < 1e-6), full_depth > 0.0
@@ -255,7 +304,9 @@ class BinHeapEnv(gym.Env):
         for mn in self._scene.mesh_nodes:
             mn.mesh.is_visible = True
 
-        return amodal_data, modal_data
+        return amodal_data.transpose(1, 2, 3, 0), modal_data.transpose(
+            1, 2, 3, 0
+        )
 
     def _create_raymond_lights(self):
         thetas = np.pi * np.array([1.0 / 6.0, 1.0 / 6.0, 1.0 / 6.0])
@@ -281,7 +332,10 @@ class BinHeapEnv(gym.Env):
             nodes.append(
                 Node(
                     light=DirectionalLight(color=np.ones(3), intensity=1.0),
-                    matrix=matrix,
+                    matrix=matrix
+                    @ trimesh.transformations.translation_matrix(
+                        [self.camera.baseline / 2, 0, 0]
+                    ),
                 )
             )
 

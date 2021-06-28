@@ -98,6 +98,7 @@ def generate_segmask_dataset(
     # read image parameters
     im_height = config["state_space"]["camera"]["im_height"]
     im_width = config["state_space"]["camera"]["im_width"]
+    num_cameras = 1 + int(config["state_space"]["camera"]["type"] == "stereo")
     segmask_channels = max_objs_per_state + 1
 
     # create the dataset path and all subfolders if they don't exist
@@ -156,7 +157,7 @@ def generate_segmask_dataset(
         if image_config["color"]:
             image_tensor_config["fields"]["color_im"] = {
                 "dtype": "uint8",
-                "channels": 3,
+                "channels": 3 * num_cameras,
                 "height": im_height,
                 "width": im_width,
             }
@@ -164,7 +165,7 @@ def generate_segmask_dataset(
         if image_config["depth"]:
             image_tensor_config["fields"]["depth_im"] = {
                 "dtype": "float32",
-                "channels": 1,
+                "channels": 1 * num_cameras,
                 "height": im_height,
                 "width": im_width,
             }
@@ -172,7 +173,7 @@ def generate_segmask_dataset(
         if image_config["modal"]:
             image_tensor_config["fields"]["modal_segmasks"] = {
                 "dtype": "uint8",
-                "channels": segmask_channels,
+                "channels": segmask_channels * num_cameras,
                 "height": im_height,
                 "width": im_width,
             }
@@ -180,7 +181,7 @@ def generate_segmask_dataset(
         if image_config["amodal"]:
             image_tensor_config["fields"]["amodal_segmasks"] = {
                 "dtype": "uint8",
-                "channels": segmask_channels,
+                "channels": segmask_channels * num_cameras,
                 "height": im_height,
                 "width": im_width,
             }
@@ -188,7 +189,7 @@ def generate_segmask_dataset(
         if image_config["semantic"]:
             image_tensor_config["fields"]["semantic_segmasks"] = {
                 "dtype": "uint8",
-                "channels": 1,
+                "channels": 1 * num_cameras,
                 "height": im_height,
                 "width": im_width,
             }
@@ -289,7 +290,7 @@ def generate_segmask_dataset(
             if image_config["color"]
             else sorted(os.listdir(depth_dir))
         )
-        num_total_images = len(generated_images)
+        num_total_images = len(generated_images) / num_cameras
 
         # Do our own calculation if no saved tensors
         if num_prev_states == 0:
@@ -297,7 +298,7 @@ def generate_segmask_dataset(
 
         # Find images to remove and remove them from all relevant places if they exist
         num_images_to_remove = num_total_images - (
-            num_prev_states * num_images_per_state
+            num_prev_states * num_images_per_state * num_cameras
         )
         logger.info(
             "Deleting last {} invalid images".format(num_images_to_remove)
@@ -436,11 +437,19 @@ def generate_segmask_dataset(
                     if vis_config["obs"]:
                         if image_config["depth"]:
                             plt.figure()
-                            plt.imshow(depth_obs)
+                            plt.imshow(
+                                depth_obs[..., 0]
+                                if num_cameras > 1
+                                else depth_obs
+                            )
                             plt.title("Depth Observation")
                         if image_config["color"]:
                             plt.figure()
-                            plt.imshow(color_obs)
+                            plt.imshow(
+                                color_obs[..., 0]
+                                if num_cameras > 1
+                                else color_obs
+                            )
                             plt.title("Color Observation")
                         plt.show()
 
@@ -458,22 +467,33 @@ def generate_segmask_dataset(
 
                         # retrieve segmask data
                         modal_segmask_arr = np.iinfo(np.uint8).max * np.ones(
-                            [im_height, im_width, segmask_channels],
+                            [
+                                im_height,
+                                im_width,
+                                segmask_channels,
+                                num_cameras,
+                            ],
                             dtype=np.uint8,
                         )
                         amodal_segmask_arr = np.iinfo(np.uint8).max * np.ones(
-                            [im_height, im_width, segmask_channels],
+                            [
+                                im_height,
+                                im_width,
+                                segmask_channels,
+                                num_cameras,
+                            ],
                             dtype=np.uint8,
                         )
                         stacked_segmask_arr = np.zeros(
-                            [im_height, im_width, 1], dtype=np.uint8
+                            [im_height, im_width, 1, num_cameras],
+                            dtype=np.uint8,
                         )
 
                         modal_segmask_arr[
-                            :, :, : env.num_objects
+                            :, :, : env.num_objects, :
                         ] = modal_segmasks
                         amodal_segmask_arr[
-                            :, :, : env.num_objects
+                            :, :, : env.num_objects, :
                         ] = amodal_segmasks
 
                         if image_config["semantic"]:
@@ -482,33 +502,52 @@ def generate_segmask_dataset(
                                     modal_segmasks[:, :, j] > 0
                                 )
                                 stacked_segmask_arr[
-                                    this_obj_px[0], this_obj_px[1], 0
-                                ] = (j + 1)
+                                    this_obj_px[0],
+                                    this_obj_px[1],
+                                    0,
+                                    this_obj_px[2],
+                                ] = (
+                                    j + 1
+                                )
 
                     # visualize
                     if vis_config["semantic"]:
                         plt.figure()
-                        plt.imshow(stacked_segmask_arr.squeeze())
+                        plt.imshow(
+                            stacked_segmask_arr[..., 0].squeeze()
+                            if num_cameras > 1
+                            else stacked_segmask_arr.squeeze()
+                        )
                         plt.show()
 
                     if save_tensors:
                         # save image data as tensors
                         if image_config["color"]:
-                            image_datapoint["color_im"] = color_obs
+                            image_datapoint["color_im"] = color_obs.reshape(
+                                im_height, im_width, -1
+                            )
                         if image_config["depth"]:
-                            image_datapoint["depth_im"] = depth_obs[:, :, None]
+                            image_datapoint["depth_im"] = depth_obs.reshape(
+                                im_height, im_width, -1
+                            )
                         if image_config["modal"]:
                             image_datapoint[
                                 "modal_segmasks"
-                            ] = modal_segmask_arr
+                            ] = modal_segmask_arr.reshape(
+                                im_height, im_width, -1
+                            )
                         if image_config["amodal"]:
                             image_datapoint[
                                 "amodal_segmasks"
-                            ] = amodal_segmask_arr
+                            ] = amodal_segmask_arr.reshape(
+                                im_height, im_width, -1
+                            )
                         if image_config["semantic"]:
                             image_datapoint[
                                 "semantic_segmasks"
-                            ] = stacked_segmask_arr
+                            ] = stacked_segmask_arr.reshape(
+                                im_height, im_width, -1
+                            )
 
                         image_datapoint["camera_pose"] = env.camera.pose.vec
                         image_datapoint[
@@ -522,23 +561,49 @@ def generate_segmask_dataset(
 
                     # Save depth image and semantic masks
                     if image_config["color"]:
-                        ColorImage(color_obs).save(
-                            os.path.join(
-                                color_dir,
-                                "image_{:06d}.png".format(
-                                    num_images_per_state * state_id + k
-                                ),
+                        if num_cameras == 1:
+                            ColorImage(color_obs).save(
+                                os.path.join(
+                                    color_dir,
+                                    "image_{:06d}.png".format(
+                                        num_images_per_state * state_id + k,
+                                    ),
+                                )
                             )
-                        )
+                        else:
+                            for cam in range(num_cameras):
+                                ColorImage(color_obs[..., cam]).save(
+                                    os.path.join(
+                                        color_dir,
+                                        "image_{:06d}-{:d}.png".format(
+                                            num_images_per_state * state_id
+                                            + k,
+                                            cam,
+                                        ),
+                                    )
+                                )
                     if image_config["depth"]:
-                        DepthImage(depth_obs).save(
-                            os.path.join(
-                                depth_dir,
-                                "image_{:06d}.png".format(
-                                    num_images_per_state * state_id + k
-                                ),
+                        if num_cameras == 1:
+                            DepthImage(depth_obs).save(
+                                os.path.join(
+                                    depth_dir,
+                                    "image_{:06d}.png".format(
+                                        num_images_per_state * state_id + k
+                                    ),
+                                )
                             )
-                        )
+                        else:
+                            for cam in range(num_cameras):
+                                DepthImage(depth_obs[..., cam]).save(
+                                    os.path.join(
+                                        depth_dir,
+                                        "image_{:06d}-{:d}.png".format(
+                                            num_images_per_state * state_id
+                                            + k,
+                                            cam,
+                                        ),
+                                    )
+                                )
                     if image_config["modal"]:
                         modal_id_dir = os.path.join(
                             modal_dir,
@@ -549,12 +614,27 @@ def generate_segmask_dataset(
                         if not os.path.exists(modal_id_dir):
                             os.mkdir(modal_id_dir)
                         for i in range(env.num_objects):
-                            BinaryImage(modal_segmask_arr[:, :, i]).save(
-                                os.path.join(
-                                    modal_id_dir,
-                                    "channel_{:03d}.png".format(i),
+                            if num_cameras == 1:
+                                BinaryImage(
+                                    modal_segmask_arr[:, :, i, 0]
+                                ).save(
+                                    os.path.join(
+                                        modal_id_dir,
+                                        "channel_{:03d}.png".format(i),
+                                    )
                                 )
-                            )
+                            else:
+                                for cam in range(num_cameras):
+                                    BinaryImage(
+                                        modal_segmask_arr[:, :, i, cam]
+                                    ).save(
+                                        os.path.join(
+                                            modal_id_dir,
+                                            "channel_{:03d}-{:d}.png".format(
+                                                i, cam
+                                            ),
+                                        )
+                                    )
                     if image_config["amodal"]:
                         amodal_id_dir = os.path.join(
                             amodal_dir,
@@ -565,21 +645,51 @@ def generate_segmask_dataset(
                         if not os.path.exists(amodal_id_dir):
                             os.mkdir(amodal_id_dir)
                         for i in range(env.num_objects):
-                            BinaryImage(amodal_segmask_arr[:, :, i]).save(
+                            if num_cameras == 1:
+                                BinaryImage(
+                                    amodal_segmask_arr[:, :, i, 0]
+                                ).save(
+                                    os.path.join(
+                                        amodal_id_dir,
+                                        "channel_{:03d}.png".format(i),
+                                    )
+                                )
+                            else:
+                                for cam in range(num_cameras):
+                                    BinaryImage(
+                                        amodal_segmask_arr[:, :, i, cam]
+                                    ).save(
+                                        os.path.join(
+                                            amodal_id_dir,
+                                            "channel_{:03d}-{:d}.png".format(
+                                                i, cam
+                                            ),
+                                        )
+                                    )
+                    if image_config["semantic"]:
+                        if num_cameras == 1:
+                            GrayscaleImage(stacked_segmask_arr.squeeze()).save(
                                 os.path.join(
-                                    amodal_id_dir,
-                                    "channel_{:03d}.png".format(i),
+                                    semantic_dir,
+                                    "image_{:06d}.png".format(
+                                        num_images_per_state * state_id + k
+                                    ),
                                 )
                             )
-                    if image_config["semantic"]:
-                        GrayscaleImage(stacked_segmask_arr.squeeze()).save(
-                            os.path.join(
-                                semantic_dir,
-                                "image_{:06d}.png".format(
-                                    num_images_per_state * state_id + k
-                                ),
-                            )
-                        )
+                        else:
+                            for cam in range(num_cameras):
+                                GrayscaleImage(
+                                    stacked_segmask_arr[..., cam].squeeze()
+                                ).save(
+                                    os.path.join(
+                                        semantic_dir,
+                                        "image_{:06d}-{:d}.png".format(
+                                            num_images_per_state * state_id
+                                            + k,
+                                            cam,
+                                        ),
+                                    )
+                                )
 
                     # Save split
                     if split == TRAIN_ID:
