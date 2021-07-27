@@ -1,16 +1,16 @@
 Cython           
 numpy
-pycocotools>=2.0
 scikit-image>=0.14.2
-keras>=2.2
+keras==2.2.2
 tqdm
-matplotlib
+matplotlib<=2.2.0
 autolab_core>=0.0.9
 autolab-perception
-tensorflow-gpu>=1.10
-gym>=0.11
-pyglet==1.4.0b1
-pyrender>=0.1.23
-pybullet
-trimesh[easy]
+tensorflow-gpu==1.12.0
+# gym>=0.11
+# pyglet==1.4.0b1
+# pyrender>=0.1.23
+# pybullet
+# trimesh[easy]
 scipy
+pycocotools
