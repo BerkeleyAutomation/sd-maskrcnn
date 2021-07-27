@@ -23,6 +23,8 @@ Author: Mike Danielczuk
 
 import json
 import os
+import random
+
 import skimage
 import numpy as np
 
@@ -99,11 +101,11 @@ class TargetDataset(utils.Dataset):
 
 
 """
-Same directory organization as TargetDataset, but one example JSON tuple is now:
-((target_path_1, target_path_2, ...), pile_image, target_index)
+TargetStackDataset pulls target images and stacks them from directory for each target class:
+(class, pile_image, target_index)
 """
 class TargetStackDataset(utils.Dataset):
-    def __init__(self, config, base_path, tuple_file, images='piles', masks='masks', targets='images', augment_targets=False):
+    def __init__(self, config, base_path, tuple_file, images='piles', masks='masks', targets='images', vis_file=None, augment_targets=False, bbs_on_disk=False):
         # omg fix this above before u get confused!!!
         assert base_path != "", "You must provide the path to a dataset!"
         self.targets = targets
@@ -111,8 +113,19 @@ class TargetStackDataset(utils.Dataset):
         self.masks = masks
         self.base_path = base_path
         self.target_stack_size = config['model']['settings']['stack_size']
+        self.bg_pixel = config['model']['settings']['bg_pixel']
+        self.bbs_on_disk = bbs_on_disk
+
+        self.augment_targets = augment_targets
         self.data_tuples = json.load(open(os.path.join(self.base_path, tuple_file)))
+        self.visibility_tuples = None
+        if vis_file:
+            self.visibility_tuples = json.load(open(os.path.join(self.base_path, vis_file)))
         super().__init__(config)
+
+        assert len(self.bg_pixel) == self._channels, "background pixel must match # of channels"
+        self.bg = np.stack(
+            [np.stack([np.array(self.bg_pixel)] * 512)] * 512)
 
     def load(self, imset=None):
         self.add_class('clutter', 1, 'fg')
@@ -131,35 +144,92 @@ class TargetStackDataset(utils.Dataset):
             mask_path = os.path.join(self.base_path, self.masks,
                                      self.data_tuples[i][1])
 
-            if not isinstance(self.data_tuples[i][0], list):
-                print("Singleton target detected.")
-                self.data_tuples[i][0] = [self.data_tuples[i][0]]
+            # if not isinstance(self.data_tuples[i][0], list):
+            #     print("Singleton target detected.")
+            #     self.data_tuples[i][0] = [self.data_tuples[i][0]]
 
-            assert len(self.data_tuples[i][0]) == self.target_stack_size, \
-            "Expected {} target images to stack, but instead found {}.".format(
-                self.target_stack_size, len(self.data_tuples[i][0]))
-            target_stack_paths = [os.path.join(self.base_path, self.targets, path) for path in self.data_tuples[i][0]]
+            # assert len(self.data_tuples[i][0]) == self.target_stack_size, \
+            # "assert self.bg_pixel.shape == Expected {} target images to stack, but instead found {}.".format(
+            #     self.target_stack_size, len(self.data_tuples[i][0]))
+            # target_stack_paths = [os.path.join(self.base_path, self.targets, path) for path in self.data_tuples[i][0]]
+
+            obj_class = self.data_tuples[i][0]
             target_ind = int(self.data_tuples[i][2]) - 1
 
             if 'numpy' in self.images:
                 pile_path = pile_path.replace('.png', '.npy')
                 target_stack_paths = [path.replace('.png', '.npy') for path in target_stack_paths]
 
+            obj_visibility = 0
+            if self.visibility_tuples is not None:
+                vis_tup = self.visibility_tuples[i]
+                obj_visibility = vis_tup[1]
+
             self.add_example(source='clutter', image_id=i, pile_path=pile_path,
-                           pile_mask_path=mask_path, target_stack_paths=target_stack_paths,
-                           target_index=target_ind)
+                             pile_mask_path=mask_path,
+                             target_index=target_ind,
+                             obj_class=obj_class,
+                             obj_visibility=obj_visibility)
 
     def load_example(self, example_id):
         """Returns a dictionary containing inputs from a training example."""
         info = self.example_info[example_id]
         example = {}
-        example['target_images'] = [self._load_image(path) for path in
-                                         info['target_stack_paths']]
+        example['target_images'] = []
+        example['target_bbs'] = []
+
+        target_obj_dir = os.path.join(self.base_path, self.targets,
+                                                 info['obj_class'])
+        target_ims = [os.path.join(target_obj_dir, p) for p in os.listdir(target_obj_dir)
+                      if '.png' in p or '.npy' in p]
+
+        sampled_target_images = random.sample(target_ims, self.target_stack_size)
+
+        for path in sampled_target_images:
+            im = self._load_image(path)
+            if self.augment_targets:
+                rotation = np.random.randint(12) * 30
+                im = self._rotate(im, rotation)
+            example['target_images'].append(im)
+
+            if self.bbs_on_disk:
+                bb = json.load(open(os.path.join(self.base_path, self.targets,
+                                                 path.replace('.png', '.json'))))[0]
+            else:
+                bb = self._compute_target_bb(im)
+            example['target_bbs'].append(bb)
+
         example['pile_image'] = self._load_image(info['pile_path'])
         example['pile_mask'], example['class_ids'] = self._load_mask(info['pile_mask_path'])
         example['target_index'] = info['target_index']
         return example
 
+    def load_example_metadata(self, example_id):
+        """Returns a dictionary of example metadata (not inputs). Primarily used for
+        benchmarking and analysis."""
+        info = self.example_info[example_id]
+        meta = {}
+        meta['obj_class'] = info['obj_class']
+        meta['obj_visibility'] = info['obj_visibility']
+        return meta
+
+    def _compute_target_bb(self, target_image):
+        target_mask = np.sum(target_image - self.bg_pixel, axis=2)
+        bb = utils.extract_bboxes(
+            target_mask.reshape((target_image.shape[0], target_image.shape[1], 1)))[0]
+        return bb
+
+    def _rotate(self, target_image, rotation):
+        im_h, im_w = target_image.shape[:2]
+        y1, x1, y2, x2 = self._compute_target_bb(target_image)
+        crop = target_image[y1-1:y2+1,x1-1:x2+1,:] # pad by one so nearest mode doesn't take colored pixels
+        rotated_crop = scipy.ndimage.rotate(crop, rotation, mode='nearest')
+        crop_h, crop_w = rotated_crop.shape[:2]
+        insert_y, insert_x = (im_h - crop_h) // 2, (im_w - crop_w) // 2
+
+        rotated_target = np.copy(self.bg)
+        rotated_target[insert_y:(insert_y + crop_h) , insert_x:(insert_x + crop_w), :] = rotated_crop
+        return rotated_target
 
 """
 ImageDataset creates a Matterport dataset for a directory of

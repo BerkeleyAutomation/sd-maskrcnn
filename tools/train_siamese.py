@@ -21,7 +21,8 @@ def train(config):
                                        images=config['dataset']['images'],
                                        masks=config['dataset']['masks'],
                                        targets=config['dataset']['targets'],
-                                       augment_targets=config['dataset']['augment'])
+                                       augment_targets=config['dataset']['augment'],
+                                       bbs_on_disk=config['dataset']['bbs_on_disk'])
     #TODO: bring back augment
     dataset_train.load(config['dataset']['train_indices'])
     dataset_train.prepare()
@@ -34,6 +35,9 @@ def train(config):
     #     dataset_val.prepare()
 
     # Load config
+    image_shape = config['model']['settings']['image_shape']
+    config['model']['settings']['image_min_dim'] = min(image_shape)
+    config['model']['settings']['image_max_dim'] = max(image_shape)
     train_config = MaskConfig(config['model']['settings'])
     train_config.STEPS_PER_EPOCH = dataset_train.example_indices.size/(train_config.IMAGES_PER_GPU*train_config.GPU_COUNT)
     # train_config.STEPS_PER_EPOCH = 5
@@ -73,7 +77,8 @@ def train(config):
         if config['model']['weight_type'].lower() == 'old':
             model.load_weights_from_sd_mrcnn_model(weights_path)
         else:
-            model.load_weights(weights_path, by_name=True)
+            weights_path_backbone = weights_path.replace('mask_rcnn_', 'mask_rcnn_resnet_')
+            model.load_weights_siamese(weights_path, weights_path_backbone)
 
     # save config in run folder
     config.save(os.path.join(config['model']['path'], config['save_conf_name']))
