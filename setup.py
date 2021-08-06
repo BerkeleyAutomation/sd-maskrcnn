@@ -21,7 +21,8 @@ requirements = set(
         "matplotlib",  # For visualization of results
         "h5py<3.0.0",  # Loading pretrained models
         "autolab_core>=1.1.0",  # For core utilities
-        "nvidia-tensorflow",  # For training - need TF 1.15 so use nvidia
+        "torch",  # For training
+        "torchvision",  # For models
     ]
 )
 

@@ -3,19 +3,18 @@ import time
 
 import numpy as np
 import skimage
-from mrcnn import model as modellib
-from mrcnn import utils as utilslib
+import torchvision
 from tqdm import tqdm
 
+from autolab_core import YamlConfig
 from . import utils
-from .config import MaskConfig
 
 
 class SDMaskRCNNModel(object):
     def __init__(self, mode, config):
 
         self.mode = mode
-        self.config = config
+        self.config = YamlConfig(config)
 
         if self.mode not in ["training", "inference"]:
             raise ValueError(
@@ -36,13 +35,8 @@ class SDMaskRCNNModel(object):
         if self.mode == "inference":
             self.config["settings"]["gpu_count"] = 1
             self.config["settings"]["images_per_gpu"] = 1
-        self.mask_config = MaskConfig(self.config["settings"])
 
-        self._model = modellib.MaskRCNN(
-            mode=self.mode,
-            config=self.mask_config,
-            model_dir=self.config["path"],
-        )
+        self._model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=False, num_classes=2)
         exclude_layers = []
         if self.mode == "training":
 
