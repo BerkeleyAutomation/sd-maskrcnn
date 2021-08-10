@@ -70,8 +70,6 @@ def benchmark(config):
     test_dataset.prepare()
 
     vis_config = copy(config)
-    vis_config["dataset"]["images"] = "depth_ims"
-    vis_config["dataset"]["masks"] = "modal_segmasks"
     vis_dataset = ImageDataset(config)
     vis_dataset.load(config["dataset"]["indices"])
     vis_dataset.prepare()
