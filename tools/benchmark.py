@@ -69,11 +69,6 @@ def benchmark(config):
     test_dataset.load(config["dataset"]["indices"])
     test_dataset.prepare()
 
-    vis_config = copy(config)
-    vis_dataset = ImageDataset(config)
-    vis_dataset.load(config["dataset"]["indices"])
-    vis_dataset.prepare()
-
     # Overarching benchmark function just creates the directory
     # code that actually produces outputs should be plug-and-play
     # depending on what kind of benchmark function we run.
@@ -101,7 +96,7 @@ def benchmark(config):
     if config["vis"]["predictions"]:
         visualize_predictions(
             config["output_dir"],
-            vis_dataset,
+            test_dataset,
             model.mask_config,
             pred_mask_dir,
             pred_info_dir,
@@ -112,7 +107,7 @@ def benchmark(config):
     if config["vis"]["ground_truth"]:
         visualize_gts(
             config["output_dir"],
-            vis_dataset,
+            test_dataset,
             model.mask_config,
             show_scores=False,
             show_bbox=config["vis"]["show_bbox_gt"],
@@ -121,7 +116,7 @@ def benchmark(config):
     if config["vis"]["s_bench"]:
         s_benchmark(
             config["output_dir"],
-            vis_dataset,
+            test_dataset,
             model.mask_config,
             pred_mask_dir,
             pred_info_dir,
