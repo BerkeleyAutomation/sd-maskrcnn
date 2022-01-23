@@ -1,26 +1,26 @@
-output_dir: benchmark_results
+output_dir: /benchmark
 save_conf_name: config.yaml
 
 model:
-  path: models/
-  weights: sd_maskrcnn.h5
+  path: /models
+  weights: mask_rcnn_stacking_model_0008.h5
   settings:
     image_shape: [512, 512]
-    image_channel_count: 3
-    mean_pixel: [128, 128, 128]
+    image_channel_count: 1
+    mean_pixel: [66.235]
     backbone: resnet35
     post_nms_rois_inference: 2000
     rpn_nms_threshold: 1.0
     detection_nms_threshold: 0.35
 
 dataset:
-  path: datasets/wisdom/wisdom-real/high-res/
+  path: /dataset
   images: depth_ims
   masks: modal_segmasks
   indices: test_indices.npy
 
 mask:                                                                                                                                                              
-  remove_bin_pixels: 1              # Set to True if we want to discard predictions based on if they have bin pixels
+  remove_bin_pixels: 0              # Set to True if we want to discard predictions based on if they have bin pixels
   bin_masks: segmasks_filled        # Directory containing bin masks                                                                                                                                                                                                                         
   overlap_thresh: 0.5               # Overlap threshold
 

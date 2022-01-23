@@ -1,0 +1,17 @@
+benchmark
+cfg
+datasets
+models
+resources
+**/images
+**/samples
+**/assets
+**/gop
+
+*.git
+*.egg-info
+README.md
+install.sh
+
+.dockerignore
+Dockerfile

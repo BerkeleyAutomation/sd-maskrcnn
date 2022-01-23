@@ -28,7 +28,7 @@ RUN mkdir -p sd-maskrcnn
 COPY [ "./maskrcnn",  "sd-maskrcnn/maskrcnn" ]
 COPY [ "./setup.py",  "sd-maskrcnn/setup.py" ]
 RUN python3.8 -m pip install --no-cache-dir `python3.8 sd-maskrcnn/setup.py --list-setup`
-RUN python3.8 -m pip install --no-cache-dir `python3.8 sd-maskrcnn/setup.py --list-gen`
+RUN python3.8 -m pip install --no-cache-dir `python3.8 sd-maskrcnn/setup.py --list-train`
 
 # Install repo
 COPY [ ".",  "sd-maskrcnn/" ]
@@ -36,4 +36,4 @@ RUN python3.8 -m pip install --no-cache-dir sd-maskrcnn/
 
 # Run generation
 WORKDIR sd-maskrcnn
-CMD PYOPENGL_PLATFORM=egl python3.8 tools/generate_mask_dataset.py /dataset --config_filename /cfg/generate_mask_dataset.yaml
+CMD python3.8 tools/train.py --config /cfg/train.yaml

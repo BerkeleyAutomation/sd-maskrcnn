@@ -1,0 +1,29 @@
+in_dir: /home/users/mjd3/sd-maskrcnn/datasets/printed_mount_imgs
+out_dir: /home/users/mjd3/sd-maskrcnn/benchmark/printed_mount_imgs
+
+# further
+# crop: [300, 0, 240, 320]
+# min_depth: 0.25
+# max_depth: 1.7
+
+# printed_mount_imgs
+crop: [180, 100, 100, 230]
+min_depth: 0.25
+max_depth: 1.7
+
+# sample_depth_imgs
+# crop: [50, 0, 50, 50]
+# min_depth: 0.1
+# max_depth: 1.5
+
+model:
+  path: /home/mjd3/sd_maskrcnn_models/stacking_model20220119T1514
+  weights: mask_rcnn_stacking_model_0008.h5
+  settings:
+    image_shape: [512, 512]
+    image_channel_count: 1
+    mean_pixel: [66.235]
+    backbone: resnet35
+    post_nms_rois_inference: 2000
+    rpn_nms_threshold: 1.0
+    detection_nms_threshold: 0.35

@@ -1,20 +1,20 @@
 model:
-  path: models/
+  path: /models
   weights: new     # new, last, coco, imagenet or custom path
   epochs: 20       # number of epochs to train for
   settings:
-    name: my_model
+    name: stacking_model
     image_shape: [512,512]
-    image_channel_count: 3
-    mean_pixel: [128, 128, 128]
+    image_channel_count: 1
+    mean_pixel: [66.235]
     backbone: resnet35
     max_gt_instances: 20
     gpu_count: 1
-    images_per_gpu: 5
+    images_per_gpu: 16
     learning_rate: 0.01
 
 dataset:
-  path: datasets/wisdom/wisdom-sim/
+  path: /dataset
   train_indices: train_indices.npy
   val_indices: test_indices.npy
   images: depth_ims

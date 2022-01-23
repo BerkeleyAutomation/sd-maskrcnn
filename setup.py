@@ -16,7 +16,7 @@ requirements = set(
     [
         "pycocotools>=2.0",  # For benchmarking
         "scikit-image>=0.14.2",  # For image loading
-        "keras>=2.2<2.3",  # For training
+        "keras>=2.2,<2.3",  # For training
         "tqdm",  # For pretty progress bars
         "matplotlib",  # For visualization of results
         "h5py<3.0.0",  # Loading pretrained models
